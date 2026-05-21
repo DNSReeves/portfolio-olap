@@ -1,0 +1,1127 @@
+# Portfolio OLAP Dashboard v2.0 Design Document
+
+## 1. Objective
+
+Build Version 2.0 of the portfolio analytics application as a polished, high-performance React Single Page Application. The primary experience is an OLAP-style hierarchical dashboard that lets the user drill from the top-level portfolio summary down through sleeve, category, strategy, account, and finally to a single ticker or atomic asset.
+
+Version 2.0 should improve on the current MVP by replacing external sleeve filters with a true expandable hierarchical grid. Every visible aggregate row must be expandable inline until the leaf asset level is reached.
+
+## 2. Product Principles
+
+- The first screen is the working analytics dashboard, not a landing page.
+- The page viewport must remain fixed and controlled.
+- Grid rows and columns must scroll inside their own container.
+- The hierarchy must be visible through indentation, expand/collapse controls, and row paths.
+- Ticker-level interactions should feel complete even before final Plotly integration.
+- Sleeve taxonomy must come from configuration, not hardcoded UI assumptions.
+- Classification labels should follow Morningstar category language as much as practical.
+
+## 3. Recommended Stack
+
+- React with functional components and hooks.
+- TypeScript.
+- Vite.
+- TanStack Table or a custom virtualized tree grid if hierarchy requirements exceed TanStack defaults.
+- Zustand or React reducer/context for grid state.
+- CSS Grid/Flexbox for fixed-shell layout.
+- IndexedDB through Dexie or a comparable wrapper for v2 local-first persistence.
+- Repository/data-access abstraction so IndexedDB can later be swapped for SQLite or a backend.
+- Plotly later for historical performance charts.
+- `custom_sleeve_definitions.json` for sleeve taxonomy.
+
+The application can remain local-first initially. CSV parsing, sleeve assignment, and dashboard calculation can run in the browser.
+
+## 4. Viewport and Layout
+
+The v2 layout should use a fixed application shell:
+
+- Left navigation/sidebar.
+- Top toolbar.
+- Main grid workspace.
+- Optional right-side or modal context panel.
+
+The body/page should not become the primary scroll container. Instead:
+
+- The grid body scrolls vertically.
+- The grid table scrolls horizontally when columns exceed available width.
+- Toolbar, column headers, and summary controls stay fixed inside the workspace.
+- Modals should be constrained to the viewport.
+
+Minimum layout regions:
+
+- `AppShell`
+- `Sidebar`
+- `TopToolbar`
+- `PortfolioWorkspace`
+- `PortfolioGrid`
+- `PerformanceModalStub`
+
+## 5. Hierarchical Drill-Down Grid
+
+### 5.1 Core Pattern
+
+The grid uses an expandable tree structure. Initial state shows a single level-0 portfolio summary row.
+
+Clicking a group row expands it inline to reveal child rows. Clicking again collapses it.
+
+The grid must recurse until it reaches an atomic asset:
+
+```text
+Portfolio
+  Equity
+    Public Equity
+      Large Cap Tech
+        AAPL
+```
+
+```text
+Portfolio
+  Alternatives
+    Liquid Alternatives
+      Trend Following Managed Futures
+        DBMF
+```
+
+```text
+Portfolio
+  Bonds / Credit
+    Public Bonds
+      Municipal Bonds
+        MUB
+```
+
+```text
+Portfolio
+  Bonds / Credit
+    Private Credit
+      Direct Lending
+        BIZD
+```
+
+### 5.2 Required Row Levels
+
+The hierarchy should support these levels:
+
+- Level 0: Portfolio summary.
+- Level 1: Broad asset class.
+- Level 2: Public/private or market-structure group.
+- Level 3: Morningstar-style category, custom sleeve, or strategy.
+- Level 4+: Optional strategy, sub-sleeve, or brokerage account.
+- Leaf: Single ticker, fund, private asset, bond, cash holding, or other atomic asset.
+
+The exact levels are data-driven. Rows must not assume a fixed depth.
+
+### 5.3 Default Hierarchy Order
+
+The default v2 hierarchy order is:
+
+```text
+Portfolio
+  Broad Asset Class
+    Public / Private Group
+      Morningstar Category, Custom Category, or Strategy
+        Brokerage Account
+          Ticker or Atomic Asset
+```
+
+This keeps the first drill-down intuitive. The user first sees broad asset-class allocation, then public/private structure, then sleeve/category detail, then account and asset detail.
+
+Examples:
+
+```text
+Portfolio
+  Equity
+    Public Equity
+      Large Growth
+        Schwab IRA
+          VUG
+```
+
+```text
+Portfolio
+  Equity
+    Private Equity
+      Buyout
+        Schwab Brokerage
+          Blackstone Capital Partners VIII
+```
+
+```text
+Portfolio
+  Alternatives
+    Liquid Alternatives
+      Trend Following Managed Futures
+        Fidelity Brokerage
+          DBMF
+```
+
+```text
+Portfolio
+  Bonds / Credit
+    Private Credit
+      Direct Lending
+        Schwab Brokerage
+          Monroe Direct Lending Fund III
+```
+
+If a row does not have a value for a hierarchy tier, the tree builder should skip that tier rather than creating empty placeholder groups. For example, a holding without a strategy can go directly from category to brokerage account.
+
+### 5.4 Row Path
+
+Every row should carry a path from root to itself:
+
+```ts
+type GridPath = string[];
+```
+
+Example:
+
+```ts
+["Portfolio", "Alternatives", "Liquid Alternatives", "Trend Following Managed Futures", "DBMF"]
+```
+
+The row path is used for:
+
+- Stable row IDs.
+- Expand/collapse state.
+- Breadcrumb display.
+- Sorting sibling groups.
+- Modal context.
+
+### 5.5 Alternate Grouping Views
+
+The default view is asset-class-first. Later versions may add alternate grouping presets:
+
+- Account-first: `Portfolio > Brokerage Account > Sleeve > Category > Asset`
+- Sleeve-first: `Portfolio > Sleeve > Category > Account > Asset`
+- Tax-first: `Portfolio > Taxable/Tax-Deferred/Tax-Free > Sleeve > Asset`
+
+These are not required for initial v2 acceptance, but the tree builder should be designed so the grouping order is configurable.
+
+## 6. Required Grid Columns
+
+Minimum columns:
+
+- Expand/collapse control.
+- Brokerage Account.
+- Ticker / Asset Class.
+- Asset Description.
+- Sleeve / Category.
+- Shares.
+- Price.
+- Cost Basis.
+- Market Value.
+- Allocation %.
+- % Gain.
+- % Loss.
+- Assignment Source.
+
+Column behavior:
+
+- Numeric columns align right.
+- Group rows aggregate numeric values.
+- Leaf rows display raw holding values.
+- Allocation % is relative to total portfolio value unless the user chooses a local parent-relative view later.
+
+## 7. Sorting
+
+Sorting applies to visible sibling rows within the currently expanded tier.
+
+Requirements:
+
+- Clicking a column header toggles ascending, descending, and unsorted.
+- Show a visual sort indicator on the active sorted column.
+- Sorting one branch should not unexpectedly reorder unrelated collapsed branches unless global sorting is explicitly enabled.
+- Numeric columns sort numerically.
+- Text columns sort locale-aware alphabetically.
+
+Recommended state:
+
+```ts
+type SortDirection = "asc" | "desc";
+
+type SortState = {
+  pathKey: string;
+  columnId: string;
+  direction: SortDirection;
+};
+```
+
+## 8. Data Model
+
+### 8.1 Holding
+
+```ts
+type Holding = {
+  id: string;
+  snapshotId: string;
+  valuationDate: string;
+  brokerageAccount?: string;
+  cusip?: string;
+  isin?: string;
+  securityId?: string;
+  assetType?: "stock" | "etf" | "mutual_fund" | "bond" | "cash" | "private_equity" | "private_credit" | "other";
+  lotId?: string;
+  ticker: string;
+  assetName: string;
+  shares: number;
+  price: number;
+  marketValue: number;
+  sleeveCode?: string;
+  sleeveName: string;
+  assignmentSource: "imported" | "manual" | "auto" | "unclassified";
+  costBasis?: number;
+  realizedGain?: number;
+  purchaseDate?: string;
+  morningstarCategory?: string;
+  classificationConfidence?: "high" | "medium" | "low";
+  classificationReason?: string;
+  sourceRow: Record<string, string>;
+};
+```
+
+`valuationDate` is required. It represents the effective date of the asset valuation, not necessarily the upload date.
+
+If a broker CSV does not include a valuation/date column, the import workflow must require the user to choose a valuation date before saving the snapshot.
+
+Ticker is not a sufficient identifier for every asset. Bonds, private funds, private credit, cash positions, options, and broker-specific instruments may not have a ticker. The app should prefer identifiers in this order when available:
+
+1. CUSIP.
+2. ISIN.
+3. Broker security ID.
+4. Ticker plus brokerage account.
+5. Asset name plus brokerage account.
+
+Private assets can be valid leaf rows without a ticker.
+
+### 8.2 Portfolio Snapshot
+
+Temporal performance analysis requires storing portfolio observations over time. Each import creates or updates a portfolio snapshot.
+
+```ts
+type PortfolioSnapshot = {
+  id: string;
+  portfolioId: string;
+  valuationDate: string;
+  importedAt: string;
+  sourceName?: string;
+  brokerPreset?: "schwab" | "fidelity" | "vanguard" | "interactive_brokers" | "generic";
+  rowCount: number;
+  notes?: string;
+};
+```
+
+Rules:
+
+- `valuationDate` is the date the prices/market values are effective.
+- `importedAt` is when the CSV was loaded into the application.
+- Periodic imports are supported, such as daily, weekly, monthly, or quarterly snapshots.
+- Sporadic imports are supported; the time series does not assume evenly spaced observations.
+- If a snapshot already exists for the same portfolio and valuation date, the user must choose whether to replace it, keep both as separate versions, or cancel.
+
+### 8.3 Position Valuation
+
+A holding represents the latest normalized row in a grid context. Historical analysis should persist valuation rows separately.
+
+```ts
+type PositionValuation = {
+  id: string;
+  snapshotId: string;
+  portfolioId: string;
+  valuationDate: string;
+  brokerageAccount?: string;
+  cusip?: string;
+  isin?: string;
+  securityId?: string;
+  ticker?: string;
+  assetName: string;
+  assetKey: string;
+  assetType?: Holding["assetType"];
+  shares: number;
+  price: number;
+  marketValue: number;
+  costBasis?: number;
+  sleeveCode?: string;
+  sleeveName: string;
+  morningstarCategory?: string;
+};
+```
+
+`assetKey` should use the same identifier precedence as holdings: CUSIP, ISIN, broker security ID, ticker plus account, or asset name plus account.
+
+### 8.4 Sleeve Definition
+
+```ts
+type SleeveDefinition = {
+  code: string;
+  name: string;
+  parent: string | null;
+  aliases?: string[];
+  morningstarArea?: string;
+  morningstarCategoryHint?: string;
+};
+```
+
+The actual JSON file should carry top-level version metadata:
+
+```ts
+type SleeveDefinitionFile = {
+  version: string;
+  schemaVersion: number;
+  taxonomyNotes: string[];
+  sleeves: SleeveDefinition[];
+};
+```
+
+### 8.5 Grid Node
+
+```ts
+type GridNode = {
+  id: string;
+  path: string[];
+  depth: number;
+  kind: "portfolio" | "group" | "holding";
+  label: string;
+  holding?: Holding;
+  children?: GridNode[];
+  metrics: PortfolioMetrics;
+};
+```
+
+### 8.6 Metrics
+
+```ts
+type PortfolioMetrics = {
+  marketValue: number;
+  costBasis: number;
+  unrealizedGain: number;
+  gainLossPercent: number;
+  gainPercent: number;
+  lossPercent: number;
+  portfolioAllocationPercent: number;
+  parentAllocationPercent: number;
+  holdingCount: number;
+  valuationDate?: string;
+};
+```
+
+Metric definitions:
+
+- `marketValue`: current total value for the node.
+- `costBasis`: summed cost basis where available.
+- `unrealizedGain`: `marketValue - costBasis`.
+- `gainLossPercent`: `unrealizedGain / costBasis`, when cost basis is positive.
+- `gainPercent`: positive portion of `gainLossPercent`, otherwise `0`.
+- `lossPercent`: absolute value of negative `gainLossPercent`, otherwise `0`.
+- `portfolioAllocationPercent`: node market value divided by total portfolio value.
+- `parentAllocationPercent`: node market value divided by direct parent node market value.
+
+The grid should default to showing portfolio-relative allocation. Parent-relative allocation can be shown as an optional column or tooltip.
+
+### 8.7 Performance Metrics
+
+Temporal analysis should calculate performance from stored snapshots.
+
+```ts
+type PerformanceSeriesPoint = {
+  valuationDate: string;
+  marketValue: number;
+  netContribution?: number;
+  income?: number;
+  fees?: number;
+  valueChange?: number;
+  simpleReturn?: number;
+};
+```
+
+Initial v2 can calculate market-value change over time. True time-weighted or money-weighted return requires contribution, withdrawal, income, and fee data, which may not be available in broker position CSVs.
+
+The UI must distinguish between:
+
+- Market value change.
+- Price/position value performance.
+- True investment return when cash-flow data is available.
+
+## 9. Sleeve Taxonomy
+
+The canonical taxonomy source is:
+
+```text
+custom_sleeve_definitions.json
+```
+
+The React app should load this configuration and use it for:
+
+- Valid sleeve options.
+- Parent/child relationships.
+- Grid hierarchy construction.
+- Import mapping and sleeve assignment.
+- Display labels.
+- Morningstar category hints.
+
+The app should tolerate missing or custom user-defined sleeves by placing them under `Other` or preserving them as imported custom categories.
+
+If an imported Morningstar category is not present in the baseline configuration, preserve the imported category as a custom category under the closest known parent when possible. If no parent can be inferred, place it under `Other`.
+
+Configuration migration rule:
+
+- If a stored manual assignment references an old sleeve name, first match by sleeve `code`.
+- If code is missing, match by alias.
+- If no alias matches, preserve the old label as a custom sleeve under `Other` and mark the assignment for user review.
+
+## 10. Baseline Taxonomy
+
+The baseline taxonomy uses an asset-class-first hierarchy. Morningstar-style labels are used below the broad asset-class level where they improve classification and drill-down clarity.
+
+### 10.1 Top-Level Asset Classes
+
+- Equity
+- Bonds / Credit
+- Commodities
+- Alternatives
+- Cash
+- Other / Unclassified
+
+### 10.2 Equity
+
+Equity splits into:
+
+- Public Equity (`PUEQ`)
+- Private Equity (`PREQ`)
+
+Private Equity should support at least:
+
+- Buyout
+- Growth Equity
+- Venture Capital
+- Secondaries
+
+### 10.3 Morningstar-Style Public Equity Categories
+
+U.S. equity categories:
+
+- Large Value
+- Large Blend
+- Large Growth
+- Mid-Cap Value
+- Mid-Cap Blend
+- Mid-Cap Growth
+- Small Value
+- Small Blend
+- Small Growth
+
+International equity categories:
+
+- Foreign Large Value
+- Foreign Large Blend
+- Foreign Large Growth
+- Foreign Small/Mid Value
+- Foreign Small/Mid Blend
+- Foreign Small/Mid Growth
+- Diversified Emerging Markets
+
+Sector equity categories:
+
+- Communications
+- Consumer Cyclical
+- Consumer Defensive
+- Equity Energy
+- Equity Precious Metals
+- Financial
+- Health
+- Industrials
+- Infrastructure
+- Natural Resources
+- Real Estate
+- Technology
+- Utilities
+- Miscellaneous Sector
+
+### 10.4 Bonds / Credit
+
+Bonds / Credit splits into:
+
+- Public Bonds
+- Private Credit (`PRCR`, alias `PC`)
+
+Public Bonds must support at least:
+
+- Junk Bonds, aligned to Morningstar-style High-Yield Bond exposure.
+- Corporate Bonds, aligned to Morningstar Corporate Bond exposure.
+- Municipal Bonds, aligned to Morningstar Municipal Bond exposure.
+
+`Private Credit` uses preferred code `PRCR`. `PC` is acceptable as a short alias in user-facing copy and imported data.
+
+Private Credit must support:
+
+- Direct Lending
+
+Direct Lending should capture middle-market/private loan strategies where the asset or fund name indicates direct lending exposure.
+
+### 10.5 Commodities
+
+Commodities are top-level, not hidden under Alternatives.
+
+Required commodity subcategories:
+
+- Precious Metals
+- Broad Commodities
+
+Examples:
+
+- `GLD` -> `Commodities > Precious Metals`
+- `DBC` or `PDBC` -> `Commodities > Broad Commodities`
+
+### 10.6 Alternatives
+
+Alternatives should not become a catch-all. Version 2.0 defines these subgroups:
+
+- Liquid Alternatives
+- Private Alternatives
+- Real Assets
+
+Liquid Alternatives includes:
+
+- Managed Futures
+- Trend Following
+- Trend Following Managed Futures
+
+`DBMF` must classify as `Alternatives > Liquid Alternatives > Trend Following Managed Futures`.
+
+## 11. Classification Rules
+
+Classification priority:
+
+1. Imported sleeve/category from CSV.
+2. Saved manual user override.
+3. CUSIP/ISIN/security ID rule.
+4. Explicit ticker rule.
+5. Morningstar category field when present.
+6. Name/category keyword rule.
+7. `Unclassified`.
+
+The classifier should preserve the assignment source for review.
+
+Classification results should include confidence and reason:
+
+```ts
+type ClassificationResult = {
+  sleeveCode?: string;
+  sleeveName: string;
+  source: "imported" | "manual" | "auto" | "unclassified";
+  confidence: "high" | "medium" | "low";
+  reason: string;
+};
+```
+
+Recommended confidence defaults:
+
+- `high`: exact manual override, exact imported sleeve, exact CUSIP/ISIN/security ID rule, exact ticker rule.
+- `medium`: Morningstar category mapping or strong category alias match.
+- `low`: keyword/name inference.
+- `low`: unclassified fallback.
+
+Manual override precedence:
+
+1. CUSIP override.
+2. ISIN override.
+3. Broker security ID override.
+4. Ticker override.
+5. Asset-name override.
+
+The UI should make low-confidence and unclassified rows easy to review.
+
+Examples:
+
+- `DBMF` -> `Trend Following Managed Futures`
+- `HYG`, `JNK`, `USHY` -> `Junk Bonds`
+- `LQD`, `VCIT` -> `Corporate Bonds`
+- `MUB`, `VTEB` -> `Municipal Bonds`
+- `BIZD` -> `Direct Lending`
+- `PRCR` or `PC` -> `Private Credit`
+- `SPY`, `VOO`, `IVV` -> `Large Blend`
+- `VUG`, `QQQ`, `IWF` -> `Large Growth`
+- `VTV`, `IVE`, `IWD` -> `Large Value`
+
+## 12. CSV Import
+
+CSV import remains core to v2.
+
+Workflow:
+
+1. User uploads CSV.
+2. App parses rows locally.
+3. App detects broker/export column names.
+4. App detects a valuation date column if present.
+5. If no valuation date is present, user selects the valuation date for the import.
+6. User reviews and edits column mappings.
+7. App normalizes holdings.
+8. App assigns sleeves.
+9. App saves or updates a dated portfolio snapshot.
+10. App builds the hierarchical tree from the selected snapshot.
+11. User reviews unclassified or low-confidence assignments.
+
+Supported field concepts:
+
+- Brokerage account.
+- Ticker/symbol.
+- CUSIP.
+- ISIN.
+- Broker security ID.
+- Asset type.
+- Asset name/security description.
+- Shares/quantity.
+- Price/current price.
+- Market value/current value.
+- Cost basis.
+- Realized gain.
+- Purchase date.
+- Valuation date / as-of date / statement date.
+- Sleeve/category/asset class.
+- Morningstar category, if available.
+
+Broker presets should be explicit:
+
+- Schwab.
+- Fidelity.
+- Vanguard.
+- Interactive Brokers.
+- Generic CSV.
+
+Each preset should define expected column aliases, ignored columns, and any known formatting quirks. The generic CSV preset remains the fallback.
+
+Valuation date rules:
+
+- Prefer a CSV-provided as-of date, statement date, price date, or valuation date when reliable.
+- If the CSV has a single valuation date for all rows, store that on the snapshot and each valuation row.
+- If rows have different valuation dates, store each row's valuation date and warn the user that the snapshot contains mixed dates.
+- If no valuation date exists, require the user to select one before saving.
+- Upload date is not a substitute for valuation date.
+
+## 13. Interactive Charting Stub
+
+Clicking an atomic ticker or asset cell opens `PerformanceModalStub`.
+
+The modal must show:
+
+- Ticker or asset name.
+- Full hierarchy path.
+- Market value.
+- Allocation %.
+- Intended date range controls.
+- Intended metrics: market value, gain/loss, drawdown, benchmark comparison.
+- Clear note that final Plotly rendering will replace the stub.
+
+No ticker click should be a no-op.
+
+The modal stub should vary by asset type:
+
+- Public ticker, ETF, mutual fund: future price/performance chart.
+- Private equity: valuation history and capital call/distribution timeline.
+- Private credit/direct lending: valuation, income, yield, and loan/fund metrics.
+- Bond: price, yield, maturity, duration, coupon, and income history.
+- Cash: balance history and yield history.
+- Unknown/private asset: valuation history stub.
+
+If the asset has no ticker, the asset name cell should open the same modal.
+
+When historical snapshots exist, the modal should read from stored `PositionValuation` rows and show the available date range. The stub should display:
+
+- First available valuation date.
+- Last available valuation date.
+- Number of observations.
+- Latest market value.
+- Change in market value across the selected range.
+- Warning when observations are sporadic or insufficient.
+
+## 14. Component Architecture
+
+Recommended components:
+
+- `App`
+- `AppShell`
+- `Sidebar`
+- `TopToolbar`
+- `CsvImportPanel`
+- `ColumnMapper`
+- `PortfolioWorkspace`
+- `PortfolioGrid`
+- `GridHeader`
+- `GridRow`
+- `ExpandToggle`
+- `SortIndicator`
+- `AssignmentSourceBadge`
+- `PerformanceModalStub`
+- `SnapshotImportDialog`
+- `SnapshotTimeline`
+- `TemporalPerformancePanel`
+- `ManualPanel`
+
+Recommended hooks/utilities:
+
+- `usePortfolioImport`
+- `usePortfolioSnapshots`
+- `useTemporalPerformance`
+- `useSleeveDefinitions`
+- `usePortfolioTree`
+- `useExpandedRows`
+- `useTierSorting`
+- `buildPortfolioTree`
+- `classifyHolding`
+- `calculateMetrics`
+- `calculatePerformanceSeries`
+
+## 15. State Architecture
+
+State should be separated into:
+
+- Raw imported rows.
+- Column mapping.
+- Active portfolio ID.
+- Active valuation date or snapshot ID.
+- Available snapshots.
+- Normalized holdings.
+- Position valuations for the selected snapshot or date range.
+- Sleeve definitions.
+- Manual assignments.
+- Expanded row IDs.
+- Sort state.
+- Active modal state.
+- Search/filter state.
+
+The portfolio tree should be derived from holdings plus sleeve definitions, not manually duplicated in state.
+
+For current dashboard display, the tree is derived from the selected snapshot. For temporal views, series are derived from all snapshots in the selected date range.
+
+## 16. Persistence
+
+Temporal performance analysis requires a database or database-like local store. Plain `localStorage` is not sufficient for serious time-series portfolio history because snapshots can grow large and require indexed queries by date, portfolio, account, sleeve, and asset.
+
+Recommended v2 storage:
+
+- Browser/local-first MVP: IndexedDB through Dexie or a similar wrapper.
+- Desktop packaging path: SQLite through Tauri.
+- Future multi-device/cloud path: backend database such as PostgreSQL.
+
+The app should use a repository/data-access layer so the UI does not depend directly on IndexedDB, SQLite, or a server API.
+
+Persist:
+
+- Portfolios.
+- Portfolio snapshots.
+- Position valuations for each snapshot.
+- Manual sleeve assignments.
+- Last portfolio snapshot.
+- Column mapping preferences.
+- Custom sleeve definitions if user-editable later.
+- Expanded/collapsed row state if useful.
+
+Persisted assignment records should include:
+
+- assignment key type: CUSIP, ISIN, security ID, ticker, or asset name.
+- assignment key value.
+- sleeve code.
+- sleeve name at time of assignment.
+- taxonomy version.
+- timestamp.
+
+When taxonomy versions change, run the migration rule described in the sleeve taxonomy section.
+
+### 16.1 Minimum Database Schema
+
+Recommended logical tables/stores:
+
+```text
+portfolios
+portfolio_snapshots
+position_valuations
+manual_assignments
+column_mapping_presets
+sleeve_definitions
+app_settings
+```
+
+`portfolios`:
+
+- `id`
+- `name`
+- `baseCurrency`
+- `createdAt`
+- `updatedAt`
+
+`portfolio_snapshots`:
+
+- `id`
+- `portfolioId`
+- `valuationDate`
+- `importedAt`
+- `sourceName`
+- `brokerPreset`
+- `rowCount`
+- `notes`
+
+`position_valuations`:
+
+- `id`
+- `snapshotId`
+- `portfolioId`
+- `valuationDate`
+- `assetKey`
+- `ticker`
+- `assetName`
+- `brokerageAccount`
+- `shares`
+- `price`
+- `marketValue`
+- `costBasis`
+- `sleeveCode`
+- `sleeveName`
+- `assetType`
+- `morningstarCategory`
+
+Required indexes:
+
+- snapshots by `portfolioId + valuationDate`
+- valuations by `portfolioId + valuationDate`
+- valuations by `assetKey + valuationDate`
+- valuations by `sleeveCode + valuationDate`
+- valuations by `brokerageAccount + valuationDate`
+
+### 16.2 Snapshot Semantics
+
+Each saved import represents the portfolio as of a valuation date.
+
+The app must support:
+
+- Daily, weekly, monthly, quarterly, or annual imports.
+- Sporadic imports at irregular dates.
+- Multiple accounts in one snapshot.
+- Replacement of an existing snapshot for the same valuation date.
+- Optional retention of multiple import versions for the same valuation date.
+
+Default behavior when importing a snapshot with an existing valuation date:
+
+1. Warn the user.
+2. Recommend replacing the prior snapshot.
+3. Allow cancel.
+4. Optionally allow keeping both versions with an import version label.
+
+### 16.3 Temporal Analysis Scope
+
+Initial v2 temporal analysis should support:
+
+- Portfolio market value over time.
+- Sleeve market value over time.
+- Asset market value over time.
+- Allocation drift over time.
+- Gain/loss over time when cost basis is available.
+- Observation count and date range for any selected node.
+
+Later versions can add:
+
+- Contributions and withdrawals.
+- Income and distributions.
+- Fees.
+- Time-weighted return.
+- Money-weighted return / IRR.
+- Benchmark comparison.
+
+Default implementation decision: v2 should start with market value over time and allocation drift. Cash-flow-aware return calculations should be deferred until contribution, withdrawal, income, and fee data are explicitly imported or entered.
+
+## 17. Visual Design Requirements
+
+- Professional dashboard style.
+- Dense but readable information layout.
+- No marketing hero.
+- No page-level decorative gradients.
+- Cards only for functional panels, not nested decorative containers.
+- Stable dimensions for grid rows, headers, toolbar, and modal.
+- Clear active/hover/focus states.
+- Text must not overflow buttons, cells, or panels.
+- Responsive desktop-first layout with usable tablet behavior.
+
+## 18. Validation and Tests
+
+Unit tests:
+
+- CSV parsing.
+- Column mapping.
+- Numeric parsing.
+- Sleeve classification priority.
+- Taxonomy parent path resolution.
+- Tree construction.
+- Aggregate metrics.
+- Sorting sibling rows.
+- Classification confidence and reason.
+- CUSIP/ISIN/security ID assignment precedence.
+- Taxonomy migration from old sleeve labels.
+- Snapshot creation and replacement behavior.
+- Valuation-date parsing and required-date fallback.
+- Time-series calculations for portfolio, sleeve, and asset value.
+
+Interaction tests:
+
+- Upload CSV to grid render.
+- Upload CSV without valuation date and require user-selected valuation date.
+- Upload multiple snapshots with different valuation dates.
+- Replace an existing snapshot for the same valuation date.
+- Expand/collapse from portfolio to ticker.
+- Sort visible siblings.
+- Click ticker to open modal stub.
+- Manual sleeve override persists.
+
+Required fixture portfolios:
+
+- Public equity ETF portfolio with Large Value, Large Blend, Large Growth, Mid-Cap, and Small-Cap examples.
+- Private equity portfolio with buyout, growth equity, venture capital, and non-ticker private fund examples.
+- International equity portfolio with foreign large and emerging markets examples.
+- Sector equity portfolio.
+- Bond portfolio with municipal, corporate, and junk/high-yield holdings.
+- Liquid alternatives portfolio including `DBMF`.
+- Private credit portfolio with direct lending and non-ticker private assets.
+- Mixed broker CSV with missing sleeves.
+- Mixed broker CSV with CUSIP/ISIN fields.
+- Portfolio containing imported Morningstar categories not yet in the baseline taxonomy.
+- Three-date portfolio history fixture for temporal performance analysis.
+- Sporadic-date portfolio history fixture with irregular observation spacing.
+
+Starter fixture files are stored under:
+
+```text
+fixtures/
+```
+
+These fixtures are intentionally small and should be expanded during implementation.
+
+Visual checks:
+
+- Grid remains inside viewport.
+- Horizontal/vertical scroll are isolated to grid containers.
+- Modal fits the viewport.
+- Long asset names do not break layout.
+
+## 19. Acceptance Criteria
+
+Version 2.0 is acceptable when:
+
+- The app is a React SPA.
+- The dashboard opens directly to the analytics workspace.
+- Level 0 shows a single portfolio summary row.
+- Expanding rows progressively reveals children down to ticker/asset leaf rows.
+- Paths such as `Portfolio > Equity > Public Equity > Large Growth > Account > VUG` are visible through the grid.
+- Paths such as `Portfolio > Equity > Private Equity > Buyout > Account > Private Fund` are visible through the grid.
+- Paths such as `Portfolio > Alternatives > Liquid Alternatives > Trend Following Managed Futures > Account > DBMF` are visible through the grid.
+- Paths such as `Portfolio > Bonds / Credit > Private Credit > Direct Lending > Account > Private Credit Fund` are visible through the grid.
+- `custom_sleeve_definitions.json` drives sleeve hierarchy.
+- Morningstar-style equity, bond, and sector labels are represented in the taxonomy.
+- Bonds include Junk Bonds, Corporate Bonds, and Municipal Bonds.
+- Private Credit includes Direct Lending.
+- `DBMF` classifies as Trend Following Managed Futures.
+- Holdings support CUSIP, ISIN, broker security ID, asset type, and non-ticker private assets.
+- Classification results include source, confidence, and reason.
+- Allocation defaults to portfolio-relative and supports parent-relative calculation.
+- Unknown imported Morningstar categories are preserved as custom categories instead of discarded.
+- Broker presets exist for Schwab, Fidelity, Vanguard, Interactive Brokers, and Generic CSV.
+- Sibling rows are sortable with visible indicators.
+- Ticker clicks open a performance modal stub.
+- Non-ticker private asset names also open the performance modal stub.
+- Imports can be saved as dated snapshots.
+- The database stores multiple valuation dates for the same portfolio.
+- Temporal panels can show portfolio, sleeve, and asset value over time from stored snapshots.
+- Valuation date is required and distinct from upload/import date.
+- The grid scrolls internally without the full page leaking off-screen.
+
+## 20. Implementation Milestones
+
+### Milestone 1: React Foundation
+
+- Scaffold React, TypeScript, and Vite.
+- Add fixed app shell with sidebar, toolbar, and grid workspace.
+- Load `custom_sleeve_definitions.json`.
+- Define TypeScript domain models.
+- Add sample in-memory portfolio data.
+
+Exit criteria:
+
+- App opens directly to the dashboard.
+- Sleeve taxonomy loads from config.
+- Sample holdings render in a basic grid.
+
+### Milestone 2: Data Layer and IndexedDB
+
+- Add IndexedDB through a repository abstraction.
+- Implement stores for portfolios, snapshots, position valuations, assignments, presets, sleeve definitions, and app settings.
+- Add CRUD functions for snapshots and position valuations.
+- Add snapshot replacement flow for duplicate valuation dates.
+
+Exit criteria:
+
+- User can save, load, replace, and list dated snapshots.
+- Storage implementation is isolated behind repository functions.
+
+### Milestone 3: CSV Import and Valuation Dates
+
+- Build CSV upload and parser.
+- Add broker presets for Schwab, Fidelity, Vanguard, Interactive Brokers, and Generic CSV.
+- Add column mapper.
+- Detect valuation date when present.
+- Require user-selected valuation date when missing.
+- Normalize rows into position valuations.
+
+Exit criteria:
+
+- CSV fixtures import successfully.
+- Imports without valuation dates cannot be saved until the user supplies one.
+
+### Milestone 4: Classification and Taxonomy Mapping
+
+- Implement sleeve classification priority.
+- Add confidence and reason.
+- Add manual override persistence.
+- Preserve unknown Morningstar categories as custom categories.
+- Add migration behavior for old sleeve labels.
+
+Exit criteria:
+
+- DBMF maps to `Alternatives > Liquid Alternatives > Trend Following Managed Futures`.
+- Private credit/direct lending maps under `Bonds / Credit`.
+- Low-confidence rows are visible for review.
+
+### Milestone 5: Expandable OLAP Grid
+
+- Build tree from selected snapshot.
+- Implement expandable/collapsible rows from portfolio to asset.
+- Add required columns and aggregate metrics.
+- Add sibling sorting with indicators.
+- Enforce isolated grid scrolling.
+
+Exit criteria:
+
+- Required acceptance paths are visible through expansion.
+- Grid stays inside the viewport.
+- Sorting works within expanded sibling tiers.
+
+### Milestone 6: Temporal Performance Views
+
+- Add snapshot timeline selector.
+- Add portfolio, sleeve, and asset value-over-time series.
+- Add allocation drift over time.
+- Add performance modal stub backed by stored historical valuations.
+
+Exit criteria:
+
+- User can import at least three dated snapshots and view value history.
+- Modal shows date range, observation count, latest value, and market-value change.
+
+### Milestone 7: Testing and Polish
+
+- Add unit tests for parsing, classification, metrics, tree construction, snapshot behavior, and time-series calculations.
+- Add interaction tests for import, date selection, expand/collapse, sorting, and modal opening.
+- Verify responsive layout and long-name handling.
+- Finalize manual/user help.
+
+Exit criteria:
+
+- All fixture imports pass.
+- Core workflows are covered by tests.
+- UI is stable and readable at desktop and tablet widths.

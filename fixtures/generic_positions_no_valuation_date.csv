@@ -1,0 +1,5 @@
+Brokerage Account,Ticker,Asset Name,Shares,Share Price,Market Value,Cost Basis,Sleeve
+Generic Account,AAPL,Apple Inc.,80,192.32,15385.60,11200.00,Large Cap Tech
+Generic Account,VCIT,Vanguard Intermediate-Term Corporate Bond ETF,90,80.21,7218.90,7000.00,Corporate Bonds
+Generic Account,PRCR,Private Credit Placeholder,1,25000.00,25000.00,25000.00,Private Credit
+Generic Account,Private Fund I,Monroe Direct Lending Fund III,1,50000.00,50000.00,48000.00,Direct Lending

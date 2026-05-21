@@ -1,0 +1,5 @@
+Account Name,Ticker,Security Name,Shares,Last Price,Current Value,Total Cost,Statement Date
+Fidelity Brokerage,SPY,SPDR S&P 500 ETF Trust,40,512.20,20488.00,18400.00,2026-04-30
+Fidelity Brokerage,HYG,iShares iBoxx High Yield Corporate Bond ETF,150,78.32,11748.00,11300.00,2026-04-30
+Fidelity IRA,DBMF,iMGP DBi Managed Futures Strategy ETF,280,28.10,7868.00,7350.00,2026-04-30
+Fidelity IRA,BIZD,VanEck BDC Income ETF,200,16.54,3308.00,3200.00,2026-04-30

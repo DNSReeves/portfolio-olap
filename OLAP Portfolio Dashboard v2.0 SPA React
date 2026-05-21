@@ -1,0 +1,7 @@
+# Portfolio OLAP Dashboard v2.0
+
+The current design document is maintained in:
+
+`OLAP Portfolio Dashboard v2.0 SPA React.txt`
+
+That file contains the full React SPA implementation design, including the progressive drill-down grid, Morningstar-aligned taxonomy, bond/private credit sublevels, CSV import workflow, and acceptance criteria.

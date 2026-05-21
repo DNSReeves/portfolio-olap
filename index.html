@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portfolio OLAP</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brandIcon">OL</div>
+          <div>
+            <strong>Portfolio OLAP</strong>
+            <em id="appVersion">v2.0</em>
+            <span>Sleeve analytics</span>
+          </div>
+        </div>
+        <nav class="nav">
+          <a href="#dashboard" class="active">Dashboard</a>
+          <a href="#import">Import</a>
+          <a href="#holdings">Holdings</a>
+        </nav>
+        <div class="sideSection">
+          <p class="sideLabel">Sleeves</p>
+          <div id="sleeveNav"></div>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="viewLabel">Portfolio overview</p>
+            <h1 id="viewTitle">Investment Portfolio</h1>
+          </div>
+          <div class="actions">
+            <label class="uploadButton">
+              Upload CSV
+              <input id="csvFile" type="file" accept=".csv,text/csv" />
+            </label>
+            <button id="sampleButton">Sample</button>
+            <button id="largeSampleButton">Large Sample</button>
+            <button id="importPanelButton">Import Mapping</button>
+            <button id="snapshotsButton">Snapshots</button>
+            <button id="manualButton">Manual</button>
+          </div>
+        </header>
+
+        <section id="dashboard" class="metrics"></section>
+
+        <div id="workspaceSplit" class="workspaceSplit">
+          <div class="topWorkspace" id="topWorkspace">
+            <section class="grid">
+              <div class="panel allocationPanel">
+                <div class="panelHeader">
+                  <div>
+                    <p class="eyebrow">OLAP cube</p>
+                    <h2>Allocation by Sleeve</h2>
+                  </div>
+                </div>
+                <div class="bars" id="allocationBars"></div>
+              </div>
+
+              <div class="panel">
+                <div class="panelHeader">
+                  <div>
+                    <p class="eyebrow">Concentration</p>
+                    <h2>Top Holdings</h2>
+                  </div>
+                </div>
+                <div class="miniList" id="topHoldings"></div>
+              </div>
+
+              <div class="panel">
+                <div class="panelHeader">
+                  <div>
+                    <p class="eyebrow">Hierarchy</p>
+                    <h2>Progressive Drill Path</h2>
+                  </div>
+                </div>
+                <div id="drillPath" class="drillPath"></div>
+              </div>
+            </section>
+          </div>
+
+          <div id="splitter" class="splitter" role="separator" aria-orientation="horizontal" tabindex="0"></div>
+
+          <div class="bottomWorkspace" id="bottomWorkspace">
+            <section id="holdings" class="panel holdingsPanel">
+              <div class="panelHeader">
+                <div>
+                  <p class="eyebrow">Drill-down</p>
+                  <h2 id="holdingsTitle">All Holdings</h2>
+                </div>
+                <label class="search">
+                  <span>Search</span>
+                  <input id="searchInput" placeholder="Ticker or name" />
+                </label>
+              </div>
+
+              <div class="tableWrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Ticker</th>
+                      <th>Asset</th>
+                      <th>Sleeve</th>
+                      <th>Source</th>
+                      <th class="num">Shares</th>
+                      <th class="num">Price</th>
+                      <th class="num">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="holdingsBody"></tbody>
+                </table>
+              </div>
+              <div class="saveNote">Manual sleeve edits are saved locally and reused on future imports.</div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <dialog id="importDialog" class="workflowDialog">
+      <div class="workflowShell">
+        <header class="manualHeader">
+          <div>
+            <p class="eyebrow">CSV workflow</p>
+            <h2>Import Mapping</h2>
+          </div>
+          <button id="importCloseButton">Close</button>
+        </header>
+        <div class="workflowContent">
+          <div class="panelHeader">
+            <span class="pill" id="rowCount">Sample data loaded</span>
+          </div>
+          <div id="mapper" class="mapper"></div>
+          <div id="errors" class="errors"></div>
+          <div id="emptyImport" class="emptyImport">Upload a broker CSV to preview columns and map fields.</div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="snapshotsDialog" class="workflowDialog">
+      <div class="workflowShell">
+        <header class="manualHeader">
+          <div>
+            <p class="eyebrow">Temporal analysis</p>
+            <h2>Portfolio Snapshots</h2>
+          </div>
+          <button id="snapshotsCloseButton">Close</button>
+        </header>
+        <div class="workflowContent">
+          <label class="dateControl">
+            <span>Valuation Date</span>
+            <input id="valuationDateInput" type="date" />
+          </label>
+          <div id="snapshotStatus" class="saveNote">IndexedDB snapshot storage initializes in the browser.</div>
+          <div id="snapshotTimeline" class="snapshotTimeline"></div>
+          <div id="performanceSeries" class="performanceSeries"></div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="manualDialog" class="manualDialog">
+      <div class="manualShell">
+        <header class="manualHeader">
+          <div>
+            <p class="eyebrow">Documentation</p>
+            <h2>Implementation and User Manual</h2>
+            <small id="manualVersion">v2.0</small>
+          </div>
+          <button id="manualCloseButton">Close</button>
+        </header>
+        <article id="manualContent" class="manualContent"></article>
+      </div>
+    </dialog>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

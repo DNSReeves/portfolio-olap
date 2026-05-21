@@ -1,0 +1,389 @@
+{
+  "version": "2.0",
+  "schemaVersion": 1,
+  "taxonomyNotes": [
+    "Version 2.0 uses an asset-class-first hierarchy for a more intuitive drill-down experience.",
+    "Top-level groups are Equity, Bonds / Credit, Commodities, Alternatives, Cash, and Other / Unclassified.",
+    "Public/private distinctions appear one level below the broad asset class.",
+    "Morningstar-style categories are used as metadata and category labels below the broad asset-class tree.",
+    "DBMF is classified under Alternatives > Liquid Alternatives > Trend Following Managed Futures.",
+    "Private Credit uses code PRCR and includes Direct Lending as a sub-level."
+  ],
+  "sleeves": [
+    {
+      "code": "EQUITY",
+      "name": "Equity",
+      "parent": null,
+      "description": "All public and private equity exposure"
+    },
+    {
+      "code": "PUEQ",
+      "name": "Public Equity",
+      "parent": "EQUITY",
+      "morningstarArea": "US Equity / Sector Equity / International Equity"
+    },
+    {
+      "code": "PREQ",
+      "name": "Private Equity",
+      "parent": "EQUITY",
+      "morningstarArea": "Private Markets / Private Equity"
+    },
+    {
+      "code": "PE_BUYOUT",
+      "name": "Buyout",
+      "parent": "PREQ"
+    },
+    {
+      "code": "PE_GROWTH_EQUITY",
+      "name": "Growth Equity",
+      "parent": "PREQ"
+    },
+    {
+      "code": "PE_VENTURE_CAPITAL",
+      "name": "Venture Capital",
+      "parent": "PREQ"
+    },
+    {
+      "code": "PE_SECONDARIES",
+      "name": "Secondaries",
+      "parent": "PREQ"
+    },
+    {
+      "code": "LARGE_VALUE",
+      "name": "Large Value",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Large Value"
+    },
+    {
+      "code": "LARGE_BLEND",
+      "name": "Large Blend",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Large Blend"
+    },
+    {
+      "code": "LARGE_GROWTH",
+      "name": "Large Growth",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Large Growth"
+    },
+    {
+      "code": "LARGE_CAP_TECH",
+      "name": "Large Cap Tech",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Technology / Large Growth"
+    },
+    {
+      "code": "LARGE_CAP_GROWTH",
+      "name": "Large Cap Growth",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Large Growth"
+    },
+    {
+      "code": "MID_CAP_VALUE",
+      "name": "Mid-Cap Value",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Mid-Cap Value"
+    },
+    {
+      "code": "MID_CAP_BLEND",
+      "name": "Mid-Cap Blend",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Mid-Cap Blend"
+    },
+    {
+      "code": "MID_CAP_GROWTH",
+      "name": "Mid-Cap Growth",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Mid-Cap Growth"
+    },
+    {
+      "code": "SMALL_VALUE",
+      "name": "Small Value",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Small Value"
+    },
+    {
+      "code": "SMALL_BLEND",
+      "name": "Small Blend",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Small Blend"
+    },
+    {
+      "code": "SMALL_GROWTH",
+      "name": "Small Growth",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Small Growth"
+    },
+    {
+      "code": "INTERNATIONAL",
+      "name": "International",
+      "parent": "PUEQ"
+    },
+    {
+      "code": "FOREIGN_LARGE_VALUE",
+      "name": "Foreign Large Value",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Foreign Large Value"
+    },
+    {
+      "code": "FOREIGN_LARGE_BLEND",
+      "name": "Foreign Large Blend",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Foreign Large Blend"
+    },
+    {
+      "code": "FOREIGN_LARGE_GROWTH",
+      "name": "Foreign Large Growth",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Foreign Large Growth"
+    },
+    {
+      "code": "FOREIGN_SMALL_MID_VALUE",
+      "name": "Foreign Small/Mid Value",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Foreign Small/Mid Value"
+    },
+    {
+      "code": "FOREIGN_SMALL_MID_BLEND",
+      "name": "Foreign Small/Mid Blend",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Foreign Small/Mid Blend"
+    },
+    {
+      "code": "FOREIGN_SMALL_MID_GROWTH",
+      "name": "Foreign Small/Mid Growth",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Foreign Small/Mid Growth"
+    },
+    {
+      "code": "DIVERSIFIED_EMERGING_MARKETS",
+      "name": "Diversified Emerging Markets",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Diversified Emerging Markets"
+    },
+    {
+      "code": "EMERGING_MARKETS",
+      "name": "Emerging Markets",
+      "parent": "PUEQ",
+      "morningstarCategoryHint": "Diversified Emerging Markets"
+    },
+    {
+      "code": "SECTOR_EQUITY",
+      "name": "Sector Equity",
+      "parent": "PUEQ",
+      "morningstarArea": "Sector Equity"
+    },
+    {
+      "code": "COMMUNICATIONS",
+      "name": "Communications",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Communications"
+    },
+    {
+      "code": "CONSUMER_CYCLICAL",
+      "name": "Consumer Cyclical",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Consumer Cyclical"
+    },
+    {
+      "code": "CONSUMER_DEFENSIVE",
+      "name": "Consumer Defensive",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Consumer Defensive"
+    },
+    {
+      "code": "EQUITY_ENERGY",
+      "name": "Equity Energy",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Equity Energy"
+    },
+    {
+      "code": "EQUITY_PRECIOUS_METALS",
+      "name": "Equity Precious Metals",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Equity Precious Metals"
+    },
+    {
+      "code": "FINANCIAL",
+      "name": "Financial",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Financial"
+    },
+    {
+      "code": "HEALTH",
+      "name": "Health",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Health"
+    },
+    {
+      "code": "INDUSTRIALS",
+      "name": "Industrials",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Industrials"
+    },
+    {
+      "code": "INFRASTRUCTURE",
+      "name": "Infrastructure",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Infrastructure"
+    },
+    {
+      "code": "NATURAL_RESOURCES",
+      "name": "Natural Resources",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Natural Resources"
+    },
+    {
+      "code": "REAL_ESTATE",
+      "name": "Real Estate",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Real Estate"
+    },
+    {
+      "code": "TECHNOLOGY",
+      "name": "Technology",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Technology"
+    },
+    {
+      "code": "UTILITIES",
+      "name": "Utilities",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Utilities"
+    },
+    {
+      "code": "MISCELLANEOUS_SECTOR",
+      "name": "Miscellaneous Sector",
+      "parent": "SECTOR_EQUITY",
+      "morningstarCategoryHint": "Miscellaneous Sector"
+    },
+    {
+      "code": "BONDS_CREDIT",
+      "name": "Bonds / Credit",
+      "parent": null,
+      "description": "Public fixed income and private credit"
+    },
+    {
+      "code": "PUBLIC_BONDS",
+      "name": "Public Bonds",
+      "parent": "BONDS_CREDIT",
+      "morningstarArea": "Taxable Bond / Municipal Bond"
+    },
+    {
+      "code": "BONDS",
+      "name": "Bonds",
+      "parent": "PUBLIC_BONDS",
+      "morningstarArea": "Taxable Bond"
+    },
+    {
+      "code": "JUNK_BONDS",
+      "name": "Junk Bonds",
+      "parent": "PUBLIC_BONDS",
+      "morningstarCategoryHint": "High-Yield Bond"
+    },
+    {
+      "code": "CORPORATE_BONDS",
+      "name": "Corporate Bonds",
+      "parent": "PUBLIC_BONDS",
+      "morningstarCategoryHint": "Corporate Bond"
+    },
+    {
+      "code": "MUNICIPAL_BONDS",
+      "name": "Municipal Bonds",
+      "parent": "PUBLIC_BONDS",
+      "morningstarCategoryHint": "Municipal Bond"
+    },
+    {
+      "code": "PRCR",
+      "name": "Private Credit",
+      "parent": "BONDS_CREDIT",
+      "aliases": ["PC"],
+      "morningstarArea": "Private Markets / Credit"
+    },
+    {
+      "code": "DIRECT_LENDING",
+      "name": "Direct Lending",
+      "parent": "PRCR",
+      "morningstarCategoryHint": "Private Credit - Direct Lending"
+    },
+    {
+      "code": "COMMODITIES",
+      "name": "Commodities",
+      "parent": null,
+      "morningstarArea": "Commodities"
+    },
+    {
+      "code": "PRECIOUS_METALS",
+      "name": "Precious Metals",
+      "parent": "COMMODITIES",
+      "morningstarCategoryHint": "Commodities Precious Metals"
+    },
+    {
+      "code": "BROAD_COMMODITIES",
+      "name": "Broad Commodities",
+      "parent": "COMMODITIES",
+      "morningstarCategoryHint": "Commodities Broad Basket"
+    },
+    {
+      "code": "ALTERNATIVES",
+      "name": "Alternatives",
+      "parent": null,
+      "morningstarArea": "Alternative"
+    },
+    {
+      "code": "LIQALTS",
+      "name": "Liquid Alternatives",
+      "parent": "ALTERNATIVES",
+      "morningstarArea": "Alternative"
+    },
+    {
+      "code": "MANAGED_FUTURES",
+      "name": "Managed Futures",
+      "parent": "LIQALTS",
+      "morningstarCategoryHint": "Systematic Trend / Managed Futures"
+    },
+    {
+      "code": "TREND_FOLLOWING",
+      "name": "Trend Following",
+      "parent": "LIQALTS",
+      "morningstarCategoryHint": "Systematic Trend"
+    },
+    {
+      "code": "TREND_FOLLOWING_MANAGED_FUTURES",
+      "name": "Trend Following Managed Futures",
+      "parent": "LIQALTS",
+      "morningstarCategoryHint": "Managed Futures / Systematic Trend"
+    },
+    {
+      "code": "PRIVATE_ALTERNATIVES",
+      "name": "Private Alternatives",
+      "parent": "ALTERNATIVES"
+    },
+    {
+      "code": "REAL_ASSETS",
+      "name": "Real Assets",
+      "parent": "ALTERNATIVES"
+    },
+    {
+      "code": "CASH",
+      "name": "Cash",
+      "parent": null,
+      "morningstarCategoryHint": "Money Market / Ultrashort Bond"
+    },
+    {
+      "code": "OTHER_UNCLASSIFIED",
+      "name": "Other / Unclassified",
+      "parent": null
+    },
+    {
+      "code": "OTHER",
+      "name": "Other",
+      "parent": "OTHER_UNCLASSIFIED"
+    },
+    {
+      "code": "UNCLASSIFIED",
+      "name": "Unclassified",
+      "parent": "OTHER_UNCLASSIFIED"
+    }
+  ]
+}
