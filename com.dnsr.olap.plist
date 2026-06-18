@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dnsr.olap</string>
+
+  <!-- Always-on static server for the Portfolio OLAP dashboard. Serves only the
+       static files (holdings live in the browser's localStorage, never on disk here).
+       LaunchDaemon (system domain) so it runs headless without a GUI login, matching
+       com.dnsr.agent. Bound to 0.0.0.0 so the Windows PC + the Forge link can reach it
+       on the LAN at http://192.168.1.70:8787/. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/david/agentic_software_from_scratch/dnsr-agent/.venv/bin/python3</string>
+    <string>-m</string>
+    <string>http.server</string>
+    <string>8787</string>
+    <string>--bind</string>
+    <string>0.0.0.0</string>
+    <string>--directory</string>
+    <string>/Users/david/agentic_software_from_scratch/olap</string>
+  </array>
+
+  <key>UserName</key>
+  <string>david</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/david/Library/Logs/dnsr-agent/olap-server.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/david/Library/Logs/dnsr-agent/olap-server.log</string>
+</dict>
+</plist>
