@@ -1,0 +1,54 @@
+{
+  "generated": "2026-06-18",
+  "data_as_of": "2026-06-17",
+  "window": [
+    "2011-06-30",
+    "2026-05-31"
+  ],
+  "trend_proxy": "AQMIX + DBMF/WTMF",
+  "note": "Precomputed by portfolio_analysis.py from the dnsr-agent price warehouse (EODHD + etf_data.db). Reflects the consolidated liquid book (CUR_LIQUID weights), not a single OLAP import. Suggest-only; monthly data understates absolute maxDD.",
+  "current": {
+    "sortino": 1.1937678394055231,
+    "mdd": -0.16476844264451684,
+    "cagr": 0.07978786693106033,
+    "vol": 0.09248231628675738
+  },
+  "deploy": [
+    {
+      "usd_m": 0.5,
+      "pct": 0.03399048266485384,
+      "sortino": 1.2200397132184762,
+      "mdd": -0.1643023602716247,
+      "ret_2022": -0.07390265320242229
+    },
+    {
+      "usd_m": 0.8,
+      "pct": 0.054384772263766146,
+      "sortino": 1.239259592854164,
+      "mdd": -0.1640232649802592,
+      "ret_2022": -0.06890551538464174
+    },
+    {
+      "usd_m": 1.2,
+      "pct": 0.0815771583956492,
+      "sortino": 1.263647625029267,
+      "mdd": -0.16365178418778437,
+      "ret_2022": -0.06221834953902883
+    }
+  ],
+  "full_convex": {
+    "sortino": 1.467509290522779,
+    "mdd": -0.13402209489959238,
+    "cagr": 0.08723879279945468
+  },
+  "regime": {
+    "2011-2020": {
+      "treasuries": 0.06197028818547645,
+      "trend": -0.0029663370329158223
+    },
+    "2021-2026": {
+      "treasuries": -0.04715615599412437,
+      "trend": 0.11255561527911317
+    }
+  }
+}

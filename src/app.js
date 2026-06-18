@@ -151,6 +151,20 @@ async function loadClassificationRules() {
   }
 }
 
+// Precomputed Sortino-overlay backtest (portfolio_analysis.py → overlay_snapshot.json).
+// The overlay needs the dnsr-agent price warehouse so it can't run in-browser; this is a
+// read-only snapshot. Absent file → the overlay panel hides itself.
+let OVERLAY_SNAPSHOT = null;
+
+async function loadOverlaySnapshot() {
+  try {
+    const res = await fetch("./overlay_snapshot.json", { cache: "no-store" });
+    if (res.ok) OVERLAY_SNAPSHOT = await res.json();
+  } catch (error) {
+    OVERLAY_SNAPSHOT = null;
+  }
+}
+
 const SLEEVE_PARENTS = {
   "Public Equity": "Equity",
   "Private Equity": "Equity",
@@ -233,6 +247,7 @@ const state = {
   db: null,
   dbError: "",
   splitPercent: loadJson(SPLIT_STORAGE_KEY, 45),
+  planning: loadJson("planning", { expenses: 360000, reserveTarget: 1500000, taxLT: 0.238, taxST: 0.408 }),
 };
 
 const el = {
@@ -240,6 +255,8 @@ const el = {
   appVersion: document.querySelector("#appVersion"),
   manualVersion: document.querySelector("#manualVersion"),
   metrics: document.querySelector("#dashboard"),
+  planning: document.querySelector("#planning"),
+  overlay: document.querySelector("#overlay"),
   allocationBars: document.querySelector("#allocationBars"),
   topHoldings: document.querySelector("#topHoldings"),
   drillPath: document.querySelector("#drillPath"),
@@ -409,6 +426,7 @@ async function initApp() {
   state.valuationDate = today();
   el.valuationDateInput.value = state.valuationDate;
   await loadClassificationRules(); // shared sleeve rules before any classification runs
+  await loadOverlaySnapshot();     // read-only precomputed overlay backtest
 
   try {
     state.db = await openPortfolioDb();
@@ -457,6 +475,8 @@ function render() {
   renderTitle();
   renderSleeves(cube);
   renderMetrics(cube);
+  renderPlanning(cube);
+  renderOverlay();
   renderAllocation(cube);
   renderTopHoldings(cube);
   renderDrillPath();
@@ -546,6 +566,136 @@ function metric(label, value, tone = "") {
   div.className = `metric ${tone}`;
   div.innerHTML = `<span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>`;
   return div;
+}
+
+// sleeve display NAME -> convex role (Cash/Income/Duration/Convexity/Diversifier/
+// Other-Alt/Growth/Other), derived from the shared classification rules. Used by the
+// Planning panel for reserve (Cash) and the tax rollup.
+function convexRoleForSleeve(sleeveName) {
+  const R = CLASSIFICATION_RULES;
+  if (R && R.sleeveToConvex && R.codeToName) {
+    if (!R._nameToConvex) {
+      R._nameToConvex = {};
+      for (const [code, role] of Object.entries(R.sleeveToConvex)) {
+        const name = R.codeToName[code];
+        if (name) R._nameToConvex[name] = role;
+      }
+    }
+    if (R._nameToConvex[sleeveName]) return R._nameToConvex[sleeveName];
+  }
+  const n = (sleeveName || "").toLowerCase();
+  if (n.includes("cash") || n.includes("money")) return "Cash";
+  if (n === "unclassified" || n.includes("other")) return "Other";
+  return "Other";
+}
+
+// Reserve + embedded-tax analytics, ported from portfolio_analysis.py. Pure browser-side
+// math over the imported holdings + an editable planning config (persisted in localStorage).
+// Reserve = the Cash sleeve (money-market + SGOV/BIL short bills classify there); embedded
+// tax = sum of positive per-sleeve unrealized gain x the long-term rate (needs cost basis).
+function renderPlanning(cube) {
+  if (!el.planning) return;
+  const cfg = state.planning;
+  const reserve = cube.sleeves
+    .filter((s) => convexRoleForSleeve(s.sleeve) === "Cash")
+    .reduce((sum, s) => sum + s.value, 0);
+  const years = cfg.expenses > 0 ? reserve / cfg.expenses : 0;
+  const idle = reserve - cfg.reserveTarget;
+
+  const taxableSleeves = cube.sleeves
+    .map((s) => ({ name: s.sleeve, gain: s.unrealizedGain, tax: Math.max(0, s.unrealizedGain) * cfg.taxLT }))
+    .filter((s) => s.tax > 0)
+    .sort((a, b) => b.tax - a.tax);
+  const embeddedTax = taxableSleeves.reduce((sum, s) => sum + s.tax, 0);
+  const hasCostBasis = cube.totalCostBasis > 0;
+
+  const cards = [
+    `<div class="metric"><span>Safe reserve (Cash)</span><strong>${money(reserve)}</strong></div>`,
+    `<div class="metric ${years >= 4 ? "good" : "warn"}"><span>Reserve coverage</span><strong>${years.toFixed(1)} yrs</strong></div>`,
+    `<div class="metric ${idle >= 0 ? "good" : "warn"}"><span>${idle >= 0 ? "Idle / deployable" : "Reserve shortfall"}</span><strong>${money(Math.abs(idle))}</strong></div>`,
+    `<div class="metric"><span>Unrealized gain</span><strong>${hasCostBasis ? money(cube.unrealizedGain) : "—"}</strong></div>`,
+    `<div class="metric warn"><span>Embedded LT tax if liquidated</span><strong>${hasCostBasis ? money(embeddedTax) : "—"}</strong></div>`,
+  ].join("");
+
+  const taxRows = hasCostBasis && taxableSleeves.length
+    ? taxableSleeves.slice(0, 6).map((s) =>
+        `<div class="planTaxRow"><span>${escapeHtml(s.name)}</span><em>${money(s.gain)} gain</em><strong>${money(s.tax)}</strong></div>`).join("")
+    : `<div class="planNote">${hasCostBasis ? "No embedded gains." : "Import cost basis to compute embedded tax."}</div>`;
+
+  const cfgField = (key, label, value, suffix = "") =>
+    `<label class="planField"><span>${label}</span><input type="number" step="any" data-plan="${key}" value="${value}" />${suffix ? `<em>${suffix}</em>` : ""}</label>`;
+
+  el.planning.innerHTML = `
+    <div class="panelHeader">
+      <div>
+        <p class="eyebrow">Planning &amp; Risk</p>
+        <h2>Reserve, Tax &amp; Liquidity</h2>
+      </div>
+      <div class="planConfig">
+        ${cfgField("expenses", "Annual expenses", cfg.expenses)}
+        ${cfgField("reserveTarget", "Reserve target", cfg.reserveTarget)}
+        ${cfgField("taxLT", "LT tax %", (cfg.taxLT * 100).toFixed(1))}
+      </div>
+    </div>
+    <div class="planMetrics metrics">${cards}</div>
+    <div class="planTax">
+      <p class="eyebrow">Embedded tax by sleeve (LT, if sold)</p>
+      ${taxRows}
+    </div>`;
+
+  el.planning.querySelectorAll("input[data-plan]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const key = input.dataset.plan;
+      let v = Number(input.value);
+      if (!Number.isFinite(v) || v < 0) return;
+      if (key === "taxLT") v = v / 100;
+      state.planning = { ...state.planning, [key]: v };
+      saveJson("planning", state.planning);
+      render();
+    });
+  });
+}
+
+function signPct(value) {
+  return (value >= 0 ? "+" : "") + percent(value);
+}
+
+// Read-only render of the precomputed Sortino-overlay backtest (overlay_snapshot.json).
+// Hidden entirely if the snapshot is absent. Provenance (as-of, window, the consolidated-
+// book caveat) is shown inline so it's never mistaken for a live, import-driven number.
+function renderOverlay() {
+  if (!el.overlay) return;
+  const S = OVERLAY_SNAPSHOT;
+  if (!S) { el.overlay.innerHTML = ""; el.overlay.style.display = "none"; return; }
+  el.overlay.style.display = "";
+  const cur = S.current;
+  const deployRows = S.deploy.map((d) =>
+    `<div class="ovRow"><span>Deploy $${d.usd_m.toFixed(1)}M (${percent(d.pct)}) → trend</span>` +
+    `<em>Sortino ${cur.sortino.toFixed(2)} → ${d.sortino.toFixed(2)}</em>` +
+    `<em>maxDD ${percent(d.mdd)}</em>` +
+    `<strong class="${d.ret_2022 >= 0 ? "good" : "warn"}">2022 ${signPct(d.ret_2022)}</strong></div>`).join("");
+  const regRows = Object.entries(S.regime).map(([k, v]) =>
+    `<div class="ovRow"><span>${escapeHtml(k)}</span>` +
+    `<em>Treasuries ${signPct(v.treasuries)}/yr</em>` +
+    `<strong class="${v.trend >= 0 ? "good" : "warn"}">Trend ${signPct(v.trend)}/yr</strong></div>`).join("");
+  const win = `${(S.window[0] || "").slice(0, 4)}–${(S.window[1] || "").slice(0, 4)}`;
+  el.overlay.innerHTML = `
+    <div class="panelHeader">
+      <div>
+        <p class="eyebrow">Convex overlay &middot; precomputed</p>
+        <h2>Sortino Overlay Backtest</h2>
+      </div>
+      <span class="pill ovPill" title="${escapeAttr(S.note)}">as-of ${escapeHtml(S.data_as_of || "?")} &middot; ${escapeHtml(win)} monthly</span>
+    </div>
+    <div class="planMetrics metrics">
+      <div class="metric"><span>Current Sortino</span><strong>${cur.sortino.toFixed(2)}</strong></div>
+      <div class="metric"><span>Current maxDD</span><strong>${percent(cur.mdd)}</strong></div>
+      <div class="metric"><span>Current CAGR</span><strong>${percent(cur.cagr)}</strong></div>
+      <div class="metric good"><span>Full Convex 60/20/20 (tax-free target)</span><strong>Sortino ${S.full_convex.sortino.toFixed(2)} &middot; maxDD ${percent(S.full_convex.mdd)}</strong></div>
+    </div>
+    <div class="ovBlock"><p class="eyebrow">Idle cash &rarr; standalone trend (~$0 tax, cash-funded)</p>${deployRows}</div>
+    <div class="ovBlock"><p class="eyebrow">Regime split &mdash; Treasuries vs trend</p>${regRows}</div>
+    <div class="planNote">${escapeHtml(S.note)} Trend = ${escapeHtml(S.trend_proxy)}.</div>`;
 }
 
 function renderAllocation(cube) {
