@@ -54,6 +54,8 @@ const DEFAULT_SLEEVES = [
   "Junk Bonds",
   "Corporate Bonds",
   "Municipal Bonds",
+  "Treasuries / Duration",
+  "Bank Loans / Floating Rate",
   "Bonds / Credit",
   "Public Bonds",
   "Private Credit",
@@ -134,6 +136,21 @@ const TICKER_RULES = [
   { sleeve: "Cash", tickers: ["CASH", "SWVXX", "SPAXX", "VMFXX", "FDRXX", "BIL", "SGOV"], words: ["cash", "money market"] },
 ];
 
+// Shared classifier rules — single source of truth with portfolio_analysis.py.
+// Loaded from ./classification_rules.json at boot (see loadClassificationRules / initApp).
+// When present it supersedes the legacy TICKER_RULES above; if the fetch fails the app
+// degrades gracefully to TICKER_RULES so classification never hard-breaks.
+let CLASSIFICATION_RULES = null;
+
+async function loadClassificationRules() {
+  try {
+    const res = await fetch("./classification_rules.json", { cache: "no-store" });
+    if (res.ok) CLASSIFICATION_RULES = await res.json();
+  } catch (error) {
+    CLASSIFICATION_RULES = null; // legacy TICKER_RULES fallback
+  }
+}
+
 const SLEEVE_PARENTS = {
   "Public Equity": "Equity",
   "Private Equity": "Equity",
@@ -181,6 +198,8 @@ const SLEEVE_PARENTS = {
   "Junk Bonds": "Public Bonds",
   "Corporate Bonds": "Public Bonds",
   "Municipal Bonds": "Public Bonds",
+  "Treasuries / Duration": "Public Bonds",
+  "Bank Loans / Floating Rate": "Public Bonds",
   "Private Credit": "Bonds / Credit",
   "Direct Lending": "Private Credit",
   "Precious Metals": "Commodities",
@@ -389,6 +408,8 @@ async function initApp() {
   el.manualVersion.textContent = APP_VERSION;
   state.valuationDate = today();
   el.valuationDateInput.value = state.valuationDate;
+  await loadClassificationRules(); // shared sleeve rules before any classification runs
+
   try {
     state.db = await openPortfolioDb();
     await ensureDefaultPortfolio();
@@ -1005,11 +1026,36 @@ function classifyHolding(ticker, assetName, importedSleeve) {
   if (sleeve) return { sleeve, source: "imported" };
   const manual = state.assignments[assignmentKey(ticker, assetName)];
   if (manual) return { sleeve: manual, source: "manual" };
-  const match = TICKER_RULES.find((rule) => {
-    const name = assetName.toLowerCase();
-    return rule.tickers.includes(ticker) || rule.words.some((word) => name.includes(word));
-  });
-  return match ? { sleeve: match.sleeve, source: "auto" } : { sleeve: "Unclassified", source: "unclassified" };
+  const auto = autoClassify(ticker, assetName);
+  return auto ? { sleeve: auto, source: "auto" } : { sleeve: "Unclassified", source: "unclassified" };
+}
+
+// Mirrors portfolio_analysis.py classify_code(): exact ticker → name keyword (in array
+// order) → CUSIP fallback → null. Returns the display sleeve NAME (via codeToName), or
+// null when nothing matches (→ Unclassified). Falls back to legacy TICKER_RULES if the
+// shared rules file failed to load.
+function autoClassify(ticker, assetName) {
+  const t = normalizeTicker(ticker);
+  const name = assetName.toLowerCase();
+  const R = CLASSIFICATION_RULES;
+  if (R) {
+    let code = R.tickerRules[t];
+    if (!code) {
+      const nr = R.nameRules.find((rule) => rule.keywords.some((k) => name.includes(k)));
+      code = nr && nr.code;
+    }
+    if (!code) {
+      for (const fb of R.fallbackRules) {
+        if (new RegExp(fb.symbolPattern).test(t) && (!fb.nameAny || fb.nameAny.some((k) => name.includes(k)))) {
+          code = fb.code;
+          break;
+        }
+      }
+    }
+    return code ? (R.codeToName[code] || code) : null;
+  }
+  const match = TICKER_RULES.find((rule) => rule.tickers.includes(t) || rule.words.some((word) => name.includes(word)));
+  return match ? match.sleeve : null;
 }
 
 function assignmentKey(ticker, assetName) {

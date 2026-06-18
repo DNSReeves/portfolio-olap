@@ -294,6 +294,19 @@
       "morningstarCategoryHint": "Municipal Bond"
     },
     {
+      "code": "TREASURIES",
+      "name": "Treasuries / Duration",
+      "parent": "PUBLIC_BONDS",
+      "morningstarCategoryHint": "Long Government / Intermediate Government",
+      "convexRole": "Duration"
+    },
+    {
+      "code": "BANK_LOANS",
+      "name": "Bank Loans / Floating Rate",
+      "parent": "PUBLIC_BONDS",
+      "morningstarCategoryHint": "Bank Loan"
+    },
+    {
       "code": "PRCR",
       "name": "Private Credit",
       "parent": "BONDS_CREDIT",
