@@ -333,6 +333,8 @@ el.loadBookButton.addEventListener("click", async () => {
   }
 });
 
+// Sample-data loaders now live inside the Guide dialog; close it on click so the
+// freshly loaded data is visible behind it.
 el.sampleButton.addEventListener("click", () => {
   state.holdings = SAMPLE_HOLDINGS;
   state.rows = [];
@@ -340,6 +342,7 @@ el.sampleButton.addEventListener("click", () => {
   state.errors = [];
   state.selectedSleeve = "All";
   saveJson("holdings", state.holdings);
+  if (el.manualDialog?.open) el.manualDialog.close();
   render();
 });
 
@@ -350,6 +353,7 @@ el.largeSampleButton.addEventListener("click", () => {
   state.errors = [];
   state.selectedSleeve = "All";
   saveJson("holdings", state.holdings);
+  if (el.manualDialog?.open) el.manualDialog.close();
   render();
 });
 

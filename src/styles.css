@@ -688,7 +688,7 @@ th {
 
 .manualShell {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);  /* header · sample row · scrollable content */
   max-height: calc(100vh - 32px);
   background: #ffffff;
 }
@@ -967,3 +967,34 @@ th {
 }
 .ovRow strong.good { color: #1b7a57; }
 .ovRow strong.warn { color: #a75b17; }
+
+/* ── Guide dialog: sample-data row (moved out of the main action bar) ────── */
+.manualSampleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  border-bottom: 1px solid #eef2f3;
+}
+.manualSampleRow span {
+  color: #65747b;
+  font-size: 13px;
+}
+.manualSampleRow button {
+  border: none;
+  background: #111418;          /* black button */
+  color: #ffffff;               /* white text */
+  border-radius: 6px;
+  padding: 8px 14px;
+  min-height: 40px;             /* tappable on iOS, not oversized */
+  font-size: 13px;
+  font-weight: 600;
+  -webkit-appearance: none;      /* Safari: render as a real button */
+  appearance: none;
+  touch-action: manipulation;    /* no double-tap zoom / tap delay on iPad */
+}
+.manualSampleRow button:hover,
+.manualSampleRow button:active {
+  background: #2a3037;
+}

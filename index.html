@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Portfolio OLAP</title>
-    <link rel="stylesheet" href="./src/styles.css" />
+    <link rel="stylesheet" href="./src/styles.css?v=20260619c" />
   </head>
   <body>
     <div class="app">
@@ -40,11 +40,9 @@
               <input id="csvFile" type="file" accept=".csv,text/csv" />
             </label>
             <button id="loadBookButton" title="Load the full consolidated book (all accounts) exported by portfolio_analysis.py">📥 Load Full Book</button>
-            <button id="sampleButton">Sample</button>
-            <button id="largeSampleButton">Large Sample</button>
             <button id="importPanelButton">Import Mapping</button>
             <button id="snapshotsButton">Snapshots</button>
-            <button id="manualButton">Manual</button>
+            <button id="manualButton">Guide</button>
           </div>
         </header>
 
@@ -173,14 +171,18 @@
         <header class="manualHeader">
           <div>
             <p class="eyebrow">Documentation</p>
-            <h2>Implementation and User Manual</h2>
+            <h2>Guide</h2>
             <small id="manualVersion">v2.0</small>
           </div>
           <button id="manualCloseButton">Close</button>
         </header>
+        <div class="manualSampleRow">
+          <button type="button" id="sampleButton">Sample portfolio</button>
+          <button type="button" id="largeSampleButton">Large sample</button>
+        </div>
         <article id="manualContent" class="manualContent"></article>
       </div>
     </dialog>
-    <script type="module" src="./src/app.js"></script>
+    <script type="module" src="./src/app.js?v=20260619c"></script>
   </body>
 </html>
