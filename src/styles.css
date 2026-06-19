@@ -1032,3 +1032,20 @@ th {
 .cxCrisis td.good { color: #1b7a57; }
 .cxCrisis td.warn { color: #a75b17; }
 .cxCrisis tr.cxHot td { background: #edf6f7; font-weight: 700; }
+
+/* ── Two-bucket dial panel ──────────────────────────────────────────────── */
+.dialPanel { margin: 0 0 16px; overflow: visible; }
+.dialSlider {
+  display: flex; align-items: center; gap: 16px; margin: 4px 0 6px;
+}
+.dialSlider input[type=range] {
+  flex: 1; -webkit-appearance: none; appearance: none; height: 8px; border-radius: 5px;
+  background: linear-gradient(90deg, #2dd4a7, #287f8f, #e7b84c); outline: none;
+}
+.dialSlider input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 26px; height: 26px; border-radius: 50%;
+  background: #11181d; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); cursor: pointer;
+}
+.dialEnd { color: #65747b; font-size: 13px; font-weight: 600; text-align: center; min-width: 86px; }
+.dialEnd small { color: #8a979c; font-weight: 400; }
+.dialNow { text-align: center; font-size: 16px; font-weight: 700; color: #185f6d; margin-bottom: 12px; }

@@ -165,6 +165,18 @@ async function loadOverlaySnapshot() {
   }
 }
 
+// Precomputed two-bucket dial grid (portfolio_analysis.py::export_dial_snapshot).
+let DIAL_SNAPSHOT = null;
+
+async function loadDialSnapshot() {
+  try {
+    const res = await fetch("./dial_snapshot.json", { cache: "no-store" });
+    if (res.ok) DIAL_SNAPSHOT = await res.json();
+  } catch (error) {
+    DIAL_SNAPSHOT = null;
+  }
+}
+
 const SLEEVE_PARENTS = {
   "Public Equity": "Equity",
   "Private Equity": "Equity",
@@ -257,6 +269,7 @@ const el = {
   metrics: document.querySelector("#dashboard"),
   planning: document.querySelector("#planning"),
   convexity: document.querySelector("#convexity"),
+  dial: document.querySelector("#dial"),
   overlay: document.querySelector("#overlay"),
   allocationBars: document.querySelector("#allocationBars"),
   topHoldings: document.querySelector("#topHoldings"),
@@ -460,6 +473,7 @@ async function initApp() {
   el.valuationDateInput.value = state.valuationDate;
   await loadClassificationRules(); // shared sleeve rules before any classification runs
   await loadOverlaySnapshot();     // read-only precomputed overlay backtest
+  await loadDialSnapshot();        // precomputed two-bucket dial grid
 
   try {
     state.db = await openPortfolioDb();
@@ -504,12 +518,14 @@ async function applyImport(sourceName = "CSV import") {
 
 function render() {
   const cube = buildPortfolioCube(state.holdings);
+  state._cube = cube;   // stashed so the dial slider can re-render without a full rebuild
   applyWorkspaceSplit();
   renderTitle();
   renderSleeves(cube);
   renderMetrics(cube);
   renderPlanning(cube);
   renderConvexity(cube);
+  renderDial(cube);
   renderOverlay();
   renderAllocation(cube);
   renderTopHoldings(cube);
@@ -817,6 +833,53 @@ function renderConvexity(cube) {
       saveJson("planning", state.planning);
       render();
     });
+  });
+}
+
+// Two-bucket dial: a live equity slider over the precomputed dial grid. Risk metrics come
+// from the snapshot (can't backtest in-browser); the $ buckets + cash-floor years are sized
+// live from the real book. The hedge sleeve is held constant across settings.
+function renderDial(cube) {
+  if (!el.dial) return;
+  const S = DIAL_SNAPSHOT;
+  if (!S || !S.grid || !S.grid.length) { el.dial.innerHTML = ""; el.dial.style.display = "none"; return; }
+  el.dial.style.display = "";
+  const total = cube.totalValue || 0;
+  const exp = S.expenses_per_yr || 360000;
+  const ev = state.planning.dialEquityPct ?? 0.59;
+  const g = S.grid.reduce((a, b) => Math.abs(b.equity - ev) < Math.abs(a.equity - ev) ? b : a, S.grid[0]);
+  const ae = S.all_equity;
+  const cashUsd = g.cash * total, floorYrs = exp ? cashUsd / exp : 0;
+  const eqUsd = g.equity * total, trendUsd = (S.hedge.TREND || 0) * total;
+  const hedgePill = `hedge fixed: ${Math.round((S.hedge.TREND || 0) * 100)}% trend · ${Math.round((S.hedge.TR || 0) * 100)}% Treas · ${Math.round((S.hedge.GLD || 0) * 100)}% gold`;
+  el.dial.innerHTML = `
+    <div class="panelHeader">
+      <div><p class="eyebrow">Two-bucket dial · set it together</p><h2>Preservation ↔ Growth Dial</h2></div>
+      <span class="pill ovPill">${hedgePill}</span>
+    </div>
+    <div class="dialSlider">
+      <span class="dialEnd">Conservative<br><small>your floor</small></span>
+      <input type="range" min="40" max="75" step="5" value="${Math.round(g.equity * 100)}" data-dial="equity" />
+      <span class="dialEnd">Growth<br><small>her horizon</small></span>
+    </div>
+    <div class="dialNow">${Math.round(g.equity * 100)}% equity · ${floorYrs.toFixed(0)}-yr cash floor</div>
+    <div class="planMetrics metrics">
+      <div class="metric"><span>Equity (growth, hedged)</span><strong>${money(eqUsd)}</strong></div>
+      <div class="metric ${floorYrs >= 5 ? "good" : "warn"}"><span>Cash floor (Bucket 1)</span><strong>${money(cashUsd)}<em class="cxSub">${floorYrs.toFixed(0)} yrs of spend</em></strong></div>
+      <div class="metric good"><span>Sortino (risk-adjusted)</span><strong>${g.sortino.toFixed(2)}<em class="cxSub">vs ${ae.sortino.toFixed(2)} all-equity</em></strong></div>
+      <div class="metric ${g.mdd > ae.mdd ? "good" : "warn"}"><span>Modeled max drawdown</span><strong>${percent(g.mdd)}<em class="cxSub">vs ${percent(ae.mdd)} all-equity</em></strong></div>
+    </div>
+    <div class="cxBlock">
+      <div class="cxRow"><span class="cxLabel">CAGR (the cost of protection)</span><strong>${percent(g.cagr)}</strong><em>vs ${percent(ae.cagr)} unhedged</em></div>
+      <div class="cxRow"><span class="cxLabel">2022 (the year bonds failed)</span><strong class="${g.y2022 >= 0 ? "good" : "warn"}">${signPct(g.y2022)}</strong><em>vs ${signPct(ae.y2022)} unhedged</em></div>
+      <div class="cxRow"><span class="cxLabel">Trend sleeve at this setting</span><strong>${money(trendUsd)}</strong><em>~$0 tax in the IRA</em></div>
+    </div>
+    <div class="planNote">Slide toward <b>Growth</b> (her 40-yr horizon) or <b>Conservative</b> (your floor) — the convex hedge stays on at every setting, so any point beats unhedged all-equity on both drawdown and risk-adjusted return. ${escapeHtml(S.note || "")}</div>`;
+  const inp = el.dial.querySelector("input[data-dial]");
+  if (inp) inp.addEventListener("input", () => {
+    state.planning = { ...state.planning, dialEquityPct: Number(inp.value) / 100 };
+    saveJson("planning", state.planning);
+    renderDial(state._cube || cube);   // light re-render — no full rebuild
   });
 }
 
