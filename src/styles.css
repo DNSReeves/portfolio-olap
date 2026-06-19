@@ -998,3 +998,35 @@ th {
 .manualSampleRow button:active {
   background: #2a3037;
 }
+
+/* ── Convexity panel (crash-shape + composition) ────────────────────────── */
+.convexityPanel { margin: 0 0 16px; overflow: visible; }
+.cxBlock { margin-top: 6px; padding-top: 10px; border-top: 1px solid #eef2f3; }
+.cxTarget input {
+  width: 80px; padding: 4px 8px; border: 1px solid #cfd9dd; border-radius: 6px;
+  font: inherit; font-size: 16px; color: #172026; background: #fbfdfd; text-align: right;
+}
+.cxTarget input:focus { outline: none; border-color: #287f8f; background: #fff; }
+.cxRow {
+  display: flex; align-items: center; gap: 12px; padding: 6px 0;
+  border-bottom: 1px dashed #eef2f3;
+}
+.cxLabel { flex: 0 0 200px; color: #1f2d31; }
+.cxBar { flex: 1; height: 10px; background: #f0f4f5; border-radius: 5px; overflow: hidden; }
+.cxBar i { display: block; height: 100%; background: #9fb3b8; border-radius: 5px; }
+.cxRow strong { min-width: 96px; text-align: right; font-variant-numeric: tabular-nums; }
+.cxRow em { min-width: 56px; text-align: right; color: #65747b; font-style: normal; font-size: 13px; }
+.cxRow.cxHot .cxLabel { color: #185f6d; font-weight: 700; }
+.cxRow.cxHot .cxBar i { background: #2dd4a7; }
+.cxRow em.good, .cxRow strong.good { color: #1b7a57; }
+.cxRow em.warn, .cxRow strong.warn { color: #a75b17; }
+.cxCrisis { width: 100%; border-collapse: collapse; margin-top: 4px; }
+.cxCrisis th, .cxCrisis td {
+  padding: 7px 10px; text-align: right; font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid #eef2f3;
+}
+.cxCrisis th:first-child, .cxCrisis td:first-child { text-align: left; }
+.cxCrisis th { color: #65747b; font-weight: 600; font-size: 12px; }
+.cxCrisis td.good { color: #1b7a57; }
+.cxCrisis td.warn { color: #a75b17; }
+.cxCrisis tr.cxHot td { background: #edf6f7; font-weight: 700; }

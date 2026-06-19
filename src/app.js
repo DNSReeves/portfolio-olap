@@ -256,6 +256,7 @@ const el = {
   manualVersion: document.querySelector("#manualVersion"),
   metrics: document.querySelector("#dashboard"),
   planning: document.querySelector("#planning"),
+  convexity: document.querySelector("#convexity"),
   overlay: document.querySelector("#overlay"),
   allocationBars: document.querySelector("#allocationBars"),
   topHoldings: document.querySelector("#topHoldings"),
@@ -508,6 +509,7 @@ function render() {
   renderSleeves(cube);
   renderMetrics(cube);
   renderPlanning(cube);
+  renderConvexity(cube);
   renderOverlay();
   renderAllocation(cube);
   renderTopHoldings(cube);
@@ -728,6 +730,94 @@ function renderOverlay() {
     <div class="ovBlock"><p class="eyebrow">Idle cash &rarr; standalone trend (~$0 tax, cash-funded)</p>${deployRows}</div>
     <div class="ovBlock"><p class="eyebrow">Regime split &mdash; Treasuries vs trend</p>${regRows}</div>
     <div class="planNote">${escapeHtml(S.note)} Trend = ${escapeHtml(S.trend_proxy)}.</div>`;
+}
+
+// Convexity panel: (1) live composition by the 7 convex roles, Convexity foregrounded;
+// (2) gap to an editable target + the deploy-$ that closes it (from the overlay snapshot);
+// (3) precomputed per-role crisis attribution (snapshot.crisis). Convexity here =
+// trend / managed-futures / long-short (the LIQALTS + trend roles).
+const _CONVEX_ROLE_ORDER = ["Growth","Income","Duration","Convexity","Diversifier","Other-Alt","Cash","Other"];
+
+function renderConvexity(cube) {
+  if (!el.convexity) return;
+  const total = cube.totalValue || 0;
+  const roleTot = {};
+  for (const s of cube.sleeves) {
+    const r = convexRoleForSleeve(s.sleeve);
+    roleTot[r] = (roleTot[r] || 0) + s.value;
+  }
+  const convexVal = roleTot["Convexity"] || 0;
+  const convexPct = total ? convexVal / total : 0;
+  // The Convexity role lumps genuine crisis-alpha trend/managed-futures together with
+  // long-short equity (AQR Flex / Delphi / CLSE). For the thesis they're NOT the same —
+  // only trend/MF is the convex crash hedge — so split them out. The gap + deploy target
+  // DEDICATED TREND, the actual lever (and the ~0% Marc flagged).
+  const _TREND_SLEEVES = new Set(["Managed Futures", "Trend Following", "Trend Following Managed Futures"]);
+  let trendVal = 0;
+  for (const s of cube.sleeves) if (_TREND_SLEEVES.has(s.sleeve)) trendVal += s.value;
+  const trendPct = total ? trendVal / total : 0;
+  const lsVal = Math.max(0, convexVal - trendVal);            // long-short portion of the role
+  const target = state.planning.convexTrendTargetPct ?? 0.05; // target DEDICATED TREND %
+  const gapPct = target - trendPct;
+  const gapUsd = gapPct * total;
+
+  const maxRole = Math.max(1, ..._CONVEX_ROLE_ORDER.map((r) => roleTot[r] || 0));
+  const compRows = _CONVEX_ROLE_ORDER.filter((r) => (roleTot[r] || 0) > 0).map((r) => {
+    const v = roleTot[r] || 0;
+    const hot = r === "Convexity";
+    return `<div class="cxRow ${hot ? "cxHot" : ""}"><span class="cxLabel">${r}${hot ? " ◆" : ""}</span>` +
+           `<span class="cxBar"><i style="width:${(100 * v / maxRole).toFixed(1)}%"></i></span>` +
+           `<strong>${money(v)}</strong><em>${percent(total ? v / total : 0)}</em></div>`;
+  }).join("");
+
+  const S = OVERLAY_SNAPSHOT;
+  const deployRows = (S && S.deploy ? S.deploy : []).map((d) =>
+    `<div class="cxRow"><span class="cxLabel">Deploy $${d.usd_m.toFixed(1)}M (${percent(d.pct)}) → trend</span>` +
+    `<em>Sortino ${S.current.sortino.toFixed(2)} → ${d.sortino.toFixed(2)}</em>` +
+    `<strong class="${d.ret_2022 >= 0 ? "good" : "warn"}">2022 ${signPct(d.ret_2022)}</strong></div>`).join("");
+
+  let crisisBlock = "";
+  if (S && S.crisis && Object.keys(S.crisis).length) {
+    const wins = Object.keys(S.crisis);
+    const roles = ["Growth", "Income", "Duration", "Convexity", "Cash"];
+    const head = `<tr><th>Role</th>${wins.map((w) => `<th>${escapeHtml(w)}</th>`).join("")}</tr>`;
+    const body = roles.map((r) => {
+      const cells = wins.map((w) => {
+        const v = S.crisis[w][r];
+        return v == null ? "<td>—</td>" : `<td class="${v >= 0 ? "good" : "warn"}">${signPct(v)}</td>`;
+      }).join("");
+      return `<tr class="${r === "Convexity" ? "cxHot" : ""}"><td>${r}${r === "Convexity" ? " ◆" : ""}</td>${cells}</tr>`;
+    }).join("");
+    crisisBlock = `<div class="cxBlock"><p class="eyebrow">Per-role crisis attribution (precomputed)</p>` +
+      `<table class="cxCrisis"><thead>${head}</thead><tbody>${body}</tbody></table>` +
+      `<div class="planNote">${escapeHtml(S.note || "")} 2008 GFC predates the trend-data window.</div></div>`;
+  }
+
+  el.convexity.innerHTML = `
+    <div class="panelHeader">
+      <div><p class="eyebrow">Convexity</p><h2>Crash-Shape &amp; Convexity</h2></div>
+      <span class="pill ovPill">Convexity = trend / managed-futures / long-short</span>
+    </div>
+    <div class="planMetrics metrics">
+      <div class="metric"><span>Convexity sleeve (broad)</span><strong>${percent(convexPct)} · ${money(convexVal)}</strong></div>
+      <div class="metric ${trendPct >= target ? "good" : "warn"}"><span>Dedicated trend / managed-futures</span><strong>${percent(trendPct)} · ${money(trendVal)}</strong></div>
+      <label class="metric cxTarget"><span>Target trend %</span><input type="number" step="0.5" data-cx="trend" value="${(target * 100).toFixed(1)}" /></label>
+      <div class="metric ${gapPct <= 0 ? "good" : "warn"}"><span>${gapPct > 0 ? "Gap → deploy to trend" : "At/above target"}</span><strong>${gapPct > 0 ? money(gapUsd) : "✓"}</strong></div>
+    </div>
+    <div class="planNote">The Convexity role's ${money(convexVal)} is mostly <strong>long-short equity</strong> (${money(lsVal)}, AQR Flex / Delphi) — only ${money(trendVal)} is genuine <strong>trend / managed-futures</strong>, the actual crash hedge. The gap + deploy target that.</div>
+    <div class="cxBlock"><p class="eyebrow">Composition by convex role</p>${compRows}</div>
+    ${deployRows ? `<div class="cxBlock"><p class="eyebrow">Close the gap — idle cash → standalone trend (~$0 tax)</p>${deployRows}</div>` : ""}
+    ${crisisBlock}`;
+
+  el.convexity.querySelectorAll("input[data-cx]").forEach((inp) => {
+    inp.addEventListener("change", () => {
+      const v = Number(inp.value);
+      if (!Number.isFinite(v) || v < 0) return;
+      state.planning = { ...state.planning, convexTrendTargetPct: v / 100 };
+      saveJson("planning", state.planning);
+      render();
+    });
+  });
 }
 
 function renderAllocation(cube) {
