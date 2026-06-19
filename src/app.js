@@ -270,6 +270,7 @@ const el = {
   emptyImport: document.querySelector("#emptyImport"),
   searchInput: document.querySelector("#searchInput"),
   csvFile: document.querySelector("#csvFile"),
+  loadBookButton: document.querySelector("#loadBookButton"),
   sampleButton: document.querySelector("#sampleButton"),
   largeSampleButton: document.querySelector("#largeSampleButton"),
   importPanelButton: document.querySelector("#importPanelButton"),
@@ -303,6 +304,33 @@ el.csvFile.addEventListener("change", async (event) => {
   el.valuationDateInput.value = state.valuationDate;
   await applyImport(file.name);
   event.target.value = "";
+});
+
+// Load the full consolidated book served by com.dnsr.olap (consolidated_holdings.csv,
+// written by portfolio_analysis.py — all accounts, Flex netted, IRA + TIAA, sleeves set).
+// Fetched from the server so it works from any browser without picking a local file.
+el.loadBookButton.addEventListener("click", async () => {
+  const btn = el.loadBookButton;
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Loading…";
+  try {
+    const res = await fetch("./consolidated_holdings.csv", { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status} — run portfolio_analysis.py to generate it`);
+    const rows = parseCsv(await res.text());
+    if (!rows.length) throw new Error("consolidated_holdings.csv is empty");
+    state.rows = rows;
+    state.mapping = detectColumnMapping(Object.keys(rows[0] || {}));
+    state.valuationDate = detectValuationDate(rows, state.mapping) || today();
+    el.valuationDateInput.value = state.valuationDate;
+    state.selectedSleeve = "All";
+    await applyImport("consolidated_holdings.csv");
+  } catch (error) {
+    window.alert(`Could not load the consolidated book: ${error.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
 });
 
 el.sampleButton.addEventListener("click", () => {

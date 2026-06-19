@@ -5,3 +5,4 @@ dist/
 *.tmp
 *.tsbuildinfo
 esbuild-test.exe
+consolidated_holdings.csv
