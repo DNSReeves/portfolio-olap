@@ -91,6 +91,7 @@ const COLUMN_ALIASES = {
   marketValue: ["market value", "value", "current value"],
   sleeve: ["sleeve", "category", "asset class", "strategy"],
   costBasis: ["cost basis", "total cost", "basis", "cost"],
+  beta: ["beta"],
   valuationDate: ["valuation date", "as of date", "as-of date", "statement date", "price date", "date"],
 };
 
@@ -768,11 +769,18 @@ function renderMetrics(cube) {
   const selectedAllocation = cube.totalValue ? selectedValue / cube.totalValue : 0;
   const selectedLabel = isAllScope() ? "Portfolio Value" : `${selectionLabel()} Value`;
 
+  // Value-weighted beta vs SPY for the current selection (per-holding beta from the imported book).
+  const betaDen = selectedHoldings.reduce((s, h) => s + (h.marketValue || 0), 0);
+  const betaNum = selectedHoldings.reduce((s, h) => s + (h.marketValue || 0) * (h.beta || 0), 0);
+  const hasBeta = selectedHoldings.some((h) => h.beta != null);
+  const beta = betaDen ? betaNum / betaDen : 0;
+
   el.metrics.replaceChildren(
     metric(selectedLabel, money(selectedValue), isAllScope() ? "" : "focus"),
     metric("Total Portfolio", money(cube.totalValue)),
     metric("Portfolio Allocation", percent(selectedAllocation)),
     metric("Selection Gain", money(selectedGain), selectedGain >= 0 ? "good" : "warn"),
+    ...(hasBeta ? [metric("Beta vs S&P (est.)", beta.toFixed(2))] : []),
   );
 }
 
@@ -1566,6 +1574,7 @@ function normalizeHoldings(rows, mapping, fallbackValuationDate) {
       sleeve: assignment.sleeve,
       assignmentSource: assignment.source,
       costBasis: optionalNumber(read(row, mapping.costBasis)),
+      beta: optionalNumber(read(row, mapping.beta)),
       sourceRow: row,
     });
   });
