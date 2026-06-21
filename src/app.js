@@ -672,8 +672,9 @@ function renderPlanning(cube) {
         `<div class="planTaxRow"><span>${escapeHtml(s.name)}</span><em>${money(s.gain)} gain</em><strong>${money(s.tax)}</strong></div>`).join("")
     : `<div class="planNote">${hasCostBasis ? "No embedded gains." : "Import cost basis to compute embedded tax."}</div>`;
 
-  const cfgField = (key, label, value, suffix = "") =>
-    `<label class="planField"><span>${label}</span><input type="number" step="any" data-plan="${key}" value="${value}" />${suffix ? `<em>${suffix}</em>` : ""}</label>`;
+  const fmtInt = (n) => Number(n).toLocaleString("en-US");
+  const cfgField = (key, label, value, opts = {}) =>
+    `<label class="planField"><span>${label}</span><input ${opts.money ? 'type="text" inputmode="numeric"' : 'type="number" step="any"'} data-plan="${key}" value="${opts.money ? fmtInt(value) : value}" />${opts.suffix ? `<em>${opts.suffix}</em>` : ""}</label>`;
 
   el.planning.innerHTML = `
     <div class="panelHeader">
@@ -682,8 +683,8 @@ function renderPlanning(cube) {
         <h2>Reserve, Tax &amp; Liquidity</h2>
       </div>
       <div class="planConfig">
-        ${cfgField("expenses", "Annual expenses", cfg.expenses)}
-        ${cfgField("reserveTarget", "Reserve target", cfg.reserveTarget)}
+        ${cfgField("expenses", "Annual expenses", cfg.expenses, { money: true })}
+        ${cfgField("reserveTarget", "Reserve target", cfg.reserveTarget, { money: true })}
         ${cfgField("taxLT", "LT tax %", (cfg.taxLT * 100).toFixed(1))}
       </div>
     </div>
@@ -696,7 +697,7 @@ function renderPlanning(cube) {
   el.planning.querySelectorAll("input[data-plan]").forEach((input) => {
     input.addEventListener("change", () => {
       const key = input.dataset.plan;
-      let v = Number(input.value);
+      let v = Number(String(input.value).replace(/,/g, ""));   // strip thousands separators
       if (!Number.isFinite(v) || v < 0) return;
       if (key === "taxLT") v = v / 100;
       state.planning = { ...state.planning, [key]: v };
