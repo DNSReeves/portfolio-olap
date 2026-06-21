@@ -75,6 +75,13 @@ def to_code(name):
     raise SystemExit(f"OLAP rule name not in taxonomy: {name!r}")
 
 ticker_rules, name_rules = {}, []
+# Private-alternative name rules are checked FIRST: private-fund names frequently embed public-sector
+# keywords ("real estate", "credit", "private equity") and must classify by their specific name
+# before the generic public rules — e.g. STALLION / PARK PLACE "... REAL ESTATE FUND" were matching
+# the public REIT "Real Estate" rule. (2026-06-21)
+PRIVATE_FIRST = {"REAL_ASSETS", "PRCR", "PE_BUYOUT", "PRIVATE_ALTERNATIVES"}
+for c, tks, words in EXTRA:
+    if c in PRIVATE_FIRST and words: name_rules.append({"keywords": words, "code": c})
 for name, tks, words in OLAP_RULES:
     c = to_code(name)
     for t in tks: ticker_rules[t.upper()] = c
@@ -82,7 +89,7 @@ for name, tks, words in OLAP_RULES:
 PROPOSED = set()  # TREASURIES + BANK_LOANS are now real taxonomy sleeves (added 2026-06-18)
 for c, tks, words in EXTRA:
     for t in tks: ticker_rules.setdefault(t.upper(), c)
-    if words: name_rules.append({"keywords": words, "code": c})
+    if words and c not in PRIVATE_FIRST: name_rules.append({"keywords": words, "code": c})
 
 # ── convex-role rollup for every code (+ proposed) ────────────────────────────
 def role(code):

@@ -311,6 +311,53 @@
   "nameRules": [
     {
       "keywords": [
+        "blackstone private credit",
+        "blackstone priv",
+        "mlt-asst crdt",
+        "multi-asset credit",
+        "cliffwater",
+        "bdc",
+        "alternative lending",
+        "alt lending",
+        "lending rs",
+        "direct lending fund"
+      ],
+      "code": "PRCR"
+    },
+    {
+      "keywords": [
+        "private capital",
+        "pe strategies",
+        "private equity",
+        "buyout",
+        " lp class"
+      ],
+      "code": "PE_BUYOUT"
+    },
+    {
+      "keywords": [
+        "real estate fund",
+        "real estate income",
+        "reit trust",
+        "park place",
+        "stallion",
+        "income property",
+        "jones lang"
+      ],
+      "code": "REAL_ASSETS"
+    },
+    {
+      "keywords": [
+        "reinsurance",
+        "risk premium",
+        "risk prmm",
+        "insurance-linked",
+        " ils"
+      ],
+      "code": "PRIVATE_ALTERNATIVES"
+    },
+    {
+      "keywords": [
         "technology",
         "software",
         "semiconductor"
@@ -650,53 +697,6 @@
         "145/45"
       ],
       "code": "LIQALTS"
-    },
-    {
-      "keywords": [
-        "blackstone private credit",
-        "blackstone priv",
-        "mlt-asst crdt",
-        "multi-asset credit",
-        "cliffwater",
-        "bdc",
-        "alternative lending",
-        "alt lending",
-        "lending rs",
-        "direct lending fund"
-      ],
-      "code": "PRCR"
-    },
-    {
-      "keywords": [
-        "private capital",
-        "pe strategies",
-        "private equity",
-        "buyout",
-        " lp class"
-      ],
-      "code": "PE_BUYOUT"
-    },
-    {
-      "keywords": [
-        "real estate fund",
-        "real estate income",
-        "reit trust",
-        "park place",
-        "stallion",
-        "income property",
-        "jones lang"
-      ],
-      "code": "REAL_ASSETS"
-    },
-    {
-      "keywords": [
-        "reinsurance",
-        "risk premium",
-        "risk prmm",
-        "insurance-linked",
-        " ils"
-      ],
-      "code": "PRIVATE_ALTERNATIVES"
     },
     {
       "keywords": [
