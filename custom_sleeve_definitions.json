@@ -396,6 +396,18 @@
       "description": "Illiquid private real-estate funds (interval/LLC/non-traded) — distinct from public REITs and liquid real-asset ETFs"
     },
     {
+      "code": "CDS",
+      "name": "CDs",
+      "parent": "BONDS_CREDIT",
+      "description": "Certificates of deposit (FDIC-insured) held in the fixed-income book"
+    },
+    {
+      "code": "ANNUITY_STABLE",
+      "name": "Annuity / Stable Value",
+      "parent": "BONDS_CREDIT",
+      "description": "Fixed/guaranteed annuities and stable-value accounts (e.g. TIAA Traditional) — capital-preservation income"
+    },
+    {
       "code": "CASH",
       "name": "Cash",
       "parent": null,

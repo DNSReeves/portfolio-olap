@@ -15,7 +15,7 @@ CODES = {s["code"] for s in tax["sleeves"]}
 OLAP_RULES = [
  ("Large Cap Tech",["AAPL","MSFT","NVDA","GOOGL","GOOG","META","AMZN","AVGO"],["technology","software","semiconductor"]),
  ("Large Growth",["VUG","QQQ","QQQM","IWF","SCHG","SPYG","VOOG","IVW"],["large growth"]),
- ("Large Blend",["SPY","VOO","IVV","VTI","ITOT","SCHB","IWB","DFAC","AVUS","SPLG","DFAU","OEF","DYNF","QUAL","USMV","MTUM"],["large blend","total stock market","s&p 500","core equity","russell 1000"]),
+ ("Large Blend",["SPY","VOO","IVV","VTI","ITOT","SCHB","IWB","DFAC","AVUS","SPLG","DFAU","OEF","DYNF","QUAL","USMV","MTUM","JEPI"],["large blend","total stock market","s&p 500","core equity","russell 1000"]),   # JEPI = S&P equity + covered calls (equity income, NOT a bond)
  ("Large Value",["VTV","IVE","IWD","SCHV","SCHD","DGRO","VIG","DFAV","VLUE"],["large value","dividend equity","dividend appreciation","high dividend"]),
  ("Mid-Cap Growth",["VOT","IWP","MDYG"],["mid cap growth","mid-cap growth"]),
  ("Mid-Cap Blend",["VO","IJH","IWR","SCHM"],["mid cap blend","mid-cap blend"]),
@@ -48,9 +48,9 @@ OLAP_RULES = [
  ("Real Estate",["VNQ","IYR","XLRE","SCHH","HST","PLD","EQIX"],["real estate","reit"]),   # HST/PLD/EQIX = REIT stocks (FMP)
  ("Utilities",["XLU","VPU","IDU"],["utilities sector"]),
  ("Junk Bonds",["HYG","JNK","USHY","SJNK","HYLB","ANGL","HYEM"],["high yield","junk bond","below investment grade"]),
- ("Corporate Bonds",["LQD","VCIT","VCLT","IGIB","IGSB","VTC","VCSH"],["corporate bond","investment grade corporate"]),
+ ("Corporate Bonds",["LQD","VCIT","VCLT","IGIB","IGSB","VTC","VCSH","IBDW"],["corporate bond","investment grade corporate"]),   # IBDW = iBonds target-maturity corporate
  ("Municipal Bonds",["MUB","VTEB","TFI","PZA","HYD","SHM"],["municipal","muni","tax exempt","tax-free","auth rev","rev ref","sales tax rev","wtr & sew","wtr & swr","swr rev","fin auth rev","pub pwr","gen oblig"," sch dist"," unif sd","util rev"," go bds"]),
- ("Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA","LIFT"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","clo","collateralized loan","ultrashort","ultra short","ultrasho","short duration income"]),   # LIFT = LifeX 2028 Treasury-backed income (likely Treasuries specifically)
+ ("Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","clo","collateralized loan","ultrashort","ultra short","ultrasho","short duration income"]),
  ("Direct Lending",["BIZD","PSP"],["direct lending","middle market lending"]),
  ("Private Credit",["PC","PRCR"],["private credit","private debt","enhanced lending","credit fund class"]),
  ("Cash",["CASH","SWVXX","SPAXX","VMFXX","FDRXX","BIL","SGOV","SNVXX","SNAXX","FZFXX","XBIL","BOXX","MINT","SHV","FNSXX","FDRXX","SPRXX"],["cash","money market","money mkt","mmkt","money inv","money ultra","prime advantage","government money","short maturity","6 month bill"]),
@@ -67,8 +67,9 @@ EXTRA = [  # (code, tickers, name-keywords)
  ("MULTI_ASSET",["BCAT"],["capital allocation","multi-asset","multi asset","balanced allocation","flexible allocation"]),   # BCAT = BlackRock Capital Allocation Term Trust
  ("PRIVATE_ALTERNATIVES",[],["reinsurance","risk premium","risk prmm","insurance-linked"," ils"]),
  # Treasuries route to a PROPOSED code (see proposedTaxonomyAdditions); falls to BONDS if absent
- ("TREASURIES",["IEF","TLT","VGIT","VGLT","SHY","GOVT","IEI","EDV","TIP","VTIP","TLTW"],["treasury","treas","t-bond","t-note","govt bond","inflation protected","tips"]),
+ ("TREASURIES",["IEF","TLT","VGIT","VGLT","SHY","GOVT","IEI","EDV","TIP","VTIP","TLTW","TLH","LIFT"],["treasury","treas","t-bond","t-note","govt bond","inflation protected","tips"]),   # TLH=10-20y Treasury; LIFT=LifeX Treasury-backed income
  ("BANK_LOANS",["BKLN","SRLN","FLOT","VRIG","FLRN","USFR"],["senior loan","bank loan","floating rate"]),
+ ("CDS",[],["fdic ins","certificate of deposit","cd fdic","brokered cd"]),   # FDIC-insured CDs (CUSIP-held → caught before the bond CUSIP fallback)
 ]
 
 # ── name → code resolution (OLAP rules use names) ─────────────────────────────
@@ -101,7 +102,7 @@ def role(code):
     if code in {"PREQ","PE_BUYOUT","PE_GROWTH_EQUITY","PE_VENTURE_CAPITAL","PE_SECONDARIES",
                 "PRIVATE_ALTERNATIVES","REAL_ASSETS","PRIVATE_REAL_ESTATE","PRCR","DIRECT_LENDING","ALTERNATIVES"}: return "Other-Alt"
     if code in {"TREASURIES"}: return "Duration"
-    if code in {"BONDS_CREDIT","PUBLIC_BONDS","BONDS","JUNK_BONDS","CORPORATE_BONDS","MUNICIPAL_BONDS","BANK_LOANS"}: return "Income"
+    if code in {"BONDS_CREDIT","PUBLIC_BONDS","BONDS","JUNK_BONDS","CORPORATE_BONDS","MUNICIPAL_BONDS","BANK_LOANS","CDS","ANNUITY_STABLE"}: return "Income"
     if code in {"OTHER","UNCLASSIFIED","OTHER_UNCLASSIFIED"}: return "Other"
     return "Growth"   # all equity (public + sectors + intl + EM)
 sleeve_to_convex = {s["code"]: role(s["code"]) for s in tax["sleeves"]}
