@@ -22,6 +22,8 @@ The implementation is a zero-dependency app. It runs in a browser using static H
 - **Rollup sidebar** — sleeves grouped into asset-class buckets, with a **View by: Asset Class | Convex Role** toggle (two orthogonal lenses).
 - **Holdings drill-down** — value-appropriate columns (Cost, Value, Gain/Loss %), adaptive Shares/Price, same-ticker lot merging, a totals row, and scroll-to-holdings on any drill-in.
 - **Taxonomy growth** — new **Options**, **Multi-Asset**, and **Private Real Estate** sleeves; **Real Assets** split into liquid vs private; **Commodities** split out. Private-fund names now classify ahead of public sector keywords (so a private real-estate fund isn't mistaken for a public REIT).
+- **Fixed Income** — the bond bucket is now **Fixed Income** (bonds + **CDs** + **fixed annuities**); JEPI reclassified to equity (it's covered-call equity income, not a bond).
+- **Portfolio beta** — a **Beta vs S&P (est.)** dashboard metric (value-weighted, updates per drill-in), using real 1-year ETF betas from the warehouse plus asset-class assumptions for stocks/bonds/privates.
 
 ## 2. Current Implementation
 
@@ -300,7 +302,7 @@ The two are orthogonal — e.g. managed futures is **Liquid Alts** structurally 
 |---|---|
 | **Public Equity** | Listed/marketable stock funds and stocks (large/mid/small cap, sectors, international, EM). |
 | **Private Equity** | Illiquid private equity — buyout, growth equity, venture, secondaries. |
-| **Public Fixed Income** | Marketable bonds — Treasuries, corporates, munis, high-yield, bank loans. |
+| **Fixed Income** | Bonds (Treasuries, corporate, municipal, high-yield, bank loans, core/multisector) plus **CDs** (FDIC certificates) and **fixed annuities** (e.g. TIAA Traditional). |
 | **Private Credit** | Illiquid private lending — direct lending, BDCs, private debt funds. |
 | **Liquid Alts** | Liquid alternative *strategies* — managed futures, trend following, long/short equity. |
 | **Commodities** | Liquid commodity exposure — gold (GLD/IAU), broad commodity ETFs. |
