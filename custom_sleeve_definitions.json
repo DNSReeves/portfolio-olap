@@ -378,6 +378,12 @@
       "parent": "ALTERNATIVES"
     },
     {
+      "code": "OPTIONS",
+      "name": "Options",
+      "parent": null,
+      "description": "Listed equity options held as hedges/overlays — protective puts, covered/short calls, collars"
+    },
+    {
       "code": "CASH",
       "name": "Cash",
       "parent": null,

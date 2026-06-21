@@ -629,7 +629,9 @@ const ROLLUP_BUCKETS = [
   { name: "Public Fixed Income", anchors: ["Public Bonds"] },
   { name: "Private Credit", anchors: ["Private Credit"] },
   { name: "Liquid Alts", anchors: ["Liquid Alternatives"] },
-  { name: "Real Assets", anchors: ["Commodities", "Real Assets", "Private Alternatives"] },
+  { name: "Commodities", anchors: ["Commodities", "Precious Metals", "Broad Commodities"] },
+  { name: "Real Assets", anchors: ["Real Assets", "Private Alternatives"] },
+  { name: "Options", anchors: ["Options"] },
   { name: "Cash", anchors: ["Cash"] },
   { name: "Other", anchors: ["Other / Unclassified", "Other", "Unclassified"] },
 ];
@@ -1501,7 +1503,8 @@ function normalizeHoldings(rows, mapping, fallbackValuationDate) {
       errors.push(`Row ${index + 1}: missing valuation date.`);
       return;
     }
-    if (!Number.isFinite(marketValue) || marketValue <= 0) {
+    if (!Number.isFinite(marketValue) || marketValue === 0) {
+      // keep real NEGATIVE values (short options/liabilities); drop only missing/zero (no data)
       errors.push(`Row ${index + 1}: missing market value, or shares and price.`);
       return;
     }

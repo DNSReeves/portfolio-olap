@@ -95,7 +95,7 @@ for c, tks, words in EXTRA:
 def role(code):
     if code in {"CASH"}: return "Cash"
     if code in {"PRECIOUS_METALS","BROAD_COMMODITIES","COMMODITIES"}: return "Diversifier"
-    if code in {"LIQALTS","MANAGED_FUTURES","TREND_FOLLOWING","TREND_FOLLOWING_MANAGED_FUTURES"}: return "Convexity"
+    if code in {"LIQALTS","MANAGED_FUTURES","TREND_FOLLOWING","TREND_FOLLOWING_MANAGED_FUTURES","OPTIONS"}: return "Convexity"
     if code in {"PREQ","PE_BUYOUT","PE_GROWTH_EQUITY","PE_VENTURE_CAPITAL","PE_SECONDARIES",
                 "PRIVATE_ALTERNATIVES","REAL_ASSETS","PRCR","DIRECT_LENDING","ALTERNATIVES"}: return "Other-Alt"
     if code in {"TREASURIES"}: return "Duration"
@@ -120,6 +120,8 @@ out = {
  "tickerRules": dict(sorted(ticker_rules.items())),
  "nameRules": name_rules,
  "fallbackRules": [
+   {"id":"option","symbolPattern":"^.*\\d{2}/\\d{2}/\\d{4}","code":"OPTIONS",
+    "why":"listed equity option — the symbol carries an expiry date (e.g. 'SPY 09/18/2026 585.00 P')"},
    {"id":"muni_cusip","symbolPattern":"^[0-9A-Z]{8,9}$",
     "nameAny":["rev","auth","cnty","county"," st ","ctfs","bds","oblig","sch dist","transn","grant antic","util","tax","ser.","g o ","go bds"],
     "code":"MUNICIPAL_BONDS","why":"individual muni bond held as CUSIP"},
