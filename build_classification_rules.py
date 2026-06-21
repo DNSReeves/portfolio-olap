@@ -29,7 +29,7 @@ OLAP_RULES = [
  ("Managed Futures",["KMLM","CTA","FMF","WTMF"],["managed futures"]),
  ("Trend Following",["TFPN","RSST"],["trend following","trend"]),
  ("International",["VXUS","IEV","VEU","ACWX"],["international","developed markets","europe"]),
- ("Foreign Large Blend",["VEA","IEFA","SCHF","EFA","DODFX","MFAPX","ACWI"],["foreign large blend","international stock","internatl stock","intl advantage","intl equity"]),
+ ("Foreign Large Blend",["VEA","IEFA","SCHF","EFA","DODFX","MFAPX","ACWI","DXJ"],["foreign large blend","international stock","internatl stock","intl advantage","intl equity"]),   # DXJ = WisdomTree Japan hedged (FMP)
  ("Foreign Large Growth",["EFG","VIGI"],["foreign large growth"]),
  ("Foreign Large Value",["EFV","IVLU","VYMI","HDEF"],["foreign large value","international high dividend"]),
  ("Foreign Small/Mid Blend",["VSS","SCZ","SCHC"],["foreign small mid","foreign small/mid blend"]),
@@ -39,18 +39,18 @@ OLAP_RULES = [
  ("Consumer Defensive",["XLP","VDC","IYK"],["consumer defensive","consumer staples"]),
  ("Equity Energy",["XLE","VDE","IYE"],["energy sector","equity energy"]),
  ("Equity Precious Metals",["GDX","GDXJ","RING"],["equity precious metals","gold miners"]),
- ("Industrials",["XLI","VIS","IYJ"],["industrials sector"]),
+ ("Industrials",["XLI","VIS","IYJ","PWRD","NASA"],["industrials sector"]),   # PWRD = energy-transition; NASA = space economy / aerospace (FMP)
  ("Infrastructure",["IGF","PAVE","IFRA"],["infrastructure"]),
  ("Natural Resources",["IGE","GNR","NANR","REMX"],["natural resources","rare earth","strategic metals"]),
  ("Technology",["XLK","VGT","IYW","FTEC"],["technology sector"]),
  ("Health",["XLV","VHT","IYH"],["health sector","healthcare"]),
  ("Financial",["XLF","VFH","IYF"],["financial sector"]),
- ("Real Estate",["VNQ","IYR","XLRE","SCHH"],["real estate","reit"]),
+ ("Real Estate",["VNQ","IYR","XLRE","SCHH","HST","PLD","EQIX"],["real estate","reit"]),   # HST/PLD/EQIX = REIT stocks (FMP)
  ("Utilities",["XLU","VPU","IDU"],["utilities sector"]),
  ("Junk Bonds",["HYG","JNK","USHY","SJNK","HYLB","ANGL","HYEM"],["high yield","junk bond","below investment grade"]),
  ("Corporate Bonds",["LQD","VCIT","VCLT","IGIB","IGSB","VTC","VCSH"],["corporate bond","investment grade corporate"]),
  ("Municipal Bonds",["MUB","VTEB","TFI","PZA","HYD","SHM"],["municipal","muni","tax exempt","tax-free","auth rev","rev ref","sales tax rev","wtr & sew","wtr & swr","swr rev","fin auth rev","pub pwr","gen oblig"," sch dist"," unif sd","util rev"," go bds"]),
- ("Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","clo","collateralized loan","ultrashort","ultra short","ultrasho","short duration income"]),
+ ("Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA","LIFT"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","clo","collateralized loan","ultrashort","ultra short","ultrasho","short duration income"]),   # LIFT = LifeX 2028 Treasury-backed income (likely Treasuries specifically)
  ("Direct Lending",["BIZD","PSP"],["direct lending","middle market lending"]),
  ("Private Credit",["PC","PRCR"],["private credit","private debt","enhanced lending","credit fund class"]),
  ("Cash",["CASH","SWVXX","SPAXX","VMFXX","FDRXX","BIL","SGOV","SNVXX","SNAXX","FZFXX","XBIL","BOXX","MINT","SHV","FNSXX","FDRXX","SPRXX"],["cash","money market","money mkt","mmkt","money inv","money ultra","prime advantage","government money","short maturity","6 month bill"]),
@@ -62,7 +62,7 @@ EXTRA = [  # (code, tickers, name-keywords)
  ("LIQALTS",["CLSE","QLEIX","QLENX","BLNDX","REMIX"],["long/short","long short","market neutral","absolute return","delphi","145/45"]),
  ("PRCR",[],["blackstone private credit","blackstone priv","mlt-asst crdt","multi-asset credit","cliffwater","bdc","alternative lending","alt lending","lending rs","direct lending fund"]),
  ("PE_BUYOUT",[],["private capital","pe strategies","private equity","buyout"," lp class"]),
- ("REAL_ASSETS",[],["real estate fund","real estate income","reit trust","park place","stallion","income property","jones lang"]),
+ ("REAL_ASSETS",["RAAX","RLY"],["real estate fund","real estate income","reit trust","park place","stallion","income property","jones lang"]),   # RAAX/RLY = liquid real-asset / real-return baskets (FMP)
  ("PRIVATE_ALTERNATIVES",[],["reinsurance","risk premium","risk prmm","insurance-linked"," ils"]),
  # Treasuries route to a PROPOSED code (see proposedTaxonomyAdditions); falls to BONDS if absent
  ("TREASURIES",["IEF","TLT","VGIT","VGLT","SHY","GOVT","IEI","EDV","TIP","VTIP","TLTW"],["treasury","treas","t-bond","t-note","govt bond","inflation protected","tips"]),
