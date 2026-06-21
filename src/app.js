@@ -236,6 +236,7 @@ const SLEEVE_PARENTS = {
   "Liquid Alternatives": "Alternatives",
   "Private Alternatives": "Alternatives",
   "Real Assets": "Alternatives",
+  "Private Real Estate": "Alternatives",
   "Other": "Other / Unclassified",
   "Unclassified": "Other / Unclassified",
 };
@@ -630,7 +631,9 @@ const ROLLUP_BUCKETS = [
   { name: "Private Credit", anchors: ["Private Credit"] },
   { name: "Liquid Alts", anchors: ["Liquid Alternatives"] },
   { name: "Commodities", anchors: ["Commodities", "Precious Metals", "Broad Commodities"] },
-  { name: "Real Assets", anchors: ["Real Assets", "Private Alternatives"] },
+  { name: "Real Assets", anchors: ["Real Assets"] },                                          // liquid real-asset ETFs (RAAX/RLY)
+  { name: "Private Real Assets", anchors: ["Private Real Estate", "Private Alternatives"] },  // Stallion/BREIT + reinsurance
+  { name: "Multi-Asset", anchors: ["Multi-Asset"] },
   { name: "Options", anchors: ["Options"] },
   { name: "Cash", anchors: ["Cash"] },
   { name: "Other", anchors: ["Other / Unclassified", "Other", "Unclassified"] },

@@ -80,6 +80,8 @@
     "PRIVATE_ALTERNATIVES": "Private Alternatives",
     "REAL_ASSETS": "Real Assets",
     "OPTIONS": "Options",
+    "MULTI_ASSET": "Multi-Asset",
+    "PRIVATE_REAL_ESTATE": "Private Real Estate",
     "CASH": "Cash",
     "OTHER_UNCLASSIFIED": "Other / Unclassified",
     "OTHER": "Other",
@@ -98,6 +100,7 @@
     "AVGO": "LARGE_CAP_TECH",
     "AVUS": "LARGE_BLEND",
     "AVUV": "SMALL_VALUE",
+    "BCAT": "MULTI_ASSET",
     "BIL": "CASH",
     "BIV": "BONDS",
     "BIZD": "DIRECT_LENDING",
@@ -354,7 +357,7 @@
         "income property",
         "jones lang"
       ],
-      "code": "REAL_ASSETS"
+      "code": "PRIVATE_REAL_ESTATE"
     },
     {
       "keywords": [
@@ -710,6 +713,16 @@
     },
     {
       "keywords": [
+        "capital allocation",
+        "multi-asset",
+        "multi asset",
+        "balanced allocation",
+        "flexible allocation"
+      ],
+      "code": "MULTI_ASSET"
+    },
+    {
+      "keywords": [
         "treasury",
         "treas",
         "t-bond",
@@ -831,6 +844,8 @@
     "PRIVATE_ALTERNATIVES": "Other-Alt",
     "REAL_ASSETS": "Other-Alt",
     "OPTIONS": "Convexity",
+    "MULTI_ASSET": "Growth",
+    "PRIVATE_REAL_ESTATE": "Other-Alt",
     "CASH": "Cash",
     "OTHER_UNCLASSIFIED": "Other",
     "OTHER": "Other",

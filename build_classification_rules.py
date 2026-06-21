@@ -62,7 +62,9 @@ EXTRA = [  # (code, tickers, name-keywords)
  ("LIQALTS",["CLSE","QLEIX","QLENX","BLNDX","REMIX"],["long/short","long short","market neutral","absolute return","delphi","145/45"]),
  ("PRCR",[],["blackstone private credit","blackstone priv","mlt-asst crdt","multi-asset credit","cliffwater","bdc","alternative lending","alt lending","lending rs","direct lending fund"]),
  ("PE_BUYOUT",[],["private capital","pe strategies","private equity","buyout"," lp class"]),
- ("REAL_ASSETS",["RAAX","RLY"],["real estate fund","real estate income","reit trust","park place","stallion","income property","jones lang"]),   # RAAX/RLY = liquid real-asset / real-return baskets (FMP)
+ ("REAL_ASSETS",["RAAX","RLY"],[]),   # LIQUID real-asset / real-return ETF baskets (FMP) — RAAX/RLY
+ ("PRIVATE_REAL_ESTATE",[],["real estate fund","real estate income","reit trust","park place","stallion","income property","jones lang"]),   # illiquid private RE funds (Stallion/BREIT/Park Place/Jones Lang)
+ ("MULTI_ASSET",["BCAT"],["capital allocation","multi-asset","multi asset","balanced allocation","flexible allocation"]),   # BCAT = BlackRock Capital Allocation Term Trust
  ("PRIVATE_ALTERNATIVES",[],["reinsurance","risk premium","risk prmm","insurance-linked"," ils"]),
  # Treasuries route to a PROPOSED code (see proposedTaxonomyAdditions); falls to BONDS if absent
  ("TREASURIES",["IEF","TLT","VGIT","VGLT","SHY","GOVT","IEI","EDV","TIP","VTIP","TLTW"],["treasury","treas","t-bond","t-note","govt bond","inflation protected","tips"]),
@@ -79,7 +81,7 @@ ticker_rules, name_rules = {}, []
 # keywords ("real estate", "credit", "private equity") and must classify by their specific name
 # before the generic public rules — e.g. STALLION / PARK PLACE "... REAL ESTATE FUND" were matching
 # the public REIT "Real Estate" rule. (2026-06-21)
-PRIVATE_FIRST = {"REAL_ASSETS", "PRCR", "PE_BUYOUT", "PRIVATE_ALTERNATIVES"}
+PRIVATE_FIRST = {"PRIVATE_REAL_ESTATE", "PRCR", "PE_BUYOUT", "PRIVATE_ALTERNATIVES"}
 for c, tks, words in EXTRA:
     if c in PRIVATE_FIRST and words: name_rules.append({"keywords": words, "code": c})
 for name, tks, words in OLAP_RULES:
@@ -97,7 +99,7 @@ def role(code):
     if code in {"PRECIOUS_METALS","BROAD_COMMODITIES","COMMODITIES"}: return "Diversifier"
     if code in {"LIQALTS","MANAGED_FUTURES","TREND_FOLLOWING","TREND_FOLLOWING_MANAGED_FUTURES","OPTIONS"}: return "Convexity"
     if code in {"PREQ","PE_BUYOUT","PE_GROWTH_EQUITY","PE_VENTURE_CAPITAL","PE_SECONDARIES",
-                "PRIVATE_ALTERNATIVES","REAL_ASSETS","PRCR","DIRECT_LENDING","ALTERNATIVES"}: return "Other-Alt"
+                "PRIVATE_ALTERNATIVES","REAL_ASSETS","PRIVATE_REAL_ESTATE","PRCR","DIRECT_LENDING","ALTERNATIVES"}: return "Other-Alt"
     if code in {"TREASURIES"}: return "Duration"
     if code in {"BONDS_CREDIT","PUBLIC_BONDS","BONDS","JUNK_BONDS","CORPORATE_BONDS","MUNICIPAL_BONDS","BANK_LOANS"}: return "Income"
     if code in {"OTHER","UNCLASSIFIED","OTHER_UNCLASSIFIED"}: return "Other"
