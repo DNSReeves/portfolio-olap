@@ -516,6 +516,15 @@ table {
   color: #2c3e50;
 }
 
+/* Content-width holdings table so the numeric columns sit right after the asset name instead of
+   the Asset column absorbing all the slack (which left a big asset→cost gap). */
+.tableWrap > table { width: auto; }
+/* keep the right-hand numeric columns from crowding the (variable-width) asset name */
+.tableWrap > table .num { padding-left: 28px; }
+
+/* "×N" badge when multiple lots of the same ticker were merged into one row. */
+.lots { font-size: 10px; font-weight: 700; color: #9aa7ad; margin-left: 5px; vertical-align: middle; }
+
 th,
 td {
   border-bottom: 1px solid #e8eef0;

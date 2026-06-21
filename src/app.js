@@ -1073,29 +1073,45 @@ function renderHoldings() {
   // Sleeve appears ONLY in the All view (in a sleeve drill-down every row is that sleeve → it's the
   // panel title). Shares (never populated) + Price (it was just the value) + per-row Source dropped.
   const isAll = state.selectedSleeve === "All";
+
+  // MERGE lots of the same ticker (e.g. the same ETF held across accounts) into one row, summing
+  // cost + value. Keyed by ticker + sleeve so a ticker that legitimately sits in two sleeves stays
+  // separate. Biggest position first.
+  const groups = new Map();
+  for (const h of holdings) {
+    const key = (h.ticker || h.assetName || "").toUpperCase() + "||" + h.sleeve;
+    let g = groups.get(key);
+    if (!g) { g = { ticker: h.ticker, assetName: h.assetName, sleeve: h.sleeve, costBasis: 0, marketValue: 0, lots: [] }; groups.set(key, g); }
+    g.costBasis += h.costBasis || 0;
+    g.marketValue += h.marketValue || 0;
+    g.lots.push(h);
+  }
+  const rows = [...groups.values()].sort((a, b) => b.marketValue - a.marketValue);
+
   el.holdingsHead.innerHTML =
     `<th>Ticker</th><th>Asset</th>` + (isAll ? `<th>Sleeve</th>` : ``) +
     `<th class="num">Cost</th><th class="num">Value</th><th class="num">Gain / Loss</th>`;
 
   el.holdingsBody.replaceChildren(
-    ...holdings.map((holding) => {
+    ...rows.map((g) => {
       const tr = document.createElement("tr");
       tr.innerHTML =
-        `<td class="ticker">${escapeHtml(holding.ticker || "-")}</td>` +
-        `<td>${escapeHtml(holding.assetName)}</td>` +
+        `<td class="ticker">${escapeHtml(g.ticker || "-")}${g.lots.length > 1 ? `<small class="lots" title="${g.lots.length} lots merged">×${g.lots.length}</small>` : ``}</td>` +
+        `<td>${escapeHtml(g.assetName)}</td>` +
         (isAll ? `<td class="sleeveCell"></td>` : ``) +
-        `<td class="num">${holding.costBasis ? money(holding.costBasis) : "—"}</td>` +
-        `<td class="num strong">${money(holding.marketValue)}</td>` +
-        glCell(holding.marketValue, holding.costBasis);
+        `<td class="num">${g.costBasis ? money(g.costBasis) : "—"}</td>` +
+        `<td class="num strong">${money(g.marketValue)}</td>` +
+        glCell(g.marketValue, g.costBasis);
       if (isAll) {
         const select = document.createElement("select");
         select.innerHTML = DEFAULT_SLEEVES.map((sleeve) => `<option value="${escapeAttr(sleeve)}">${escapeHtml(sleeve)}</option>`).join("");
-        select.value = holding.sleeve;
+        select.value = g.sleeve;
         select.addEventListener("change", () => {
-          const key = assignmentKey(holding.ticker, holding.assetName);
-          state.assignments[key] = select.value;
-          holding.sleeve = select.value;
-          holding.assignmentSource = "manual";
+          for (const h of g.lots) {            // reassigning a merged row moves every underlying lot
+            state.assignments[assignmentKey(h.ticker, h.assetName)] = select.value;
+            h.sleeve = select.value;
+            h.assignmentSource = "manual";
+          }
           saveJson("assignments", state.assignments);
           saveJson("holdings", state.holdings);
           render();
@@ -1111,8 +1127,8 @@ function renderHoldings() {
   const tVal = holdings.reduce((s, h) => s + (h.marketValue || 0), 0);
   const tGain = tVal - tCost;
   const tPct = tCost ? tGain / tCost : 0;
-  el.holdingsFoot.innerHTML = holdings.length
-    ? `<tr><td colspan="${isAll ? 3 : 2}">${holdings.length} holding${holdings.length === 1 ? "" : "s"}</td>` +
+  el.holdingsFoot.innerHTML = rows.length
+    ? `<tr><td colspan="${isAll ? 3 : 2}">${rows.length} holding${rows.length === 1 ? "" : "s"}</td>` +
       `<td class="num">${money(tCost)}</td><td class="num strong">${money(tVal)}</td>` +
       `<td class="num gl ${tGain >= 0 ? "up" : "down"}">${money(tGain)}${tCost ? ` <em>${(tGain >= 0 ? "+" : "") + (tPct * 100).toFixed(1)}%</em>` : ""}</td></tr>`
     : "";
