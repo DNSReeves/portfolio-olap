@@ -333,6 +333,7 @@ The **convex role** describes a sleeve's job in the portfolio's "crash shape":
 - Click `All Portfolio` for the whole book.
 - Click a **bucket / role header** to drill into every holding in that group.
 - Click a **sleeve** under a header to drill into just that sleeve.
+- Some buckets nest one level deeper — e.g. **Fixed Income → Bonds → {Treasuries, Corporate, Municipal, High-Yield, Bank Loans, Core/Multisector}**, with **CDs** and **Annuity / Stable Value** as direct siblings of the **Bonds** sub-group. The sub-group is itself collapsible and drillable (clicking **Bonds** shows the whole bond family).
 - Click an **allocation row** or a **top holding** to jump to its sleeve.
 - The chevron (▸ / ▾) collapses or expands a group; the state is remembered.
 
