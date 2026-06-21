@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.0";
+const APP_VERSION = "v2.1";
 
 const DEFAULT_SLEEVES = [
   "Equity",
@@ -1765,12 +1765,26 @@ function renderMarkdown(markdown) {
   let inList = false;
   let inCode = false;
   let codeLines = [];
+  let inTable = false;
+  let tableRows = [];
 
   function closeList() {
     if (inList) {
       html.push("</ul>");
       inList = false;
     }
+  }
+  function flushTable() {
+    if (!inTable) return;
+    const cells = tableRows.map((r) => r.replace(/^\||\|$/g, "").split("|").map((c) => c.trim()));
+    const header = cells[0] || [];
+    const sep = cells[1] && cells[1].every((c) => /^:?-{2,}:?$/.test(c));   // |---|---| divider
+    const body = cells.slice(sep ? 2 : 1);
+    let t = `<table class="manualTable"><thead><tr>${header.map((h) => `<th>${inlineMarkdown(h)}</th>`).join("")}</tr></thead><tbody>`;
+    for (const row of body) t += `<tr>${row.map((c) => `<td>${inlineMarkdown(c)}</td>`).join("")}</tr>`;
+    html.push(t + "</tbody></table>");
+    tableRows = [];
+    inTable = false;
   }
 
   for (const line of lines) {
@@ -1780,6 +1794,7 @@ function renderMarkdown(markdown) {
         codeLines = [];
         inCode = false;
       } else {
+        flushTable();
         closeList();
         inCode = true;
       }
@@ -1791,7 +1806,16 @@ function renderMarkdown(markdown) {
       continue;
     }
 
-    if (!line.trim()) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("|") && trimmed.endsWith("|") && trimmed.length > 1) {
+      closeList();
+      tableRows.push(trimmed);
+      inTable = true;
+      continue;
+    }
+    if (inTable) flushTable();   // any non-table line (incl. blank) ends a table
+
+    if (!trimmed) {
       closeList();
       continue;
     }
@@ -1825,6 +1849,7 @@ function renderMarkdown(markdown) {
     html.push(`<p>${inlineMarkdown(line)}</p>`);
   }
 
+  flushTable();
   closeList();
   if (inCode) {
     html.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);

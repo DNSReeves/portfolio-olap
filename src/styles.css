@@ -760,6 +760,12 @@ th {
   box-shadow: 0 22px 80px rgba(17, 24, 29, 0.32);
 }
 
+/* Definition tables in the Guide */
+.manualTable { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+.manualTable th, .manualTable td { border: 1px solid #e0e6e9; padding: 6px 10px; text-align: left; vertical-align: top; }
+.manualTable th { background: #f3f6f7; font-weight: 700; }
+.manualTable tr:nth-child(even) td { background: #fafbfc; }
+
 .workflowDialog {
   width: min(980px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
