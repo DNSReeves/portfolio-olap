@@ -168,6 +168,20 @@ button {
 .bucketSleeves { margin-left: 13px; padding-left: 6px; border-left: 1px solid #2a3a44; }
 .bucketSleeves .sleeve { font-size: 12.5px; padding: 6px 8px; }
 
+/* "View by: Asset Class | Convex Role" sidebar switch */
+.viewToggle { margin-bottom: 12px; }
+.viewToggleLabel {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #8fa1a8; padding-left: 4px; margin-bottom: 5px;
+}
+.viewToggleBtns { display: flex; gap: 4px; }
+.viewToggleBtn {
+  flex: 1; border: 1px solid #2a3a44; background: transparent; color: #a9b8bf;
+  font-size: 11px; font-weight: 600; padding: 5px 4px; border-radius: 6px; cursor: pointer;
+}
+.viewToggleBtn:hover { background: #1b2730; color: #eef3f5; }
+.viewToggleBtn.active { background: #287f8f; color: #ffffff; border-color: #287f8f; }
+
 main {
   display: grid;
   grid-auto-rows: min-content;   /* each section sizes to content (was a rigid 3-row grid

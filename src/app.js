@@ -255,6 +255,7 @@ const state = {
   selectedSleeve: "All",
   selectedBucket: null,                                       // rollup-bucket drill-down (orthogonal to sleeve)
   collapsedBuckets: new Set(loadJson("collapsedBuckets", [])),
+  sidebarView: loadJson("sidebarView", "class"),              // "class" (asset class) | "role" (convex role)
   query: "",
   valuationDate: "",
   snapshots: [],
@@ -648,9 +649,14 @@ function bucketOfSleeve(sleeveName) {
   return name;
 }
 
-// Drill scope = "All" | a single sleeve | a whole bucket (bucket keeps selectedSleeve "All").
+// A sleeve's group in the ACTIVE sidebar view: asset-class bucket, or its convex role.
+function groupOfSleeve(sleeveName) {
+  return state.sidebarView === "role" ? (convexRoleForSleeve(sleeveName) || "Other") : bucketOfSleeve(sleeveName);
+}
+
+// Drill scope = "All" | a single sleeve | a whole group (group keeps selectedSleeve "All").
 function inSelection(holding) {
-  if (state.selectedBucket) return bucketOfSleeve(holding.sleeve) === state.selectedBucket;
+  if (state.selectedBucket) return groupOfSleeve(holding.sleeve) === state.selectedBucket;
   if (state.selectedSleeve !== "All") return holding.sleeve === state.selectedSleeve;
   return true;
 }
@@ -664,19 +670,48 @@ function selectScope({ sleeve = "All", bucket = null }) {
   if (!isAllScope()) revealHoldings();   // jump to the holdings table on any drill-in (not on "All")
 }
 
+// The "View by: Asset Class | Convex Role" switch atop the sidebar nav.
+function viewToggle() {
+  const wrap = document.createElement("div");
+  wrap.className = "viewToggle";
+  const lbl = document.createElement("div");
+  lbl.className = "viewToggleLabel";
+  lbl.textContent = "View by";
+  wrap.appendChild(lbl);
+  const row = document.createElement("div");
+  row.className = "viewToggleBtns";
+  for (const [v, text] of [["class", "Asset Class"], ["role", "Convex Role"]]) {
+    const btn = document.createElement("button");
+    btn.className = `viewToggleBtn ${state.sidebarView === v ? "active" : ""}`;
+    btn.textContent = text;
+    btn.addEventListener("click", () => {
+      if (state.sidebarView === v) return;
+      state.sidebarView = v;
+      saveJson("sidebarView", v);
+      state.selectedSleeve = "All"; state.selectedBucket = null;   // group names differ between views → reset scope
+      render();
+    });
+    row.appendChild(btn);
+  }
+  wrap.appendChild(row);
+  return wrap;
+}
+
 function renderSleeves(cube) {
-  const nav = [navButton("All Portfolio", () => selectScope({ sleeve: "All" }), "", isAllScope())];
-  // group the live sleeves under their rollup bucket (cube.sleeves is already weight-desc)
+  const nav = [viewToggle(), navButton("All Portfolio", () => selectScope({ sleeve: "All" }), "", isAllScope())];
+  // group the live sleeves under the active grouping — asset-class bucket OR convex role
   const groups = new Map();
   for (const s of cube.sleeves) {
-    const b = bucketOfSleeve(s.sleeve);
-    if (!groups.has(b)) groups.set(b, { value: 0, weight: 0, sleeves: [] });
-    const g = groups.get(b);
+    const grp = groupOfSleeve(s.sleeve);
+    if (!groups.has(grp)) groups.set(grp, { value: 0, weight: 0, sleeves: [] });
+    const g = groups.get(grp);
     g.value += s.value; g.weight += s.weight; g.sleeves.push(s);
   }
-  for (const { name } of ROLLUP_BUCKETS) {
+  const order = state.sidebarView === "role" ? _CONVEX_ROLE_ORDER : ROLLUP_BUCKETS.map((b) => b.name);
+  const ordered = [...order, ...[...groups.keys()].filter((k) => !order.includes(k))];   // any straggler last
+  for (const name of ordered) {
     const g = groups.get(name);
-    if (!g) continue;                                       // hide empty buckets
+    if (!g) continue;                                       // hide empty groups
     const collapsed = state.collapsedBuckets.has(name);
     const group = document.createElement("div");
     group.className = "bucketGroup";
