@@ -264,19 +264,38 @@ h2 {
 
 .metric {
   justify-content: space-between;
-  gap: 16px;
+  gap: 4px 16px;
   background: #ffffff;
   border: 1px solid #dfe6e9;
   border-radius: 8px;
   padding: 18px;
+  /* RESPONSIVE FIT: when the label + value don't fit side-by-side, the value wraps UNDER the
+     label instead of overflowing the card frame (any panel, any width — no breakpoint needed). */
+  flex-wrap: wrap;
 }
 
 .metric span {
   color: #65747b;
+  min-width: 0;   /* let a long label shrink rather than push the value out of the box */
 }
 
 .metric strong {
-  font-size: 24px;
+  /* auto-shrink the value as the viewport narrows (24px on wide screens). overflow-wrap is the
+     last-resort guard so a value can never spill outside the card frame. */
+  font-size: clamp(16px, 1.6vw, 24px);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* composite-value sub-note (e.g. "9 yrs of spend", "vs -26.7% all-equity") — drop it BELOW the
+   number as a small muted line instead of inline, so it never widens the value past the card. */
+.cxSub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  color: #65747b;
 }
 
 .metric.good strong {
