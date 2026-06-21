@@ -1081,15 +1081,20 @@ function renderHoldings() {
   for (const h of holdings) {
     const key = (h.ticker || h.assetName || "").toUpperCase() + "||" + h.sleeve;
     let g = groups.get(key);
-    if (!g) { g = { ticker: h.ticker, assetName: h.assetName, sleeve: h.sleeve, costBasis: 0, marketValue: 0, lots: [] }; groups.set(key, g); }
+    if (!g) { g = { ticker: h.ticker, assetName: h.assetName, sleeve: h.sleeve, shares: 0, costBasis: 0, marketValue: 0, lots: [] }; groups.set(key, g); }
     g.costBasis += h.costBasis || 0;
     g.marketValue += h.marketValue || 0;
+    g.shares += h.shares || 0;
     g.lots.push(h);
   }
   const rows = [...groups.values()].sort((a, b) => b.marketValue - a.marketValue);
 
+  // ADAPTIVE Shares column: only shown when the imported book actually carries share counts (the
+  // value-only consolidated book has none → column stays hidden; a broker CSV with Qty shows it).
+  const hasShares = state.holdings.some((h) => (h.shares || 0) > 0);
   el.holdingsHead.innerHTML =
     `<th>Ticker</th><th>Asset</th>` + (isAll ? `<th>Sleeve</th>` : ``) +
+    (hasShares ? `<th class="num">Shares</th>` : ``) +
     `<th class="num">Cost</th><th class="num">Value</th><th class="num">Gain / Loss</th>`;
 
   el.holdingsBody.replaceChildren(
@@ -1099,6 +1104,7 @@ function renderHoldings() {
         `<td class="ticker">${escapeHtml(g.ticker || "-")}${g.lots.length > 1 ? `<small class="lots" title="${g.lots.length} lots merged">×${g.lots.length}</small>` : ``}</td>` +
         `<td>${escapeHtml(g.assetName)}</td>` +
         (isAll ? `<td class="sleeveCell"></td>` : ``) +
+        (hasShares ? `<td class="num">${number(g.shares)}</td>` : ``) +
         `<td class="num">${g.costBasis ? money(g.costBasis) : "—"}</td>` +
         `<td class="num strong">${money(g.marketValue)}</td>` +
         glCell(g.marketValue, g.costBasis);
@@ -1123,12 +1129,14 @@ function renderHoldings() {
   );
 
   // Totals footer for the current view (sleeve total cost / value / gain).
+  const tShares = holdings.reduce((s, h) => s + (h.shares || 0), 0);
   const tCost = holdings.reduce((s, h) => s + (h.costBasis || 0), 0);
   const tVal = holdings.reduce((s, h) => s + (h.marketValue || 0), 0);
   const tGain = tVal - tCost;
   const tPct = tCost ? tGain / tCost : 0;
   el.holdingsFoot.innerHTML = rows.length
     ? `<tr><td colspan="${isAll ? 3 : 2}">${rows.length} holding${rows.length === 1 ? "" : "s"}</td>` +
+      (hasShares ? `<td class="num">${number(tShares)}</td>` : ``) +
       `<td class="num">${money(tCost)}</td><td class="num strong">${money(tVal)}</td>` +
       `<td class="num gl ${tGain >= 0 ? "up" : "down"}">${money(tGain)}${tCost ? ` <em>${(tGain >= 0 ? "+" : "") + (tPct * 100).toFixed(1)}%</em>` : ""}</td></tr>`
     : "";
