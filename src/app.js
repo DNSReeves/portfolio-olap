@@ -1089,12 +1089,13 @@ function renderHoldings() {
   }
   const rows = [...groups.values()].sort((a, b) => b.marketValue - a.marketValue);
 
-  // ADAPTIVE Shares column: only shown when the imported book actually carries share counts (the
-  // value-only consolidated book has none → column stays hidden; a broker CSV with Qty shows it).
+  // ADAPTIVE Shares + Price columns: only shown when the imported book carries share counts (the
+  // value-only consolidated book has none → hidden; a broker CSV with Qty shows them). Price is
+  // DERIVED value÷shares so a merged row gets a correct weighted price even when lots differ.
   const hasShares = state.holdings.some((h) => (h.shares || 0) > 0);
   el.holdingsHead.innerHTML =
     `<th>Ticker</th><th>Asset</th>` + (isAll ? `<th>Sleeve</th>` : ``) +
-    (hasShares ? `<th class="num">Shares</th>` : ``) +
+    (hasShares ? `<th class="num">Shares</th><th class="num">Price</th>` : ``) +
     `<th class="num">Cost</th><th class="num">Value</th><th class="num">Gain / Loss</th>`;
 
   el.holdingsBody.replaceChildren(
@@ -1104,7 +1105,7 @@ function renderHoldings() {
         `<td class="ticker">${escapeHtml(g.ticker || "-")}${g.lots.length > 1 ? `<small class="lots" title="${g.lots.length} lots merged">×${g.lots.length}</small>` : ``}</td>` +
         `<td>${escapeHtml(g.assetName)}</td>` +
         (isAll ? `<td class="sleeveCell"></td>` : ``) +
-        (hasShares ? `<td class="num">${number(g.shares)}</td>` : ``) +
+        (hasShares ? `<td class="num">${number(g.shares)}</td><td class="num">${g.shares > 0 ? priceUsd(g.marketValue / g.shares) : "—"}</td>` : ``) +
         `<td class="num">${g.costBasis ? money(g.costBasis) : "—"}</td>` +
         `<td class="num strong">${money(g.marketValue)}</td>` +
         glCell(g.marketValue, g.costBasis);
@@ -1136,7 +1137,7 @@ function renderHoldings() {
   const tPct = tCost ? tGain / tCost : 0;
   el.holdingsFoot.innerHTML = rows.length
     ? `<tr><td colspan="${isAll ? 3 : 2}">${rows.length} holding${rows.length === 1 ? "" : "s"}</td>` +
-      (hasShares ? `<td class="num">${number(tShares)}</td>` : ``) +
+      (hasShares ? `<td class="num">${number(tShares)}</td><td></td>` : ``) +
       `<td class="num">${money(tCost)}</td><td class="num strong">${money(tVal)}</td>` +
       `<td class="num gl ${tGain >= 0 ? "up" : "down"}">${money(tGain)}${tCost ? ` <em>${(tGain >= 0 ? "+" : "") + (tPct * 100).toFixed(1)}%</em>` : ""}</td></tr>`
     : "";
@@ -1517,6 +1518,16 @@ function money(value) {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
+  }).format(Number.isFinite(value) ? value : 0);
+}
+
+// like money() but with cents — for per-share prices ($121.85, not $122).
+function priceUsd(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0);
 }
 
