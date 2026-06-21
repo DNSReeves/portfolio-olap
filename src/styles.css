@@ -1041,7 +1041,10 @@ th {
 .cxRow.cxHot .cxBar i { background: #2dd4a7; }
 .cxRow em.good, .cxRow strong.good { color: #1b7a57; }
 .cxRow em.warn, .cxRow strong.warn { color: #a75b17; }
-.cxCrisis { width: 100%; border-collapse: collapse; margin-top: 4px; }
+/* the crisis table can't shrink below its column content — let it scroll horizontally inside the
+   panel on narrow screens instead of clipping the right-hand columns. */
+.cxScroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.cxCrisis { width: 100%; border-collapse: collapse; margin-top: 4px; min-width: 360px; }
 .cxCrisis th, .cxCrisis td {
   padding: 7px 10px; text-align: right; font-variant-numeric: tabular-nums;
   border-bottom: 1px solid #eef2f3;

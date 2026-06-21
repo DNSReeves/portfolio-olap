@@ -806,7 +806,7 @@ function renderConvexity(cube) {
       return `<tr class="${r === "Convexity" ? "cxHot" : ""}"><td>${r}${r === "Convexity" ? " ◆" : ""}</td>${cells}</tr>`;
     }).join("");
     crisisBlock = `<div class="cxBlock"><p class="eyebrow">Per-role crisis attribution (precomputed)</p>` +
-      `<table class="cxCrisis"><thead>${head}</thead><tbody>${body}</tbody></table>` +
+      `<div class="cxScroll"><table class="cxCrisis"><thead>${head}</thead><tbody>${body}</tbody></table></div>` +
       `<div class="planNote">${escapeHtml(S.note || "")} 2008 GFC predates the trend-data window.</div></div>`;
   }
 
