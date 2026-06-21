@@ -525,6 +525,31 @@ table {
 /* "×N" badge when multiple lots of the same ticker were merged into one row. */
 .lots { font-size: 10px; font-weight: 700; color: #9aa7ad; margin-left: 5px; vertical-align: middle; }
 
+/* "newer book available" banner — shown on boot when the served consolidated CSV changed. */
+.bookBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: #fff7e6;
+  border: 1px solid #f0c97a;
+  border-radius: 8px;
+  color: #7a5a17;
+  font-size: 14px;
+}
+.bookBanner[hidden] { display: none; }
+.bookBannerMsg { flex: 1; font-weight: 600; }
+.bookBannerBtn {
+  background: #287f8f; color: #ffffff; border: none; border-radius: 6px;
+  padding: 6px 14px; font-weight: 600; cursor: pointer;
+}
+.bookBannerBtn:hover { background: #1f6573; }
+.bookBannerGhost {
+  background: transparent; border: none; color: #7a5a17;
+  cursor: pointer; text-decoration: underline; font-size: 13px;
+}
+
 th,
 td {
   border-bottom: 1px solid #e8eef0;

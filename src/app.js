@@ -287,6 +287,9 @@ const el = {
   searchInput: document.querySelector("#searchInput"),
   csvFile: document.querySelector("#csvFile"),
   loadBookButton: document.querySelector("#loadBookButton"),
+  bookBanner: document.querySelector("#bookBanner"),
+  bookReload: document.querySelector("#bookReload"),
+  bookDismiss: document.querySelector("#bookDismiss"),
   sampleButton: document.querySelector("#sampleButton"),
   largeSampleButton: document.querySelector("#largeSampleButton"),
   importPanelButton: document.querySelector("#importPanelButton"),
@@ -325,28 +328,62 @@ el.csvFile.addEventListener("change", async (event) => {
 // Load the full consolidated book served by com.dnsr.olap (consolidated_holdings.csv,
 // written by portfolio_analysis.py — all accounts, Flex netted, IRA + TIAA, sleeves set).
 // Fetched from the server so it works from any browser without picking a local file.
-el.loadBookButton.addEventListener("click", async () => {
-  const btn = el.loadBookButton;
-  const original = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Loading…";
+// Cheap content signature (djb2) so we can tell when the served book has changed since we loaded it.
+function bookSignature(text) {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
+  return `${text.length}.${(h >>> 0).toString(36)}`;
+}
+
+// Fetch + import the consolidated book; records the signature of what we loaded so a later boot can
+// detect a regeneration. Reused by the Load Full Book button AND the "newer book" banner's Reload.
+async function loadConsolidatedBook() {
+  const res = await fetch("./consolidated_holdings.csv", { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status} — run portfolio_analysis.py to generate it`);
+  const text = await res.text();
+  const rows = parseCsv(text);
+  if (!rows.length) throw new Error("consolidated_holdings.csv is empty");
+  state.rows = rows;
+  state.mapping = detectColumnMapping(Object.keys(rows[0] || {}));
+  state.valuationDate = detectValuationDate(rows, state.mapping) || today();
+  el.valuationDateInput.value = state.valuationDate;
+  state.selectedSleeve = "All";
+  await applyImport("consolidated_holdings.csv");
+  localStorage.setItem("olap.bookSignature", bookSignature(text));
+  hideBookBanner();
+}
+
+function showBookBanner(sig) { if (el.bookBanner) { el.bookBanner.dataset.sig = sig; el.bookBanner.hidden = false; } }
+function hideBookBanner() { if (el.bookBanner) el.bookBanner.hidden = true; }
+
+// On boot: if the user previously adopted the consolidated book and the served file has since changed
+// (portfolio_analysis.py re-exported it), surface a non-blocking banner — a plain refresh reuses the
+// localStorage book, so without this a regenerated book would go unnoticed.
+async function checkForNewerBook() {
+  const prev = localStorage.getItem("olap.bookSignature");
+  if (!prev) return;                          // never loaded the full book → don't nag
   try {
     const res = await fetch("./consolidated_holdings.csv", { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status} — run portfolio_analysis.py to generate it`);
-    const rows = parseCsv(await res.text());
-    if (!rows.length) throw new Error("consolidated_holdings.csv is empty");
-    state.rows = rows;
-    state.mapping = detectColumnMapping(Object.keys(rows[0] || {}));
-    state.valuationDate = detectValuationDate(rows, state.mapping) || today();
-    el.valuationDateInput.value = state.valuationDate;
-    state.selectedSleeve = "All";
-    await applyImport("consolidated_holdings.csv");
-  } catch (error) {
-    window.alert(`Could not load the consolidated book: ${error.message}`);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
-  }
+    if (!res.ok) return;
+    const sig = bookSignature(await res.text());
+    if (sig !== prev && localStorage.getItem("olap.bookBannerDismissed") !== sig) showBookBanner(sig);
+  } catch { /* offline / server down → skip silently */ }
+}
+
+async function _runBookLoad(btn, busyLabel) {
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = busyLabel;
+  try { await loadConsolidatedBook(); }
+  catch (error) { window.alert(`Could not load the consolidated book: ${error.message}`); }
+  finally { btn.disabled = false; btn.textContent = original; }
+}
+
+el.loadBookButton.addEventListener("click", () => _runBookLoad(el.loadBookButton, "Loading…"));
+el.bookReload?.addEventListener("click", () => _runBookLoad(el.bookReload, "Reloading…"));
+el.bookDismiss?.addEventListener("click", () => {
+  const sig = el.bookBanner?.dataset.sig;
+  if (sig) localStorage.setItem("olap.bookBannerDismissed", sig);   // don't re-nag until it changes again
+  hideBookBanner();
 });
 
 // Sample-data loaders now live inside the Guide dialog; close it on click so the
@@ -487,6 +524,7 @@ async function initApp() {
     el.snapshotStatus.textContent = `IndexedDB unavailable: ${state.dbError}`;
   }
   render();
+  checkForNewerBook();   // fire-and-forget: surface a banner if the served book was regenerated
 }
 
 async function applyImport(sourceName = "CSV import") {
