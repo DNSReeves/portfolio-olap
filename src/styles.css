@@ -148,6 +148,26 @@ button {
   color: #e7b84c;
 }
 
+/* ── Rollup buckets: a collapsible group header + indented sleeves under it ── */
+.bucketGroup { margin-bottom: 2px; }
+.bucketHeader { display: flex; align-items: center; gap: 2px; }
+.bucketToggle {
+  flex: 0 0 auto; width: 20px; border: 0; background: transparent; color: #8fa1a8;
+  cursor: pointer; font-size: 11px; line-height: 1; padding: 7px 0;
+}
+.bucketToggle:hover { color: #eef3f5; }
+.bucketLabel {
+  flex: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  border: 0; background: transparent; color: #eef3f5; cursor: pointer;
+  padding: 7px 10px 7px 4px; border-radius: 8px; text-align: left; font-weight: 700; font-size: 13px;
+}
+.bucketLabel strong { font-weight: 600; font-size: 11px; color: #9fb0b7; }
+.bucketLabel:hover { background: #1b2730; }
+.bucketLabel.active { background: #287f8f; color: #ffffff; }
+.bucketLabel.active strong { color: #d9eef2; }
+.bucketSleeves { margin-left: 13px; padding-left: 6px; border-left: 1px solid #2a3a44; }
+.bucketSleeves .sleeve { font-size: 12.5px; padding: 6px 8px; }
+
 main {
   display: grid;
   grid-auto-rows: min-content;   /* each section sizes to content (was a rigid 3-row grid

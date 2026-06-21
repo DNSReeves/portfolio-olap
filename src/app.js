@@ -252,6 +252,8 @@ const state = {
   mapping: {},
   errors: [],
   selectedSleeve: "All",
+  selectedBucket: null,                                       // rollup-bucket drill-down (orthogonal to sleeve)
+  collapsedBuckets: new Set(loadJson("collapsedBuckets", [])),
   query: "",
   valuationDate: "",
   snapshots: [],
@@ -274,6 +276,7 @@ const el = {
   allocationBars: document.querySelector("#allocationBars"),
   topHoldings: document.querySelector("#topHoldings"),
   drillPath: document.querySelector("#drillPath"),
+  holdings: document.querySelector("#holdings"),
   holdingsHead: document.querySelector("#holdingsHead"),
   holdingsFoot: document.querySelector("#holdingsFoot"),
   holdingsBody: document.querySelector("#holdingsBody"),
@@ -348,6 +351,7 @@ async function loadConsolidatedBook() {
   state.valuationDate = detectValuationDate(rows, state.mapping) || today();
   el.valuationDateInput.value = state.valuationDate;
   state.selectedSleeve = "All";
+  state.selectedBucket = null;
   await applyImport("consolidated_holdings.csv");
   localStorage.setItem("olap.bookSignature", bookSignature(text));
   hideBookBanner();
@@ -394,6 +398,7 @@ el.sampleButton.addEventListener("click", () => {
   state.mapping = {};
   state.errors = [];
   state.selectedSleeve = "All";
+  state.selectedBucket = null;
   saveJson("holdings", state.holdings);
   if (el.manualDialog?.open) el.manualDialog.close();
   render();
@@ -405,6 +410,7 @@ el.largeSampleButton.addEventListener("click", () => {
   state.mapping = {};
   state.errors = [];
   state.selectedSleeve = "All";
+  state.selectedBucket = null;
   saveJson("holdings", state.holdings);
   if (el.manualDialog?.open) el.manualDialog.close();
   render();
@@ -538,6 +544,7 @@ async function applyImport(sourceName = "CSV import") {
   state.holdings = normalized.holdings.length ? normalized.holdings : state.holdings;
   state.errors = normalized.errors;
   state.selectedSleeve = "All";
+  state.selectedBucket = null;
   saveJson("holdings", state.holdings);
   if (normalized.holdings.length && state.db) {
     const snapshot = {
@@ -608,43 +615,117 @@ function handleSplitterKey(event) {
 }
 
 function renderTitle() {
-  el.viewLabel.textContent = state.selectedSleeve === "All" ? "Portfolio overview" : "Sleeve drill-down";
-  el.viewTitle.textContent = state.selectedSleeve === "All" ? "Investment Portfolio" : state.selectedSleeve;
-  el.holdingsTitle.textContent = state.selectedSleeve === "All" ? "All Holdings" : `${state.selectedSleeve} Holdings`;
+  const all = isAllScope();
+  el.viewLabel.textContent = all ? "Portfolio overview" : (state.selectedBucket ? "Bucket drill-down" : "Sleeve drill-down");
+  el.viewTitle.textContent = all ? "Investment Portfolio" : selectionLabel();
+  el.holdingsTitle.textContent = all ? "All Holdings" : `${selectionLabel()} Holdings`;
+}
+
+// ── Rollup taxonomy: granular sleeves → ~7 top-level buckets (the liquidity-aware view). A sleeve's
+// bucket is the first anchor found walking its taxonomy ancestor chain (SLEEVE_PARENTS). ─────────
+const ROLLUP_BUCKETS = [
+  { name: "Public Equity", anchors: ["Public Equity"] },
+  { name: "Private Equity", anchors: ["Private Equity"] },
+  { name: "Public Fixed Income", anchors: ["Public Bonds"] },
+  { name: "Private Credit", anchors: ["Private Credit"] },
+  { name: "Liquid Alts", anchors: ["Liquid Alternatives"] },
+  { name: "Real Assets", anchors: ["Commodities", "Real Assets", "Private Alternatives"] },
+  { name: "Cash", anchors: ["Cash"] },
+  { name: "Other", anchors: ["Other / Unclassified", "Other", "Unclassified"] },
+];
+const _bucketCache = new Map();
+function bucketOfSleeve(sleeveName) {
+  if (_bucketCache.has(sleeveName)) return _bucketCache.get(sleeveName);
+  const chain = [sleeveName, ...parentPath(sleeveName)];
+  const hit = ROLLUP_BUCKETS.find((b) => b.anchors.some((a) => chain.includes(a)));
+  const name = hit ? hit.name : "Other";
+  _bucketCache.set(sleeveName, name);
+  return name;
+}
+
+// Drill scope = "All" | a single sleeve | a whole bucket (bucket keeps selectedSleeve "All").
+function inSelection(holding) {
+  if (state.selectedBucket) return bucketOfSleeve(holding.sleeve) === state.selectedBucket;
+  if (state.selectedSleeve !== "All") return holding.sleeve === state.selectedSleeve;
+  return true;
+}
+function isAllScope() { return !state.selectedBucket && state.selectedSleeve === "All"; }
+function selectionLabel() { return state.selectedBucket || (state.selectedSleeve === "All" ? "All" : state.selectedSleeve); }
+function revealHoldings() { el.holdings?.scrollIntoView({ behavior: "smooth", block: "start" }); }
+function selectScope({ sleeve = "All", bucket = null }) {
+  state.selectedSleeve = sleeve;
+  state.selectedBucket = bucket;
+  render();
+  if (!isAllScope()) revealHoldings();   // jump to the holdings table on any drill-in (not on "All")
 }
 
 function renderSleeves(cube) {
-  const buttons = [
-    navButton("All Portfolio", "All", ""),
-    ...cube.sleeves.map((sleeve) => navButton(sleeve.sleeve, sleeve.sleeve, percent(sleeve.weight))),
-  ];
-  el.sleeveNav.replaceChildren(...buttons);
+  const nav = [navButton("All Portfolio", () => selectScope({ sleeve: "All" }), "", isAllScope())];
+  // group the live sleeves under their rollup bucket (cube.sleeves is already weight-desc)
+  const groups = new Map();
+  for (const s of cube.sleeves) {
+    const b = bucketOfSleeve(s.sleeve);
+    if (!groups.has(b)) groups.set(b, { value: 0, weight: 0, sleeves: [] });
+    const g = groups.get(b);
+    g.value += s.value; g.weight += s.weight; g.sleeves.push(s);
+  }
+  for (const { name } of ROLLUP_BUCKETS) {
+    const g = groups.get(name);
+    if (!g) continue;                                       // hide empty buckets
+    const collapsed = state.collapsedBuckets.has(name);
+    const group = document.createElement("div");
+    group.className = "bucketGroup";
+
+    const header = document.createElement("div");
+    header.className = "bucketHeader";
+    const toggle = document.createElement("button");
+    toggle.className = "bucketToggle";
+    toggle.textContent = collapsed ? "▸" : "▾";
+    toggle.title = collapsed ? "Expand" : "Collapse";
+    toggle.addEventListener("click", () => {
+      if (collapsed) state.collapsedBuckets.delete(name); else state.collapsedBuckets.add(name);
+      saveJson("collapsedBuckets", [...state.collapsedBuckets]);
+      render();
+    });
+    const label = document.createElement("button");
+    label.className = `bucketLabel ${state.selectedBucket === name ? "active" : ""}`;
+    label.innerHTML = `<span>${escapeHtml(name)}</span><strong>${percent(g.weight)}</strong>`;
+    label.addEventListener("click", () => selectScope({ bucket: name }));
+    header.append(toggle, label);
+    group.appendChild(header);
+
+    if (!collapsed) {
+      const list = document.createElement("div");
+      list.className = "bucketSleeves";
+      for (const s of g.sleeves) {
+        list.appendChild(navButton(s.sleeve, () => selectScope({ sleeve: s.sleeve }),
+          percent(s.weight), !state.selectedBucket && state.selectedSleeve === s.sleeve));
+      }
+      group.appendChild(list);
+    }
+    nav.push(group);
+  }
+  el.sleeveNav.replaceChildren(...nav);
 }
 
-function navButton(label, sleeve, meta) {
+function navButton(label, onClick, meta, active) {
   const button = document.createElement("button");
-  button.className = `sleeve ${state.selectedSleeve === sleeve ? "active" : ""}`;
+  button.className = `sleeve ${active ? "active" : ""}`;
   button.innerHTML = `<span>${escapeHtml(label)}</span><strong>${escapeHtml(meta)}</strong>`;
-  button.addEventListener("click", () => {
-    state.selectedSleeve = sleeve;
-    render();
-  });
+  button.addEventListener("click", onClick);
   return button;
 }
 
 function renderMetrics(cube) {
-  const selectedHoldings =
-    state.selectedSleeve === "All"
-      ? state.holdings
-      : state.holdings.filter((holding) => holding.sleeve === state.selectedSleeve);
+  const selectedHoldings = isAllScope() ? state.holdings : state.holdings.filter(inSelection);
   const selectedValue = selectedHoldings.reduce((sum, holding) => sum + holding.marketValue, 0);
   const selectedCostBasis = selectedHoldings.reduce((sum, holding) => sum + (holding.costBasis || 0), 0);
   const selectedGain = selectedValue - selectedCostBasis;
   const selectedAllocation = cube.totalValue ? selectedValue / cube.totalValue : 0;
-  const selectedLabel = state.selectedSleeve === "All" ? "Portfolio Value" : `${state.selectedSleeve} Value`;
+  const selectedLabel = isAllScope() ? "Portfolio Value" : `${selectionLabel()} Value`;
 
   el.metrics.replaceChildren(
-    metric(selectedLabel, money(selectedValue), state.selectedSleeve === "All" ? "" : "focus"),
+    metric(selectedLabel, money(selectedValue), isAllScope() ? "" : "focus"),
     metric("Total Portfolio", money(cube.totalValue)),
     metric("Portfolio Allocation", percent(selectedAllocation)),
     metric("Selection Gain", money(selectedGain), selectedGain >= 0 ? "good" : "warn"),
@@ -934,10 +1015,7 @@ function renderAllocation(cube) {
         <span class="barTrack"><span class="barFill" style="width:${Math.max(sleeve.weight * 100, 2)}%"></span></span>
         <span class="barValue">${money(sleeve.value)}</span>
         <span class="barPct">${percent(sleeve.weight)}</span>`;
-      button.addEventListener("click", () => {
-        state.selectedSleeve = sleeve.sleeve;
-        render();
-      });
+      button.addEventListener("click", () => selectScope({ sleeve: sleeve.sleeve }));
       return button;
     }),
   );
@@ -949,10 +1027,7 @@ function renderTopHoldings(cube) {
       const button = document.createElement("button");
       button.className = "miniItem";
       button.innerHTML = `<span><strong>${escapeHtml(holding.ticker || holding.assetName)}</strong><small>${escapeHtml(holding.sleeve)}</small></span><span>${money(holding.marketValue)}</span>`;
-      button.addEventListener("click", () => {
-        state.selectedSleeve = holding.sleeve;
-        render();
-      });
+      button.addEventListener("click", () => selectScope({ sleeve: holding.sleeve }));
       return button;
     }),
   );
@@ -986,7 +1061,7 @@ function renderDrillPath() {
 
 function representativeHolding() {
   const filtered = state.holdings
-    .filter((holding) => state.selectedSleeve === "All" || holding.sleeve === state.selectedSleeve)
+    .filter((holding) => isAllScope() || inSelection(holding))
     .sort((a, b) => b.marketValue - a.marketValue);
   return filtered[0] || state.holdings.slice().sort((a, b) => b.marketValue - a.marketValue)[0];
 }
@@ -1101,10 +1176,9 @@ function glCell(marketValue, costBasis) {
 function renderHoldings() {
   const query = state.query.trim().toLowerCase();
   const holdings = state.holdings.filter((holding) => {
-    const sleeveMatch = state.selectedSleeve === "All" || holding.sleeve === state.selectedSleeve;
     const queryMatch =
       !query || holding.ticker.toLowerCase().includes(query) || holding.assetName.toLowerCase().includes(query);
-    return sleeveMatch && queryMatch;
+    return inSelection(holding) && queryMatch;
   });
 
   // Columns are value-only-book appropriate: Ticker · Asset · [Sleeve] · Cost · Value · Gain/Loss.
