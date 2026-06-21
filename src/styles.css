@@ -168,6 +168,20 @@ button {
 .bucketSleeves { margin-left: 13px; padding-left: 6px; border-left: 1px solid #2a3a44; }
 .bucketSleeves .sleeve { font-size: 12.5px; padding: 6px 8px; }
 
+/* mid-level sub-group within a bucket (e.g. "Bonds" under Fixed Income) */
+.subHeader { display: flex; align-items: center; gap: 2px; }
+.subLabel {
+  flex: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  border: 0; background: transparent; color: #cdd8dd; cursor: pointer;
+  padding: 5px 8px 5px 2px; border-radius: 6px; text-align: left; font-weight: 600; font-size: 12px;
+}
+.subLabel strong { font-weight: 600; font-size: 11px; color: #9fb0b7; }
+.subLabel:hover { background: #1b2730; }
+.subLabel.active { background: #287f8f; color: #ffffff; }
+.subLabel.active strong { color: #d9eef2; }
+.subSleeves { margin-left: 14px; padding-left: 6px; border-left: 1px solid #2a3a44; }
+.subSleeves .sleeve { font-size: 12px; padding: 5px 8px; }
+
 /* "View by: Asset Class | Convex Role" sidebar switch */
 .viewToggle { margin-bottom: 12px; }
 .viewToggleLabel {

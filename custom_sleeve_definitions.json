@@ -265,13 +265,13 @@
     },
     {
       "code": "PUBLIC_BONDS",
-      "name": "Public Bonds",
+      "name": "Bonds",
       "parent": "BONDS_CREDIT",
       "morningstarArea": "Taxable Bond / Municipal Bond"
     },
     {
       "code": "BONDS",
-      "name": "Bonds",
+      "name": "Core / Multisector Bonds",
       "parent": "PUBLIC_BONDS",
       "morningstarArea": "Taxable Bond"
     },

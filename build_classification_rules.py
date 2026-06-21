@@ -50,7 +50,7 @@ OLAP_RULES = [
  ("Junk Bonds",["HYG","JNK","USHY","SJNK","HYLB","ANGL","HYEM"],["high yield","junk bond","below investment grade"]),
  ("Corporate Bonds",["LQD","VCIT","VCLT","IGIB","IGSB","VTC","VCSH","IBDW"],["corporate bond","investment grade corporate"]),   # IBDW = iBonds target-maturity corporate
  ("Municipal Bonds",["MUB","VTEB","TFI","PZA","HYD","SHM"],["municipal","muni","tax exempt","tax-free","auth rev","rev ref","sales tax rev","wtr & sew","wtr & swr","swr rev","fin auth rev","pub pwr","gen oblig"," sch dist"," unif sd","util rev"," go bds"]),
- ("Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","clo","collateralized loan","ultrashort","ultra short","ultrasho","short duration income"]),
+ ("Core / Multisector Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","clo","collateralized loan","ultrashort","ultra short","ultrasho","short duration income"]),
  ("Direct Lending",["BIZD","PSP"],["direct lending","middle market lending"]),
  ("Private Credit",["PC","PRCR"],["private credit","private debt","enhanced lending","credit fund class"]),
  ("Cash",["CASH","SWVXX","SPAXX","VMFXX","FDRXX","BIL","SGOV","SNVXX","SNAXX","FZFXX","XBIL","BOXX","MINT","SHV","FNSXX","FDRXX","SPRXX"],["cash","money market","money mkt","mmkt","money inv","money ultra","prime advantage","government money","short maturity","6 month bill"]),

@@ -50,14 +50,14 @@ const DEFAULT_SLEEVES = [
   "Real Estate",
   "Utilities",
   "Miscellaneous Sector",
-  "Bonds",
+  "Core / Multisector Bonds",
   "Junk Bonds",
   "Corporate Bonds",
   "Municipal Bonds",
   "Treasuries / Duration",
   "Bank Loans / Floating Rate",
   "Bonds / Credit",
-  "Public Bonds",
+  "Bonds",
   "Private Credit",
   "Direct Lending",
   "CDs",
@@ -133,7 +133,7 @@ const TICKER_RULES = [
   { sleeve: "Junk Bonds", tickers: ["HYG", "JNK", "USHY", "SJNK", "HYLB", "ANGL"], words: ["high yield", "junk bond", "below investment grade"] },
   { sleeve: "Corporate Bonds", tickers: ["LQD", "VCIT", "VCLT", "IGIB", "IGSB", "VTC"], words: ["corporate bond", "investment grade corporate"] },
   { sleeve: "Municipal Bonds", tickers: ["MUB", "VTEB", "TFI", "PZA", "HYD", "SHM"], words: ["municipal", "muni", "tax exempt"] },
-  { sleeve: "Bonds", tickers: ["BND", "AGG", "TLT", "IEF", "SHY", "TIP"], words: ["bond", "treasury", "fixed income"] },
+  { sleeve: "Core / Multisector Bonds", tickers: ["BND", "AGG", "TLT", "IEF", "SHY", "TIP"], words: ["bond", "treasury", "fixed income"] },
   { sleeve: "Direct Lending", tickers: ["BIZD", "PSP"], words: ["direct lending", "middle market lending"] },
   { sleeve: "Private Credit", tickers: ["PC", "PRCR"], words: ["private credit", "private debt"] },
   { sleeve: "Cash", tickers: ["CASH", "SWVXX", "SPAXX", "VMFXX", "FDRXX", "BIL", "SGOV"], words: ["cash", "money market"] },
@@ -222,13 +222,13 @@ const SLEEVE_PARENTS = {
   "Real Estate": "Sector Equity",
   "Utilities": "Sector Equity",
   "Miscellaneous Sector": "Sector Equity",
-  "Bonds": "Public Bonds",
-  "Public Bonds": "Bonds / Credit",
-  "Junk Bonds": "Public Bonds",
-  "Corporate Bonds": "Public Bonds",
-  "Municipal Bonds": "Public Bonds",
-  "Treasuries / Duration": "Public Bonds",
-  "Bank Loans / Floating Rate": "Public Bonds",
+  "Core / Multisector Bonds": "Bonds",
+  "Bonds": "Bonds / Credit",
+  "Junk Bonds": "Bonds",
+  "Corporate Bonds": "Bonds",
+  "Municipal Bonds": "Bonds",
+  "Treasuries / Duration": "Bonds",
+  "Bank Loans / Floating Rate": "Bonds",
   "Private Credit": "Bonds / Credit",
   "Direct Lending": "Private Credit",
   "CDs": "Bonds / Credit",
@@ -259,6 +259,7 @@ const state = {
   errors: [],
   selectedSleeve: "All",
   selectedBucket: null,                                       // rollup-bucket drill-down (orthogonal to sleeve)
+  selectedSubGroup: null,                                     // mid-level sub-group drill-down (e.g. "Bonds")
   collapsedBuckets: new Set(loadJson("collapsedBuckets", [])),
   sidebarView: loadJson("sidebarView", "class"),              // "class" (asset class) | "role" (convex role)
   query: "",
@@ -358,7 +359,7 @@ async function loadConsolidatedBook() {
   state.valuationDate = detectValuationDate(rows, state.mapping) || today();
   el.valuationDateInput.value = state.valuationDate;
   state.selectedSleeve = "All";
-  state.selectedBucket = null;
+  state.selectedBucket = null; state.selectedSubGroup = null;
   await applyImport("consolidated_holdings.csv");
   localStorage.setItem("olap.bookSignature", bookSignature(text));
   hideBookBanner();
@@ -405,7 +406,7 @@ el.sampleButton.addEventListener("click", () => {
   state.mapping = {};
   state.errors = [];
   state.selectedSleeve = "All";
-  state.selectedBucket = null;
+  state.selectedBucket = null; state.selectedSubGroup = null;
   saveJson("holdings", state.holdings);
   if (el.manualDialog?.open) el.manualDialog.close();
   render();
@@ -417,7 +418,7 @@ el.largeSampleButton.addEventListener("click", () => {
   state.mapping = {};
   state.errors = [];
   state.selectedSleeve = "All";
-  state.selectedBucket = null;
+  state.selectedBucket = null; state.selectedSubGroup = null;
   saveJson("holdings", state.holdings);
   if (el.manualDialog?.open) el.manualDialog.close();
   render();
@@ -495,8 +496,8 @@ function buildLargeSampleHoldings() {
     ["VCIT", "Vanguard Intermediate-Term Corporate Bond ETF", "Corporate Bonds", 90, 80.21],
     ["HYG", "iShares iBoxx High Yield Corporate Bond ETF", "Junk Bonds", 150, 78.32],
     ["JNK", "SPDR Bloomberg High Yield Bond ETF", "Junk Bonds", 120, 94.5],
-    ["BND", "Vanguard Total Bond Market ETF", "Bonds", 200, 72.3],
-    ["AGG", "iShares Core U.S. Aggregate Bond ETF", "Bonds", 160, 98.2],
+    ["BND", "Vanguard Total Bond Market ETF", "Core / Multisector Bonds", 200, 72.3],
+    ["AGG", "iShares Core U.S. Aggregate Bond ETF", "Core / Multisector Bonds", 160, 98.2],
     ["BIZD", "VanEck BDC Income ETF", "Direct Lending", 200, 16.54],
     ["PRCR", "Private Credit Placeholder", "Private Credit", 1, 25000],
     ["PE-BUYOUT", "Blackstone Capital Partners VIII", "Buyout", 1, 45000],
@@ -551,7 +552,7 @@ async function applyImport(sourceName = "CSV import") {
   state.holdings = normalized.holdings.length ? normalized.holdings : state.holdings;
   state.errors = normalized.errors;
   state.selectedSleeve = "All";
-  state.selectedBucket = null;
+  state.selectedBucket = null; state.selectedSubGroup = null;
   saveJson("holdings", state.holdings);
   if (normalized.holdings.length && state.db) {
     const snapshot = {
@@ -633,7 +634,7 @@ function renderTitle() {
 const ROLLUP_BUCKETS = [
   { name: "Public Equity", anchors: ["Public Equity"] },
   { name: "Private Equity", anchors: ["Private Equity"] },
-  { name: "Fixed Income", anchors: ["Public Bonds", "CDs", "Annuity / Stable Value"] },
+  { name: "Fixed Income", anchors: ["Bonds", "CDs", "Annuity / Stable Value"] },
   { name: "Private Credit", anchors: ["Private Credit"] },
   { name: "Liquid Alts", anchors: ["Liquid Alternatives"] },
   { name: "Commodities", anchors: ["Commodities", "Precious Metals", "Broad Commodities"] },
@@ -659,18 +660,31 @@ function groupOfSleeve(sleeveName) {
   return state.sidebarView === "role" ? (convexRoleForSleeve(sleeveName) || "Other") : bucketOfSleeve(sleeveName);
 }
 
-// Drill scope = "All" | a single sleeve | a whole group (group keeps selectedSleeve "All").
+// Optional mid-level sub-group within a bucket (asset-class view only): a sleeve whose taxonomy chain
+// includes an anchor renders under that sub-header (the bond TYPES nest under "Bonds", while CDs and
+// Annuity sit directly under Fixed Income).
+const SUB_GROUPS = { "Bonds": "Bonds" };
+function subGroupOfSleeve(sleeveName) {
+  if (state.sidebarView !== "class") return null;
+  const chain = parentPath(sleeveName);
+  for (const [anchor, label] of Object.entries(SUB_GROUPS)) if (chain.includes(anchor)) return label;
+  return null;
+}
+
+// Drill scope = "All" | a single sleeve | a whole bucket | a sub-group (wider scopes keep selectedSleeve "All").
 function inSelection(holding) {
+  if (state.selectedSubGroup) return subGroupOfSleeve(holding.sleeve) === state.selectedSubGroup;
   if (state.selectedBucket) return groupOfSleeve(holding.sleeve) === state.selectedBucket;
   if (state.selectedSleeve !== "All") return holding.sleeve === state.selectedSleeve;
   return true;
 }
-function isAllScope() { return !state.selectedBucket && state.selectedSleeve === "All"; }
-function selectionLabel() { return state.selectedBucket || (state.selectedSleeve === "All" ? "All" : state.selectedSleeve); }
+function isAllScope() { return !state.selectedBucket && !state.selectedSubGroup && state.selectedSleeve === "All"; }
+function selectionLabel() { return state.selectedSubGroup || state.selectedBucket || (state.selectedSleeve === "All" ? "All" : state.selectedSleeve); }
 function revealHoldings() { el.holdings?.scrollIntoView({ behavior: "smooth", block: "start" }); }
-function selectScope({ sleeve = "All", bucket = null }) {
+function selectScope({ sleeve = "All", bucket = null, subGroup = null }) {
   state.selectedSleeve = sleeve;
   state.selectedBucket = bucket;
+  state.selectedSubGroup = subGroup;
   render();
   if (!isAllScope()) revealHoldings();   // jump to the holdings table on any drill-in (not on "All")
 }
@@ -693,7 +707,7 @@ function viewToggle() {
       if (state.sidebarView === v) return;
       state.sidebarView = v;
       saveJson("sidebarView", v);
-      state.selectedSleeve = "All"; state.selectedBucket = null;   // group names differ between views → reset scope
+      state.selectedSleeve = "All"; state.selectedBucket = null; state.selectedSubGroup = null;   // group names differ between views → reset scope
       render();
     });
     row.appendChild(btn);
@@ -742,10 +756,43 @@ function renderSleeves(cube) {
     if (!collapsed) {
       const list = document.createElement("div");
       list.className = "bucketSleeves";
+      const sleeveBtn = (s) => navButton(s.sleeve, () => selectScope({ sleeve: s.sleeve }),
+        percent(s.weight), !state.selectedBucket && !state.selectedSubGroup && state.selectedSleeve === s.sleeve);
+      // partition the bucket's sleeves into mid-level sub-groups (e.g. "Bonds") + direct sleeves (CDs, Annuity)
+      const subs = new Map();
+      const direct = [];
       for (const s of g.sleeves) {
-        list.appendChild(navButton(s.sleeve, () => selectScope({ sleeve: s.sleeve }),
-          percent(s.weight), !state.selectedBucket && state.selectedSleeve === s.sleeve));
+        const sub = subGroupOfSleeve(s.sleeve);
+        if (sub) { if (!subs.has(sub)) subs.set(sub, { weight: 0, sleeves: [] }); const sg = subs.get(sub); sg.weight += s.weight; sg.sleeves.push(s); }
+        else direct.push(s);
       }
+      for (const [subName, sg] of subs) {
+        const key = "sub:" + subName;
+        const sc = state.collapsedBuckets.has(key);
+        const sh = document.createElement("div");
+        sh.className = "subHeader";
+        const st = document.createElement("button");
+        st.className = "bucketToggle";
+        st.textContent = sc ? "▸" : "▾";
+        st.title = sc ? "Expand" : "Collapse";
+        st.addEventListener("click", () => {
+          if (sc) state.collapsedBuckets.delete(key); else state.collapsedBuckets.add(key);
+          saveJson("collapsedBuckets", [...state.collapsedBuckets]); render();
+        });
+        const sl = document.createElement("button");
+        sl.className = `subLabel ${state.selectedSubGroup === subName ? "active" : ""}`;
+        sl.innerHTML = `<span>${escapeHtml(subName)}</span><strong>${percent(sg.weight)}</strong>`;
+        sl.addEventListener("click", () => selectScope({ subGroup: subName }));
+        sh.append(st, sl);
+        list.appendChild(sh);
+        if (!sc) {
+          const inner = document.createElement("div");
+          inner.className = "subSleeves";
+          for (const s of sg.sleeves) inner.appendChild(sleeveBtn(s));
+          list.appendChild(inner);
+        }
+      }
+      for (const s of direct) list.appendChild(sleeveBtn(s));
       group.appendChild(list);
     }
     nav.push(group);
