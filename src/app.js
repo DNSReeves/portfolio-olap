@@ -274,6 +274,8 @@ const el = {
   allocationBars: document.querySelector("#allocationBars"),
   topHoldings: document.querySelector("#topHoldings"),
   drillPath: document.querySelector("#drillPath"),
+  holdingsHead: document.querySelector("#holdingsHead"),
+  holdingsFoot: document.querySelector("#holdingsFoot"),
   holdingsBody: document.querySelector("#holdingsBody"),
   viewLabel: document.querySelector("#viewLabel"),
   viewTitle: document.querySelector("#viewTitle"),
@@ -1049,6 +1051,15 @@ function renderPerformanceSeries() {
   );
 }
 
+// Gain/Loss cell: "$419,935  +76.1%", coloured green (gain) / red (loss). pct omitted when no basis.
+function glCell(marketValue, costBasis) {
+  const gain = (marketValue || 0) - (costBasis || 0);
+  const pct = costBasis ? gain / costBasis : 0;
+  const cls = gain >= 0 ? "up" : "down";
+  const pctTxt = costBasis ? ` <em>${(gain >= 0 ? "+" : "") + (pct * 100).toFixed(1)}%</em>` : "";
+  return `<td class="num gl ${cls}">${money(gain)}${pctTxt}</td>`;
+}
+
 function renderHoldings() {
   const query = state.query.trim().toLowerCase();
   const holdings = state.holdings.filter((holding) => {
@@ -1058,33 +1069,53 @@ function renderHoldings() {
     return sleeveMatch && queryMatch;
   });
 
+  // Columns are value-only-book appropriate: Ticker · Asset · [Sleeve] · Cost · Value · Gain/Loss.
+  // Sleeve appears ONLY in the All view (in a sleeve drill-down every row is that sleeve → it's the
+  // panel title). Shares (never populated) + Price (it was just the value) + per-row Source dropped.
+  const isAll = state.selectedSleeve === "All";
+  el.holdingsHead.innerHTML =
+    `<th>Ticker</th><th>Asset</th>` + (isAll ? `<th>Sleeve</th>` : ``) +
+    `<th class="num">Cost</th><th class="num">Value</th><th class="num">Gain / Loss</th>`;
+
   el.holdingsBody.replaceChildren(
     ...holdings.map((holding) => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="ticker">${escapeHtml(holding.ticker || "-")}</td>
-        <td>${escapeHtml(holding.assetName)}</td>
-        <td></td>
-        <td><span class="source ${holding.assignmentSource}">${escapeHtml(holding.assignmentSource)}</span></td>
-        <td class="num">${number(holding.shares)}</td>
-        <td class="num">${money(holding.price)}</td>
-        <td class="num strong">${money(holding.marketValue)}</td>`;
-      const select = document.createElement("select");
-      select.innerHTML = DEFAULT_SLEEVES.map((sleeve) => `<option value="${escapeAttr(sleeve)}">${escapeHtml(sleeve)}</option>`).join("");
-      select.value = holding.sleeve;
-      select.addEventListener("change", () => {
-        const key = assignmentKey(holding.ticker, holding.assetName);
-        state.assignments[key] = select.value;
-        holding.sleeve = select.value;
-        holding.assignmentSource = "manual";
-        saveJson("assignments", state.assignments);
-        saveJson("holdings", state.holdings);
-        render();
-      });
-      tr.children[2].appendChild(select);
+      tr.innerHTML =
+        `<td class="ticker">${escapeHtml(holding.ticker || "-")}</td>` +
+        `<td>${escapeHtml(holding.assetName)}</td>` +
+        (isAll ? `<td class="sleeveCell"></td>` : ``) +
+        `<td class="num">${holding.costBasis ? money(holding.costBasis) : "—"}</td>` +
+        `<td class="num strong">${money(holding.marketValue)}</td>` +
+        glCell(holding.marketValue, holding.costBasis);
+      if (isAll) {
+        const select = document.createElement("select");
+        select.innerHTML = DEFAULT_SLEEVES.map((sleeve) => `<option value="${escapeAttr(sleeve)}">${escapeHtml(sleeve)}</option>`).join("");
+        select.value = holding.sleeve;
+        select.addEventListener("change", () => {
+          const key = assignmentKey(holding.ticker, holding.assetName);
+          state.assignments[key] = select.value;
+          holding.sleeve = select.value;
+          holding.assignmentSource = "manual";
+          saveJson("assignments", state.assignments);
+          saveJson("holdings", state.holdings);
+          render();
+        });
+        tr.querySelector(".sleeveCell").appendChild(select);
+      }
       return tr;
     }),
   );
+
+  // Totals footer for the current view (sleeve total cost / value / gain).
+  const tCost = holdings.reduce((s, h) => s + (h.costBasis || 0), 0);
+  const tVal = holdings.reduce((s, h) => s + (h.marketValue || 0), 0);
+  const tGain = tVal - tCost;
+  const tPct = tCost ? tGain / tCost : 0;
+  el.holdingsFoot.innerHTML = holdings.length
+    ? `<tr><td colspan="${isAll ? 3 : 2}">${holdings.length} holding${holdings.length === 1 ? "" : "s"}</td>` +
+      `<td class="num">${money(tCost)}</td><td class="num strong">${money(tVal)}</td>` +
+      `<td class="num gl ${tGain >= 0 ? "up" : "down"}">${money(tGain)}${tCost ? ` <em>${(tGain >= 0 ? "+" : "") + (tPct * 100).toFixed(1)}%</em>` : ""}</td></tr>`
+    : "";
 }
 
 function buildPortfolioCube(holdings) {

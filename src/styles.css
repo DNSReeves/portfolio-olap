@@ -499,7 +499,21 @@ select,
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 880px;
+  min-width: 600px;   /* trimmed from 880 — the holdings table now has fewer columns */
+}
+
+/* Gain/Loss cell — green gain / red loss, with a lighter % suffix. */
+.gl.up { color: #1b7a57; }
+.gl.down { color: #c0392b; }
+.gl em { font-style: normal; font-weight: 500; font-size: 12px; opacity: 0.82; margin-left: 4px; }
+
+/* Totals row (tfoot) — a bold summary line for the sleeve. */
+#holdingsFoot td {
+  border-top: 2px solid #cfd8dc;
+  border-bottom: none;
+  font-weight: 700;
+  padding-top: 12px;
+  color: #2c3e50;
 }
 
 th,
