@@ -479,10 +479,10 @@ async function initApp() {
     state.db = await openPortfolioDb();
     await ensureDefaultPortfolio();
     await refreshSnapshots();
-    state.snapshotStatus.textContent = "IndexedDB snapshot storage is ready.";
+    el.snapshotStatus.textContent = "IndexedDB snapshot storage is ready.";
   } catch (error) {
     state.dbError = error.message || String(error);
-    state.snapshotStatus.textContent = `IndexedDB unavailable: ${state.dbError}`;
+    el.snapshotStatus.textContent = `IndexedDB unavailable: ${state.dbError}`;
   }
   render();
 }
