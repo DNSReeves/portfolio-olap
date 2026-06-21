@@ -1167,11 +1167,12 @@ function renderPerformanceSeries() {
 }
 
 // Gain/Loss cell: "$419,935  +76.1%", coloured green (gain) / red (loss). pct omitted when no basis.
-function glCell(marketValue, costBasis) {
+function glCell(marketValue, costBasis, hidePct = false) {
   const gain = (marketValue || 0) - (costBasis || 0);
   const pct = costBasis ? gain / costBasis : 0;
   const cls = gain >= 0 ? "up" : "down";
-  const pctTxt = costBasis ? ` <em>${(gain >= 0 ? "+" : "") + (pct * 100).toFixed(1)}%</em>` : "";
+  // % is suppressed for options — short premium inverts the cost-basis math, so the % is meaningless.
+  const pctTxt = (costBasis && !hidePct) ? ` <em>${(gain >= 0 ? "+" : "") + (pct * 100).toFixed(1)}%</em>` : "";
   return `<td class="num gl ${cls}">${money(gain)}${pctTxt}</td>`;
 }
 
@@ -1222,7 +1223,7 @@ function renderHoldings() {
         (hasShares ? `<td class="num">${number(g.shares)}</td><td class="num">${g.shares > 0 ? priceUsd(g.marketValue / g.shares) : "—"}</td>` : ``) +
         `<td class="num">${g.costBasis ? money(g.costBasis) : "—"}</td>` +
         `<td class="num strong">${money(g.marketValue)}</td>` +
-        glCell(g.marketValue, g.costBasis);
+        glCell(g.marketValue, g.costBasis, g.sleeve === "Options");
       if (isAll) {
         const select = document.createElement("select");
         select.innerHTML = DEFAULT_SLEEVES.map((sleeve) => `<option value="${escapeAttr(sleeve)}">${escapeHtml(sleeve)}</option>`).join("");
@@ -1249,11 +1250,12 @@ function renderHoldings() {
   const tVal = holdings.reduce((s, h) => s + (h.marketValue || 0), 0);
   const tGain = tVal - tCost;
   const tPct = tCost ? tGain / tCost : 0;
+  const optScope = state.selectedBucket === "Options" || state.selectedSleeve === "Options";   // % meaningless for shorts
   el.holdingsFoot.innerHTML = rows.length
     ? `<tr><td colspan="${isAll ? 3 : 2}">${rows.length} holding${rows.length === 1 ? "" : "s"}</td>` +
       (hasShares ? `<td class="num">${number(tShares)}</td><td></td>` : ``) +
       `<td class="num">${money(tCost)}</td><td class="num strong">${money(tVal)}</td>` +
-      `<td class="num gl ${tGain >= 0 ? "up" : "down"}">${money(tGain)}${tCost ? ` <em>${(tGain >= 0 ? "+" : "") + (tPct * 100).toFixed(1)}%</em>` : ""}</td></tr>`
+      `<td class="num gl ${tGain >= 0 ? "up" : "down"}">${money(tGain)}${(tCost && !optScope) ? ` <em>${(tGain >= 0 ? "+" : "") + (tPct * 100).toFixed(1)}%</em>` : ""}</td></tr>`
     : "";
 }
 
