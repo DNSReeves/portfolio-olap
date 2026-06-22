@@ -180,6 +180,24 @@ async function loadDialSnapshot() {
   }
 }
 
+// Per-ETF look-through region exposure (portfolio_analysis.py::export_region_exposure):
+// { TICKER: { "US": pct, "Foreign Developed": pct, "Emerging Markets": pct, "Other": pct } }.
+// Joined by ticker for the Pivot panel's weighted Region dimension.
+let REGION_EXPOSURE = {};
+
+async function loadRegionExposure() {
+  try {
+    const res = await fetch("./region_exposure.json", { cache: "no-store" });
+    if (res.ok) {
+      const raw = await res.json();
+      REGION_EXPOSURE = {};
+      for (const [t, dist] of Object.entries(raw || {})) REGION_EXPOSURE[String(t).toUpperCase()] = dist;
+    }
+  } catch (error) {
+    REGION_EXPOSURE = {};
+  }
+}
+
 const SLEEVE_PARENTS = {
   "Public Equity": "Equity",
   "Private Equity": "Equity",
@@ -531,6 +549,7 @@ async function initApp() {
   await loadClassificationRules(); // shared sleeve rules before any classification runs
   await loadOverlaySnapshot();     // read-only precomputed overlay backtest
   await loadDialSnapshot();        // precomputed two-bucket dial grid
+  await loadRegionExposure();      // per-ETF look-through region exposure (Pivot Region dim)
 
   try {
     state.db = await openPortfolioDb();
@@ -1305,21 +1324,44 @@ const PIVOT_DIMS = [
   { key: "style_size", label: "Style × Size", of: (h) => styleSizeOfSleeve(h.sleeve) },
   { key: "account", label: "Account", of: (h) => h.brokerageAccount || "—" },
   { key: "liquidity", label: "Liquidity", of: (h) => liquidityOfSleeve(h.sleeve) },
+  // Region is a LOOK-THROUGH (weighted) dimension: a fund splits across regions by its
+  // country breakdown, so a holding's value is apportioned across cells (not one cell).
+  { key: "region", label: "Region (look-through)", order: () => ["US", "Foreign Developed", "Emerging Markets", "Other", "Unknown"],
+    dist: (h) => {
+      const ex = REGION_EXPOSURE[(h.ticker || "").toUpperCase()];
+      if (!ex) return { "Unknown": 1 };
+      const out = {}; let tot = 0;
+      for (const k in ex) { const f = (+ex[k]) / 100; if (f > 0) { out[k] = f; tot += f; } }
+      if (tot <= 0) return { "Unknown": 1 };
+      for (const k in out) out[k] /= tot;
+      return out;
+    } },
   { key: "sleeve", label: "Sleeve", of: (h) => h.sleeve || "—" },
 ];
 const pivotDim = (key) => PIVOT_DIMS.find((d) => d.key === key) || PIVOT_DIMS[0];
 
+// A holding's distribution over a dimension's categories: a plain dim → {cat: 1}; a
+// look-through dim (e.g. Region) → {cat: fraction} summing to 1. Unifies the aggregation
+// so weighted + single dimensions share one code path.
+function _distOf(dim, h) {
+  return dim.dist ? dim.dist(h) : { [dim.of(h)]: 1 };
+}
+
 function matchesPivotCell(holding) {
   const pc = state.pivotCell;
   if (!pc) return true;
-  if (pivotDim(pc.rowKey).of(holding) !== pc.rowVal) return false;
-  if (pc.colKey && pivotDim(pc.colKey).of(holding) !== pc.colVal) return false;
+  if (!(_distOf(pivotDim(pc.rowKey), holding)[pc.rowVal] > 0)) return false;
+  if (pc.colKey && !(_distOf(pivotDim(pc.colKey), holding)[pc.colVal] > 0)) return false;
   return true;
 }
 
 function _pivotCatsByValue(dim, holdings) {
   const totals = {};
-  for (const h of holdings) { const c = dim.of(h); totals[c] = (totals[c] || 0) + (h.marketValue || 0); }
+  for (const h of holdings) {
+    const v = h.marketValue || 0;
+    const d = _distOf(dim, h);
+    for (const c in d) totals[c] = (totals[c] || 0) + v * d[c];
+  }
   let cats = Object.keys(totals).filter((c) => totals[c] > 0);
   if (dim.order) {
     const ord = dim.order();
@@ -1359,12 +1401,14 @@ function renderPivot() {
     }
     html += `<tr class="pivotTotal"><td>Total</td><td class="num">${money(grand)}</td><td class="num">100%</td></tr></tbody></table>`;
   } else {
-    const { cats: colCats } = _pivotCatsByValue(colDim, hs);
-    const cell = {}, colTot = {};
+    const { cats: colCats, totals: colTot } = _pivotCatsByValue(colDim, hs);
+    const cell = {};
     for (const h of hs) {
-      const r = rowDim.of(h), c = colDim.of(h), v = h.marketValue || 0;
-      cell[r + "" + c] = (cell[r + "" + c] || 0) + v;
-      colTot[c] = (colTot[c] || 0) + v;
+      const v = h.marketValue || 0;
+      const rd = _distOf(rowDim, h), cd = _distOf(colDim, h);
+      for (const r in rd) for (const c in cd) {
+        cell[r + "" + c] = (cell[r + "" + c] || 0) + v * rd[r] * cd[c];
+      }
     }
     html += `<div class="pivotScroll"><table class="pivotTable matrix"><thead><tr><th>${e(rowDim.label)} \\ ${e(colDim.label)}</th>`;
     for (const c of colCats) html += `<th class="num">${e(c)}</th>`;

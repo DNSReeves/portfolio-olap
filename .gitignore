@@ -6,3 +6,5 @@ dist/
 *.tsbuildinfo
 esbuild-test.exe
 consolidated_holdings.csv
+Investment_First_Principles.pdf
+region_exposure.json
