@@ -16,6 +16,10 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.2 — what's new
+
+- **Pivot / Matrix panel** — a new analytical lens below Convexity. Choose **Rows** (and optionally **Columns**) from any of seven dimensions to get a **1-D breakdown** (value + %) or a **2-D matrix / cross-tab** (value cells with row, column, and grand totals). Click any cell to filter the holdings table to that slice. Dimensions: Asset Class, Convex Role, Style × Size, Account, Liquidity, Sleeve, and **Region** (look-through). See *Pivot / Matrix: cross-tab any two dimensions* below.
+
 ### Version 2.1 — what's new
 
 - **Load Full Book + auto-update banner** — one-click consolidated import; a banner offers to reload when the served book has been regenerated.
@@ -338,6 +342,31 @@ The **convex role** describes a sleeve's job in the portfolio's "crash shape":
 - The chevron (▸ / ▾) collapses or expands a group; the state is remembered.
 
 Any drill-in scrolls the holdings table into view automatically. The title and table update to the selected scope.
+
+### Pivot / Matrix: cross-tab any two dimensions
+
+The **Pivot / Matrix** panel (below Convexity) re-slices the whole book by dimensions you choose, independent of the sidebar selection. Pick a **Rows** dimension and, optionally, a **Columns** dimension:
+
+- **Columns = None → 1-D breakdown.** A table of the Rows dimension's categories with **Value** and **% of book**, largest first. This generalizes the sidebar's View-by toggle to any dimension.
+- **Columns = a dimension → 2-D matrix (cross-tab).** Rows × Columns with the dollar value in each cell, plus a **Total** row and column and the grand total. Empty combinations show a dot.
+
+**Click any cell** (a 1-D row or a 2-D cell) to filter the **Holdings table** to exactly that slice — a chip appears above the matrix naming the filter (e.g. *Region = US × Asset Class = Public Equity*); click **✕ clear** to return to the sidebar selection.
+
+The seven dimensions:
+
+| Dimension | What it groups by |
+| --- | --- |
+| **Asset Class** | the rollup bucket (Public Equity, Fixed Income, Real Assets, …) |
+| **Convex Role** | crash behavior (Growth, Duration, Convexity, …) |
+| **Style × Size** | equity box parsed from the sleeve (Large Blend, Small Value, …; non-equity → *Non-equity*) |
+| **Account** | the holding's account / entity (IRA, Living Trust, Partnership, …) |
+| **Liquidity** | Liquid vs Private (private real estate / credit / equity / alternatives) |
+| **Sleeve** | the granular sleeve itself |
+| **Region** | US / Foreign Developed / Emerging Markets / Other — **look-through** |
+
+**Region is look-through.** A fund is split across regions by its actual country breakdown (e.g. a total-international ETF lands partly in Foreign Developed and partly in Emerging Markets), so each fund's value is *apportioned* across the region cells rather than dumped into one. Region exposure comes from the warehouse's per-ETF country weightings (regenerated with the book; holdings with no country data — single stocks, bonds, private funds — show as *Unknown*). Because a look-through holding spans several cells, clicking a Region cell shows every holding with **any** exposure to it (so a holding can appear under more than one region).
+
+> Phase 2 will add a **Fixed Income: Duration × Credit Quality** matrix once per-ETF duration and credit-rating data is ingested into the warehouse.
 
 ### Reading the Holdings Table
 

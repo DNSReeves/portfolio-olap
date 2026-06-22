@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.1";
+const APP_VERSION = "v2.2";
 
 const DEFAULT_SLEEVES = [
   "Equity",
