@@ -262,6 +262,9 @@ const state = {
   selectedSubGroup: null,                                     // mid-level sub-group drill-down (e.g. "Bonds")
   collapsedBuckets: new Set(loadJson("collapsedBuckets", [])),
   sidebarView: loadJson("sidebarView", "class"),              // "class" (asset class) | "role" (convex role)
+  pivotRow: loadJson("pivotRow", "account"),                  // Pivot panel — rows dimension
+  pivotCol: loadJson("pivotCol", "asset_class"),              // Pivot panel — cols dimension ("none" = 1-D)
+  pivotCell: null,                                            // transient: a clicked cell → filters the holdings table
   query: "",
   valuationDate: "",
   snapshots: [],
@@ -279,6 +282,7 @@ const el = {
   metrics: document.querySelector("#dashboard"),
   planning: document.querySelector("#planning"),
   convexity: document.querySelector("#convexity"),
+  pivot: document.querySelector("#pivot"),
   dial: document.querySelector("#dial"),
   overlay: document.querySelector("#overlay"),
   allocationBars: document.querySelector("#allocationBars"),
@@ -580,6 +584,7 @@ function render() {
   renderMetrics(cube);
   renderPlanning(cube);
   renderConvexity(cube);
+  renderPivot();
   renderDial(cube);
   renderOverlay();
   renderAllocation(cube);
@@ -1273,11 +1278,147 @@ function glCell(marketValue, costBasis, hidePct = false) {
   return `<td class="num gl ${cls}">${money(gain)}${pctTxt}</td>`;
 }
 
+// ── PIVOT / MATRIX (Phase 1) ──────────────────────────────────────────────────
+// Cross-tab the book by any two holding dimensions (1-D when Columns = None). All
+// dimensions are derived in-browser from the existing book (no ingestion): asset
+// class + convex role reuse the sleeve rollup; style×size + liquidity parse the
+// sleeve; account is a book field. (Region — look-through country weights — lands in
+// Phase 2 once the export carries it.) Clicking a cell filters the holdings table.
+const _PRIVATE_SLEEVES = new Set(["Private Real Estate", "Private Credit", "Private Alternatives", "Buyout"]);
+
+function styleSizeOfSleeve(sleeve) {
+  const t = (sleeve || "").toLowerCase();
+  const size = /\blarge\b/.test(t) ? "Large" : /\bmid/.test(t) ? "Mid" : /\bsmall\b/.test(t) ? "Small" : null;
+  const style = /\bvalue\b/.test(t) ? "Value" : /\bgrowth\b/.test(t) ? "Growth" : /\bblend\b/.test(t) ? "Blend" : null;
+  if (size && style) return `${size} ${style}`;
+  if (size) return `${size} Blend`;
+  if (/technology|industrials?|utilities|energy|real estate|natural resources|materials|health/.test(t)) return "Sector / Thematic";
+  return "Non-equity";
+}
+function liquidityOfSleeve(sleeve) {
+  return _PRIVATE_SLEEVES.has(sleeve) ? "Private" : "Liquid";
+}
+
+const PIVOT_DIMS = [
+  { key: "asset_class", label: "Asset Class", of: (h) => bucketOfSleeve(h.sleeve), order: () => ROLLUP_BUCKETS.map((b) => b.name) },
+  { key: "convex_role", label: "Convex Role", of: (h) => convexRoleForSleeve(h.sleeve) || "Other", order: () => _CONVEX_ROLE_ORDER },
+  { key: "style_size", label: "Style × Size", of: (h) => styleSizeOfSleeve(h.sleeve) },
+  { key: "account", label: "Account", of: (h) => h.brokerageAccount || "—" },
+  { key: "liquidity", label: "Liquidity", of: (h) => liquidityOfSleeve(h.sleeve) },
+  { key: "sleeve", label: "Sleeve", of: (h) => h.sleeve || "—" },
+];
+const pivotDim = (key) => PIVOT_DIMS.find((d) => d.key === key) || PIVOT_DIMS[0];
+
+function matchesPivotCell(holding) {
+  const pc = state.pivotCell;
+  if (!pc) return true;
+  if (pivotDim(pc.rowKey).of(holding) !== pc.rowVal) return false;
+  if (pc.colKey && pivotDim(pc.colKey).of(holding) !== pc.colVal) return false;
+  return true;
+}
+
+function _pivotCatsByValue(dim, holdings) {
+  const totals = {};
+  for (const h of holdings) { const c = dim.of(h); totals[c] = (totals[c] || 0) + (h.marketValue || 0); }
+  let cats = Object.keys(totals).filter((c) => totals[c] > 0);
+  if (dim.order) {
+    const ord = dim.order();
+    cats.sort((a, b) => ((ord.indexOf(a) + 1) || 999) - ((ord.indexOf(b) + 1) || 999) || totals[b] - totals[a]);
+  } else {
+    cats.sort((a, b) => totals[b] - totals[a]);
+  }
+  return { cats, totals };
+}
+
+function renderPivot() {
+  if (!el.pivot) return;
+  const rowDim = pivotDim(state.pivotRow);
+  const colDim = state.pivotCol === "none" ? null : pivotDim(state.pivotCol);
+  const hs = state.holdings;
+  const e = escapeHtml;
+  if (!hs.length) { el.pivot.innerHTML = ""; return; }
+  const grand = hs.reduce((s, h) => s + (h.marketValue || 0), 0) || 1;
+
+  const dimOptions = (sel, withNone) =>
+    (withNone ? `<option value="none"${sel === "none" ? " selected" : ""}>— None (1-D) —</option>` : "") +
+    PIVOT_DIMS.map((d) => `<option value="${d.key}"${sel === d.key ? " selected" : ""}>${e(d.label)}</option>`).join("");
+
+  let html = `<header class="pivotHead"><h2>Pivot / Matrix</h2>
+    <div class="pivotCtl">
+      <label>Rows <select id="pivotRowSel">${dimOptions(state.pivotRow, false)}</select></label>
+      <label>Columns <select id="pivotColSel">${dimOptions(state.pivotCol, true)}</select></label>
+    </div></header>`;
+
+  const { cats: rowCats, totals: rowOnly } = _pivotCatsByValue(rowDim, hs);
+
+  if (!colDim) {
+    html += `<table class="pivotTable"><thead><tr><th>${e(rowDim.label)}</th><th class="num">Value</th><th class="num">%</th></tr></thead><tbody>`;
+    for (const c of rowCats) {
+      const v = rowOnly[c] || 0;
+      html += `<tr class="pivotCell" data-row="${e(c)}"><td>${e(c)}</td><td class="num">${money(v)}</td><td class="num">${percent(v / grand)}</td></tr>`;
+    }
+    html += `<tr class="pivotTotal"><td>Total</td><td class="num">${money(grand)}</td><td class="num">100%</td></tr></tbody></table>`;
+  } else {
+    const { cats: colCats } = _pivotCatsByValue(colDim, hs);
+    const cell = {}, colTot = {};
+    for (const h of hs) {
+      const r = rowDim.of(h), c = colDim.of(h), v = h.marketValue || 0;
+      cell[r + "" + c] = (cell[r + "" + c] || 0) + v;
+      colTot[c] = (colTot[c] || 0) + v;
+    }
+    html += `<div class="pivotScroll"><table class="pivotTable matrix"><thead><tr><th>${e(rowDim.label)} \\ ${e(colDim.label)}</th>`;
+    for (const c of colCats) html += `<th class="num">${e(c)}</th>`;
+    html += `<th class="num total">Total</th></tr></thead><tbody>`;
+    for (const r of rowCats) {
+      html += `<tr><th>${e(r)}</th>`;
+      for (const c of colCats) {
+        const v = cell[r + "" + c] || 0;
+        html += v > 0
+          ? `<td class="num pivotCell" data-row="${e(r)}" data-col="${e(c)}" title="${e(r)} × ${e(c)} — ${percent(v / grand)} of book">${money(v)}</td>`
+          : `<td class="num empty">·</td>`;
+      }
+      html += `<td class="num total">${money(rowOnly[r] || 0)}</td></tr>`;
+    }
+    html += `<tr class="pivotTotal"><th>Total</th>`;
+    for (const c of colCats) html += `<td class="num">${money(colTot[c] || 0)}</td>`;
+    html += `<td class="num total">${money(grand)}</td></tr></tbody></table></div>`;
+  }
+
+  if (state.pivotCell) {
+    const pc = state.pivotCell;
+    const lbl = `${e(pivotDim(pc.rowKey).label)} = ${e(pc.rowVal)}` +
+      (pc.colKey ? ` × ${e(pivotDim(pc.colKey).label)} = ${e(pc.colVal)}` : "");
+    html += `<div class="pivotFilter">Holdings filtered to <strong>${lbl}</strong> <button id="pivotClear" type="button">✕ clear</button></div>`;
+  }
+  el.pivot.innerHTML = html;
+
+  el.pivot.querySelector("#pivotRowSel").addEventListener("change", (ev) => {
+    state.pivotRow = ev.target.value; saveJson("pivotRow", state.pivotRow); state.pivotCell = null; render();
+  });
+  el.pivot.querySelector("#pivotColSel").addEventListener("change", (ev) => {
+    state.pivotCol = ev.target.value; saveJson("pivotCol", state.pivotCol); state.pivotCell = null; render();
+  });
+  const clearBtn = el.pivot.querySelector("#pivotClear");
+  if (clearBtn) clearBtn.addEventListener("click", () => { state.pivotCell = null; render(); });
+  el.pivot.querySelectorAll(".pivotCell").forEach((td) => {
+    td.addEventListener("click", () => {
+      state.pivotCell = {
+        rowKey: state.pivotRow, rowVal: td.dataset.row,
+        colKey: colDim ? state.pivotCol : null, colVal: colDim ? td.dataset.col : null,
+      };
+      render();
+      if (el.holdings) el.holdings.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+}
+
 function renderHoldings() {
   const query = state.query.trim().toLowerCase();
   const holdings = state.holdings.filter((holding) => {
     const queryMatch =
       !query || holding.ticker.toLowerCase().includes(query) || holding.assetName.toLowerCase().includes(query);
+    // A clicked pivot cell takes precedence over the sidebar sleeve selection.
+    if (state.pivotCell) return matchesPivotCell(holding) && queryMatch;
     return inSelection(holding) && queryMatch;
   });
 

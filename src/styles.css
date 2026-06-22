@@ -1173,3 +1173,26 @@ th {
 .dialEnd { color: #65747b; font-size: 13px; font-weight: 600; text-align: center; min-width: 86px; }
 .dialEnd small { color: #8a979c; font-weight: 400; }
 .dialNow { text-align: center; font-size: 16px; font-weight: 700; color: #185f6d; margin-bottom: 12px; }
+
+/* ── Pivot / Matrix panel (Phase 1) ── */
+.pivotPanel .pivotHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.pivotPanel .pivotHead h2 { margin: 0; }
+.pivotCtl { display: flex; gap: 14px; flex-wrap: wrap; }
+.pivotCtl label { font-size: 12px; color: #5b6b72; display: flex; gap: 6px; align-items: center; }
+.pivotCtl select { font-size: 13px; padding: 3px 6px; border: 1px solid #cfd9dd; border-radius: 6px; background: #fff; color: #1c2a31; }
+.pivotScroll { overflow-x: auto; }
+.pivotTable { border-collapse: collapse; width: 100%; font-size: 13px; }
+.pivotTable th, .pivotTable td { padding: 5px 9px; border-bottom: 1px solid #eef2f4; text-align: left; white-space: nowrap; }
+.pivotTable thead th { background: #ecf0f2; font-weight: 600; color: #33444c; }
+.pivotTable .num { text-align: right; font-variant-numeric: tabular-nums; }
+.pivotTable.matrix tbody th { text-align: left; font-weight: 600; color: #33444c; background: #f6f9fa; position: sticky; left: 0; }
+.pivotTable td.empty { color: #c3ced3; text-align: center; }
+.pivotTable td.total, .pivotTable th.total { font-weight: 600; background: #f2f7f8; }
+.pivotTable tr.pivotTotal td, .pivotTable tr.pivotTotal th { font-weight: 700; border-top: 2px solid #cfd9dd; background: #eef4f5; }
+.pivotTable .pivotCell { cursor: pointer; }
+.pivotTable td.pivotCell:hover { background: #dceef1; }
+.pivotTable tr.pivotCell:hover td { background: #dceef1; }
+.pivotFilter { margin-top: 10px; font-size: 12px; color: #5b6b72; }
+.pivotFilter strong { color: #1c2a31; }
+.pivotFilter button { margin-left: 8px; border: 1px solid #cfd9dd; background: #fff; border-radius: 6px; padding: 2px 8px; cursor: pointer; color: #33444c; font-size: 12px; }
+.pivotFilter button:hover { background: #ecf0f2; }
