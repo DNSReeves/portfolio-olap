@@ -711,7 +711,8 @@ function selectScope({ sleeve = "All", bucket = null, subGroup = null }) {
   state.selectedBucket = bucket;
   state.selectedSubGroup = subGroup;
   render();
-  if (!isAllScope()) revealHoldings();   // jump to the holdings table on any drill-in (not on "All")
+  if (!isAllScope()) revealHoldings();             // jump to the holdings table on any drill-in
+  else window.scrollTo({ top: 0, behavior: "smooth" });   // "All Portfolio" → back to the top
 }
 
 // The "View by: Asset Class | Convex Role" switch atop the sidebar nav.

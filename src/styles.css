@@ -921,10 +921,18 @@ th {
     overflow: visible;
   }
 
+  /* Portrait / stacked layout: the sidebar sits full-width ON TOP of the panels. Cap its height to
+     a short scrollable band (~1/3 screen) so the panels show right below it instead of being pushed
+     a full screen down — the sleeve list scrolls within the band (iPad-portrait fix). */
   .sidebar {
     position: static;
-    height: auto;
+    max-height: 38vh;
+    overflow-y: auto;
   }
+
+  /* …and cap the sleeve-nav column so the label/% rows (justify-content: space-between) stay compact
+     instead of stretching edge-to-edge across the full-width band. */
+  #sleeveNav { max-width: 240px; }
 
   main {
     display: block;
