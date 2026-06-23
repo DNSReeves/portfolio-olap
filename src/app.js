@@ -626,6 +626,7 @@ function render() {
   state._cube = cube;   // stashed so the dial slider can re-render without a full rebuild
   applyWorkspaceSplit();
   renderTitle();
+  renderMarketRef();
   renderSleeves(cube);
   renderMetrics(cube);
   renderPlanning(cube);
@@ -678,6 +679,23 @@ function renderTitle() {
   el.viewLabel.textContent = all ? "Portfolio overview" : (state.selectedBucket ? "Bucket drill-down" : "Sleeve drill-down");
   el.viewTitle.textContent = all ? "Investment Portfolio" : selectionLabel();
   el.holdingsTitle.textContent = all ? "All Holdings" : `${selectionLabel()} Holdings`;
+}
+
+// Reference rates near the top — the live risk-free (90-day Treasury, DGS3MO) and CPI YoY (headline
+// + core), carried in the DB-derived dial_snapshot. Read-only context; the editable assumptions
+// live in the Planning panel.
+function renderMarketRef() {
+  const ref = document.getElementById("marketRef");
+  if (!ref) return;
+  const s = DIAL_SNAPSHOT;
+  if (!s || s.tbill_3m == null) { ref.textContent = ""; return; }
+  const pct = (x) => (x * 100).toFixed(2) + "%";
+  let txt = `Risk-free (90-day T-bill) ${pct(s.tbill_3m)}`;
+  if (s.cpi_yoy != null) {
+    txt += ` · Inflation (YoY) ${pct(s.cpi_yoy)} CPI`;
+    if (s.cpi_core_yoy != null) txt += ` / ${pct(s.cpi_core_yoy)} core`;
+  }
+  ref.textContent = txt;
 }
 
 // ── Rollup taxonomy: granular sleeves → ~7 top-level buckets (the liquidity-aware view). A sleeve's
@@ -956,8 +974,10 @@ function renderPlanning(cube) {
     .filter((s) => convexRoleForSleeve(s.sleeve) === "Cash")
     .reduce((sum, s) => sum + s.value, 0);
   // Reserve coverage assumes the cash earns the 90-day T-bill NET of inflation (real rate), drawn
-  // down by expenses — not a flat 0% ratio. Both rates are editable; ?? keeps old saved configs working.
-  const tbill = cfg.tbillRate ?? 0.043, infl = cfg.inflation ?? 0.03, realRate = tbill - infl;
+  // down by expenses — not a flat 0% ratio. The T-bill default is the live 90-day Treasury (FRED
+  // DGS3MO) carried in the DB-derived dial_snapshot (fallback 3.83%); both rates are editable, and
+  // ?? keeps old saved configs working.
+  const tbill = cfg.tbillRate ?? DIAL_SNAPSHOT?.tbill_3m ?? 0.0383, infl = cfg.inflation ?? 0.03, realRate = tbill - infl;
   const years = reserveYears(reserve, cfg.expenses, realRate);
   const idle = reserve - cfg.reserveTarget;
 

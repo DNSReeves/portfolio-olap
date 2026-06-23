@@ -5,6 +5,11 @@
     "2026-05-31"
   ],
   "expenses_per_yr": 360000,
+  "tbill_3m": 0.0383,
+  "tbill_3m_date": "2026-06-18",
+  "cpi_yoy": 0.0417,
+  "cpi_core_yoy": 0.0282,
+  "cpi_date": "2026-05-01",
   "hedge": {
     "TREND": 0.1,
     "TR": 0.08,
