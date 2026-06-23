@@ -283,6 +283,7 @@ const state = {
   pivotRow: loadJson("pivotRow", "account"),                  // Pivot panel — rows dimension
   pivotCol: loadJson("pivotCol", "asset_class"),              // Pivot panel — cols dimension ("none" = 1-D)
   pivotCell: null,                                            // transient: a clicked cell → filters the holdings table
+  pivotChartType: loadJson("pivotChartType", null),           // Pivot chart: "donut" | "bars" | null (smart default)
   query: "",
   valuationDate: "",
   snapshots: [],
@@ -1409,8 +1410,32 @@ function liquidityOfSleeve(sleeve) {
   return _PRIVATE_SLEEVES.has(sleeve) ? "Private" : "Liquid";
 }
 
+// Look-through asset class (Equity / Bond / Cash / Alternatives). APPROXIMATE & strategy-based, NOT
+// security-level: pure sleeves map 1:1, while composite/alternative funds are decomposed into a
+// typical underlying mix so the view leans toward an eMoney-style allocation. The split weights below
+// are deliberate assumptions — tweak freely (no $ reconciliation intended).
+const _AC_EQUITY = new Set(["Large Blend", "Large Growth", "Large Value", "Small Value", "Small Blend", "Small Growth", "Mid-Cap Value", "Mid-Cap Blend", "Mid-Cap Growth", "International", "Foreign Large Value", "Foreign Large Blend", "Emerging Markets", "Industrials", "Utilities", "Technology", "Equity Energy", "Real Estate", "Natural Resources"]);
+const _AC_BOND = new Set(["Core / Multisector Bonds", "Municipal Bonds", "Bank Loans / Floating Rate", "Treasuries / Duration", "Corporate Bonds", "Junk Bonds"]);
+const _AC_CASH = new Set(["Cash", "CDs"]);
+const _SLEEVE_ASSET_SPLIT = {        // composite funds → approximate underlying equity/bond/cash/alt mix
+  "Liquid Alternatives": { Equity: 0.60, Bond: 0.10, Alternatives: 0.30 },   // AQR Flex — equity-tilted long/short + alt strategies
+  "Multi-Asset": { Equity: 0.55, Bond: 0.40, Cash: 0.05 },                   // balanced
+  "Private Credit": { Bond: 0.90, Alternatives: 0.10 },                      // direct lending → mostly credit
+  "Buyout": { Equity: 1.00 },                                                // private equity → equity exposure
+  "Annuity / Stable Value": { Cash: 0.50, Bond: 0.50 },                      // stable value ≈ cash / short bonds
+};
+function _baseAssetClass(s) {
+  return _AC_EQUITY.has(s) ? "Equity" : _AC_BOND.has(s) ? "Bond" : _AC_CASH.has(s) ? "Cash" : "Alternatives";
+}
+function assetClassLookThrough(h) {   // → {class: fraction} summing to 1
+  return _SLEEVE_ASSET_SPLIT[h.sleeve] || { [_baseAssetClass(h.sleeve)]: 1 };
+}
+
 const PIVOT_DIMS = [
   { key: "asset_class", label: "Asset Class", of: (h) => bucketOfSleeve(h.sleeve), order: () => ROLLUP_BUCKETS.map((b) => b.name) },
+  // Look-through (weighted): composite/alt funds are split into Equity/Bond/Cash/Alternatives.
+  { key: "asset_lt", label: "Asset Class (look-through)", order: () => ["Equity", "Bond", "Cash", "Alternatives"],
+    dist: (h) => assetClassLookThrough(h) },
   { key: "convex_role", label: "Convex Role", of: (h) => convexRoleForSleeve(h.sleeve) || "Other", order: () => _CONVEX_ROLE_ORDER },
   { key: "style_size", label: "Style × Size", of: (h) => styleSizeOfSleeve(h.sleeve) },
   { key: "account", label: "Account", of: (h) => h.brokerageAccount || "—" },
@@ -1471,6 +1496,7 @@ function renderPivot() {
   const e = escapeHtml;
   if (!hs.length) { el.pivot.innerHTML = ""; return; }
   const grand = hs.reduce((s, h) => s + (h.marketValue || 0), 0) || 1;
+  const chartType = state.pivotChartType || "donut";   // default donut; the header button switches to bars
 
   const dimOptions = (sel, withNone) =>
     (withNone ? `<option value="none"${sel === "none" ? " selected" : ""}>— None (1-D) —</option>` : "") +
@@ -1480,10 +1506,25 @@ function renderPivot() {
     <div class="pivotCtl">
       <label>Rows <select id="pivotRowSel">${dimOptions(state.pivotRow, false)}</select></label>
       <label>Columns <select id="pivotColSel">${dimOptions(state.pivotCol, true)}</select></label>
+      <button id="pivotChartTypeBtn" class="pivotFullBtn" type="button" title="Switch chart type — donut / bars">${chartType === "bars" ? "▭ Bars" : "◔ Donut"}</button>
       <button id="pivotFullBtn" class="pivotFullBtn" type="button" title="Toggle full screen">⛶ Full screen</button>
     </div></header>`;
+  if (rowDim.key === "asset_lt" || (colDim && colDim.key === "asset_lt"))
+    html += `<p class="pivotNote">Look-through asset class is <strong>approximate</strong> — composite &amp; alternative funds are split into a typical underlying equity/bond/cash/alt mix (strategy-based assumptions), not security-level holdings. Not a $ reconciliation.</p>`;
 
   const { cats: rowCats, totals: rowOnly } = _pivotCatsByValue(rowDim, hs);
+
+  // 2-D look-through matrix (shared by the matrix table and the stacked-bar chart below).
+  let colCats = null, colTot = null, cell = null;
+  if (colDim) {
+    ({ cats: colCats, totals: colTot } = _pivotCatsByValue(colDim, hs));
+    cell = {};
+    for (const h of hs) {
+      const v = h.marketValue || 0;
+      const rd = _distOf(rowDim, h), cd = _distOf(colDim, h);
+      for (const r in rd) for (const c in cd) cell[r + "" + c] = (cell[r + "" + c] || 0) + v * rd[r] * cd[c];
+    }
+  }
 
   if (!colDim) {
     html += `<table class="pivotTable"><thead><tr><th>${e(rowDim.label)}</th><th class="num">Value</th><th class="num">%</th></tr></thead><tbody>`;
@@ -1521,20 +1562,53 @@ function renderPivot() {
   }
 
   {
-    // Dependency-free SVG donut shown UNDER the table (always on) — 1-D % breakdown by the Rows
-    // dimension (row totals; ignores any column split). Slices carry "pivotSlice" + data-cat for filter.
-    const R = 62, W = 30, CIRC = 2 * Math.PI * R, CX = 80, CY = 80;
+    // Chart under the table — chartType picks it (bars: stacked for 2-D / single for 1-D; else donut).
     const PALETTE = ["#1f77b4", "#2ca02c", "#d62728", "#9467bd", "#ff7f0e", "#17becf", "#8c564b", "#e377c2", "#bcbd22", "#5b8c5a", "#c49c2e", "#7f7f7f"];
-    const slices = rowCats.map((c) => ({ c, v: rowOnly[c] || 0 })).filter((s) => s.v > 0);
-    if (slices.length && grand) {
-      let off = 0, rings = "", legend = "";
-      slices.forEach((s, i) => {
-        const frac = s.v / grand, len = frac * CIRC, col = PALETTE[i % PALETTE.length];
-        rings += `<circle class="pivotSlice" data-cat="${e(s.c)}" cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${col}" stroke-width="${W}" stroke-dasharray="${len.toFixed(2)} ${(CIRC - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"><title>${e(s.c)} — ${percent(frac)} (${money(s.v)})</title></circle>`;
-        legend += `<button type="button" class="pivotSlice pivotLegItem" data-cat="${e(s.c)}"><span class="pivotLegSw" style="background:${col}"></span><span class="pivotLegLbl">${e(s.c)}</span><strong>${percent(frac)}</strong><em>${money(s.v)}</em></button>`;
-        off += len;
+    if (chartType === "bars" && colDim && cell) {
+      // 2-D → stacked bars: one horizontal bar per row, segmented by column; segment width = the
+      // cell's % of the whole book (so a bar's length = the row's % of total and the segments show
+      // its column composition). Colors map to columns (shared legend); segments reuse the .pivotCell
+      // click-to-filter (row × col).
+      const colColor = {}; colCats.forEach((c, i) => { colColor[c] = PALETTE[i % PALETTE.length]; });
+      const legend = colCats.map((c) => `<span class="pivotBarKey"><span class="pivotLegSw" style="background:${colColor[c]}"></span>${e(c)}</span>`).join("");
+      let bars = "";
+      for (const r of rowCats) {
+        const rt = rowOnly[r] || 0;
+        if (rt <= 0 || !grand) continue;
+        let segs = "";
+        for (const c of colCats) {
+          const v = cell[r + "" + c] || 0;
+          if (v <= 0) continue;
+          segs += `<span class="pivotBarSeg pivotCell" data-row="${e(r)}" data-col="${e(c)}" style="width:${((v / grand) * 100).toFixed(3)}%;background:${colColor[c]}" title="${e(r)} × ${e(c)} — ${money(v)} (${percent(v / grand)})"></span>`;
+        }
+        bars += `<div class="pivotBarRow"><span class="pivotBarLbl" title="${e(r)}">${e(r)}</span><div class="pivotBarTrack">${segs}</div><span class="pivotBarTot"><strong>${percent(rt / grand)}</strong> <em>${money(rt)}</em></span></div>`;
+      }
+      if (bars) html += `<div class="pivotChart pivotBarsChart"><p class="pivotBarsHd">${e(rowDim.label)} × ${e(colDim.label)} — share of book (bar length = the row's % of total)</p><div class="pivotBarLegend">${legend}</div>${bars}</div>`;
+    } else if (chartType === "bars") {
+      // 1-D bars → one horizontal bar per row, length = the row's % of the book. Click → filter (row).
+      let bars = "";
+      rowCats.forEach((r, i) => {
+        const rt = rowOnly[r] || 0;
+        if (rt <= 0 || !grand) return;
+        const col = PALETTE[i % PALETTE.length];
+        const seg = `<span class="pivotBarSeg pivotSlice" data-cat="${e(r)}" style="width:${((rt / grand) * 100).toFixed(3)}%;background:${col}" title="${e(r)} — ${money(rt)} (${percent(rt / grand)})"></span>`;
+        bars += `<div class="pivotBarRow"><span class="pivotBarLbl" title="${e(r)}">${e(r)}</span><div class="pivotBarTrack">${seg}</div><span class="pivotBarTot"><strong>${percent(rt / grand)}</strong> <em>${money(rt)}</em></span></div>`;
       });
-      html += `<div class="pivotChart"><svg class="pivotDonut" viewBox="0 0 160 160" role="img" aria-label="${e(rowDim.label)} breakdown"><g transform="rotate(-90 ${CX} ${CY})">${rings}</g><text x="${CX}" y="${CY - 2}" class="pivotDonutLbl">${e(rowDim.label)}</text><text x="${CX}" y="${CY + 16}" class="pivotDonutTot">${money(grand)}</text></svg><div class="pivotLegend">${legend}</div></div>`;
+      if (bars) html += `<div class="pivotChart pivotBarsChart"><p class="pivotBarsHd">${e(rowDim.label)} — share of book</p>${bars}</div>`;
+    } else {
+      // donut → % breakdown by the Rows dimension (row totals; ignores any column split). Slices carry "pivotSlice".
+      const R = 62, W = 30, CIRC = 2 * Math.PI * R, CX = 80, CY = 80;
+      const slices = rowCats.map((c) => ({ c, v: rowOnly[c] || 0 })).filter((s) => s.v > 0);
+      if (slices.length && grand) {
+        let off = 0, rings = "", legend = "";
+        slices.forEach((s, i) => {
+          const frac = s.v / grand, len = frac * CIRC, col = PALETTE[i % PALETTE.length];
+          rings += `<circle class="pivotSlice" data-cat="${e(s.c)}" cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${col}" stroke-width="${W}" stroke-dasharray="${len.toFixed(2)} ${(CIRC - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"><title>${e(s.c)} — ${percent(frac)} (${money(s.v)})</title></circle>`;
+          legend += `<button type="button" class="pivotSlice pivotLegItem" data-cat="${e(s.c)}"><span class="pivotLegSw" style="background:${col}"></span><span class="pivotLegLbl">${e(s.c)}</span><strong>${percent(frac)}</strong><em>${money(s.v)}</em></button>`;
+          off += len;
+        });
+        html += `<div class="pivotChart"><svg class="pivotDonut" viewBox="0 0 160 160" role="img" aria-label="${e(rowDim.label)} breakdown"><g transform="rotate(-90 ${CX} ${CY})">${rings}</g><text x="${CX}" y="${CY - 2}" class="pivotDonutLbl">${e(rowDim.label)}</text><text x="${CX}" y="${CY + 16}" class="pivotDonutTot">${money(grand)}</text></svg><div class="pivotLegend">${legend}</div></div>`;
+      }
     }
   }
 
@@ -1546,12 +1620,19 @@ function renderPivot() {
   }
   el.pivot.innerHTML = html;
 
-  el.pivot.querySelectorAll(".pivotSlice").forEach((sl) => {   // donut slice / legend → filter holdings to that row category
+  el.pivot.querySelectorAll(".pivotSlice").forEach((sl) => {   // donut slice / 1-D bar / legend → filter holdings to that row category
     sl.addEventListener("click", () => {
       state.pivotCell = { rowKey: state.pivotRow, rowVal: sl.dataset.cat, colKey: null, colVal: null };
       render();
       if (el.holdings) el.holdings.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+  });
+
+  const chartTypeBtn = el.pivot.querySelector("#pivotChartTypeBtn");   // toggle donut ⇄ bars (stores an explicit pick)
+  if (chartTypeBtn) chartTypeBtn.addEventListener("click", () => {
+    state.pivotChartType = chartType === "bars" ? "donut" : "bars";
+    saveJson("pivotChartType", state.pivotChartType);
+    render();
   });
 
   // Full-screen toggle — CSS overlay (the native Fullscreen API isn't supported for arbitrary
