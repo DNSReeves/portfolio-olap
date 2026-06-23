@@ -938,13 +938,27 @@ function convexRoleForSleeve(sleeveName) {
 // math over the imported holdings + an editable planning config (persisted in localStorage).
 // Reserve = the Cash sleeve (money-market + SGOV/BIL short bills classify there); embedded
 // tax = sum of positive per-sleeve unrealized gain x the long-term rate (needs cost basis).
+// Reserve runway: years until a reserve earning a constant REAL rate r, drawn down by `expense`/yr,
+// is exhausted (annuity-exhaustion). r<=0 → flat reserve/expense; if the real interest meets/exceeds
+// the draw, the reserve is self-funding (Infinity).
+function reserveYears(reserve, expense, realRate) {
+  if (!(expense > 0)) return 0;
+  if (realRate <= 0) return reserve / expense;
+  const k = realRate * reserve / expense;
+  if (k >= 1) return Infinity;
+  return Math.log(1 / (1 - k)) / Math.log(1 + realRate);
+}
+
 function renderPlanning(cube) {
   if (!el.planning) return;
   const cfg = state.planning;
   const reserve = cube.sleeves
     .filter((s) => convexRoleForSleeve(s.sleeve) === "Cash")
     .reduce((sum, s) => sum + s.value, 0);
-  const years = cfg.expenses > 0 ? reserve / cfg.expenses : 0;
+  // Reserve coverage assumes the cash earns the 90-day T-bill NET of inflation (real rate), drawn
+  // down by expenses — not a flat 0% ratio. Both rates are editable; ?? keeps old saved configs working.
+  const tbill = cfg.tbillRate ?? 0.043, infl = cfg.inflation ?? 0.03, realRate = tbill - infl;
+  const years = reserveYears(reserve, cfg.expenses, realRate);
   const idle = reserve - cfg.reserveTarget;
 
   const taxableSleeves = cube.sleeves
@@ -956,7 +970,7 @@ function renderPlanning(cube) {
 
   const cards = [
     `<div class="metric"><span>Safe reserve (Cash)</span><strong>${money(reserve)}</strong></div>`,
-    `<div class="metric ${years >= 4 ? "good" : "warn"}"><span>Reserve coverage</span><strong>${years.toFixed(1)} yrs</strong></div>`,
+    `<div class="metric ${years >= 4 ? "good" : "warn"}"><span>Reserve coverage</span><strong>${Number.isFinite(years) ? years.toFixed(1) + " yrs" : "∞ self-funding"}</strong></div>`,
     `<div class="metric ${idle >= 0 ? "good" : "warn"}"><span>${idle >= 0 ? "Idle / deployable" : "Reserve shortfall"}</span><strong>${money(Math.abs(idle))}</strong></div>`,
     `<div class="metric"><span>Unrealized gain</span><strong>${hasCostBasis ? money(cube.unrealizedGain) : "—"}</strong></div>`,
     `<div class="metric warn"><span>Embedded LT tax if liquidated</span><strong>${hasCostBasis ? money(embeddedTax) : "—"}</strong></div>`,
@@ -981,9 +995,12 @@ function renderPlanning(cube) {
         ${cfgField("expenses", "Annual expenses", cfg.expenses, { money: true })}
         ${cfgField("reserveTarget", "Reserve target", cfg.reserveTarget, { money: true })}
         ${cfgField("taxLT", "LT tax %", (cfg.taxLT * 100).toFixed(1))}
+        ${cfgField("tbillRate", "90-day T-bill %", (tbill * 100).toFixed(2))}
+        ${cfgField("inflation", "Inflation %", (infl * 100).toFixed(2))}
       </div>
     </div>
     <div class="planMetrics metrics">${cards}</div>
+    <p class="planNote">Reserve coverage assumes the cash earns the 90-day T-bill net of inflation — real ${(realRate * 100).toFixed(1)}%/yr — drawn down by annual expenses.</p>
     <div class="planTax">
       <p class="eyebrow">Embedded tax by sleeve (LT, if sold)</p>
       ${taxRows}
@@ -994,7 +1011,7 @@ function renderPlanning(cube) {
       const key = input.dataset.plan;
       let v = Number(String(input.value).replace(/,/g, ""));   // strip thousands separators
       if (!Number.isFinite(v) || v < 0) return;
-      if (key === "taxLT") v = v / 100;
+      if (key === "taxLT" || key === "tbillRate" || key === "inflation") v = v / 100;
       state.planning = { ...state.planning, [key]: v };
       saveJson("planning", state.planning);
       render();
