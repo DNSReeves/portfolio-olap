@@ -974,10 +974,12 @@ function renderPlanning(cube) {
     .filter((s) => convexRoleForSleeve(s.sleeve) === "Cash")
     .reduce((sum, s) => sum + s.value, 0);
   // Reserve coverage assumes the cash earns the 90-day T-bill NET of inflation (real rate), drawn
-  // down by expenses — not a flat 0% ratio. The T-bill default is the live 90-day Treasury (FRED
-  // DGS3MO) carried in the DB-derived dial_snapshot (fallback 3.83%); both rates are editable, and
-  // ?? keeps old saved configs working.
-  const tbill = cfg.tbillRate ?? DIAL_SNAPSHOT?.tbill_3m ?? 0.0383, infl = cfg.inflation ?? 0.03, realRate = tbill - infl;
+  // down by expenses — not a flat 0% ratio. Both defaults come from the live DB-derived dial_snapshot:
+  // T-bill = 90-day Treasury (FRED DGS3MO, fallback 3.83%), inflation = core CPI YoY (CPILFESL,
+  // fallback 2.82%). Both are editable, and ?? keeps old saved configs working.
+  const tbill = cfg.tbillRate ?? DIAL_SNAPSHOT?.tbill_3m ?? 0.0383,
+        infl = cfg.inflation ?? DIAL_SNAPSHOT?.cpi_core_yoy ?? 0.0282,
+        realRate = tbill - infl;
   const years = reserveYears(reserve, cfg.expenses, realRate);
   const idle = reserve - cfg.reserveTarget;
 
