@@ -1415,6 +1415,7 @@ function renderPivot() {
     <div class="pivotCtl">
       <label>Rows <select id="pivotRowSel">${dimOptions(state.pivotRow, false)}</select></label>
       <label>Columns <select id="pivotColSel">${dimOptions(state.pivotCol, true)}</select></label>
+      <button id="pivotFullBtn" class="pivotFullBtn" type="button" title="Toggle full screen">⛶ Full screen</button>
     </div></header>`;
 
   const { cats: rowCats, totals: rowOnly } = _pivotCatsByValue(rowDim, hs);
@@ -1461,6 +1462,32 @@ function renderPivot() {
     html += `<div class="pivotFilter">Holdings filtered to <strong>${lbl}</strong> <button id="pivotClear" type="button">✕ clear</button></div>`;
   }
   el.pivot.innerHTML = html;
+
+  // Full-screen toggle — CSS overlay (the native Fullscreen API isn't supported for arbitrary
+  // elements on iPad Safari). The .pivotFull class lives on #pivot so it survives innerHTML rebuilds.
+  const fullBtn = el.pivot.querySelector("#pivotFullBtn");
+  if (fullBtn) {
+    const syncFull = () => {
+      fullBtn.textContent = el.pivot.classList.contains("pivotFull") ? "✕ Exit full screen" : "⛶ Full screen";
+    };
+    syncFull();
+    fullBtn.addEventListener("click", () => {
+      const on = el.pivot.classList.toggle("pivotFull");
+      document.body.classList.toggle("pivotFullOpen", on);   // lock the background scroll
+      syncFull();
+    });
+  }
+  if (!window._pivotEscWired) {                              // global Esc-to-exit, wired once
+    window._pivotEscWired = true;
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape" && el.pivot?.classList.contains("pivotFull")) {
+        el.pivot.classList.remove("pivotFull");
+        document.body.classList.remove("pivotFullOpen");
+        const b = el.pivot.querySelector("#pivotFullBtn");
+        if (b) b.textContent = "⛶ Full screen";
+      }
+    });
+  }
 
   el.pivot.querySelector("#pivotRowSel").addEventListener("change", (ev) => {
     state.pivotRow = ev.target.value; saveJson("pivotRow", state.pivotRow); state.pivotCell = null; render();

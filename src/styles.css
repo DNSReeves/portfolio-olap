@@ -1193,7 +1193,15 @@ th {
 .pivotTable th, .pivotTable td { padding: 5px 9px; border-bottom: 1px solid #eef2f4; text-align: left; white-space: nowrap; }
 .pivotTable thead th { background: #ecf0f2; font-weight: 600; color: #33444c; }
 .pivotTable .num { text-align: right; font-variant-numeric: tabular-nums; }
-.pivotTable.matrix tbody th { text-align: left; font-weight: 600; color: #33444c; background: #f6f9fa; position: sticky; left: 0; }
+.pivotFullBtn { font-size: 12px; padding: 3px 10px; border: 1px solid #cfd9dd; border-radius: 6px; background: #fff; color: #1c2a31; cursor: pointer; }
+.pivotFullBtn:hover { background: #eef2f4; }
+/* Full-screen overlay for the Pivot/Matrix panel (toggled by .pivotFullBtn; class on #pivot). */
+.pivotPanel.pivotFull { position: fixed; inset: 0; z-index: 1000; margin: 0; border-radius: 0; max-height: none; overflow: auto; background: #ffffff; box-shadow: none; }
+body.pivotFullOpen { overflow: hidden; }
+.pivotTable.matrix tbody th { text-align: left; font-weight: 600; color: #33444c; background: #f6f9fa; position: sticky; left: 0; z-index: 1; }
+/* Freeze the top-left corner header cell too, so the header row's first column stays aligned with
+   the frozen body column instead of scrolling with the data columns. */
+.pivotTable.matrix thead th:first-child { position: sticky; left: 0; z-index: 2; }
 .pivotTable td.empty { color: #c3ced3; text-align: center; }
 .pivotTable td.total, .pivotTable th.total { font-weight: 600; background: #f2f7f8; }
 .pivotTable tr.pivotTotal td, .pivotTable tr.pivotTotal th { font-weight: 700; border-top: 2px solid #cfd9dd; background: #eef4f5; }
