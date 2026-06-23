@@ -469,6 +469,16 @@ el.splitter.addEventListener("keydown", handleSplitterKey);
 el.manualButton.addEventListener("click", openManual);
 el.manualCloseButton.addEventListener("click", () => el.manualDialog.close());
 
+// Sticky section nav-bar → scroll the target panel into view. scrollIntoView handles both scroll
+// containers (main on desktop, the page on iPad portrait), unlike a bare fragment link.
+document.querySelector(".sectionNav")?.addEventListener("click", (ev) => {
+  const a = ev.target.closest("a[href^='#']");
+  if (!a) return;
+  ev.preventDefault();
+  const target = document.querySelector(a.getAttribute("href"));
+  if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 initApp();
 
 function holding(ticker, assetName, shares, price, sleeve, costBasis) {

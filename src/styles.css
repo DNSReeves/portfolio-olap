@@ -252,6 +252,13 @@ main {
   margin-bottom: 0;
 }
 
+/* Sticky section nav-bar — jump links to each panel; pins to the top of the scroll on the way down. */
+html { scroll-behavior: smooth; }
+.sectionNav { position: sticky; top: 0; z-index: 200; display: flex; flex-wrap: wrap; gap: 4px 6px; padding: 8px 4px; background: #ffffff; border-bottom: 1px solid #e3e9ec; }
+.sectionNav a { font-size: 12.5px; padding: 5px 11px; border-radius: 7px; color: #33444c; text-decoration: none; white-space: nowrap; }
+.sectionNav a:hover { background: #eef2f4; color: #1c2a31; }
+#dashboard, #planning, #convexity, #pivot, #dial, #overlay, #holdings { scroll-margin-top: 52px; }
+
 .eyebrow {
   margin: 0 0 4px;
   color: #67767e;
