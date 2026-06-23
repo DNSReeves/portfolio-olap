@@ -298,6 +298,7 @@ const el = {
   appVersion: document.querySelector("#appVersion"),
   manualVersion: document.querySelector("#manualVersion"),
   metrics: document.querySelector("#dashboard"),
+  scopeSummary: document.querySelector("#scopeSummary"),
   planning: document.querySelector("#planning"),
   convexity: document.querySelector("#convexity"),
   pivot: document.querySelector("#pivot"),
@@ -846,13 +847,36 @@ function renderMetrics(cube) {
   const hasBeta = selectedHoldings.some((h) => h.beta != null);
   const beta = betaDen ? betaNum / betaDen : 0;
 
+  // Top dashboard: the All-Portfolio summary — always pinned, unchanged on drill-down (as before).
+  const allCost = state.holdings.reduce((s, h) => s + (h.costBasis || 0), 0);
+  const allGain = cube.totalValue - allCost;
+  const allBetaNum = state.holdings.reduce((s, h) => s + (h.marketValue || 0) * (h.beta || 0), 0);
+  const allBetaDen = state.holdings.reduce((s, h) => s + (h.marketValue || 0), 0);
+  const allHasBeta = state.holdings.some((h) => h.beta != null);
   el.metrics.replaceChildren(
-    metric(selectedLabel, money(selectedValue), isAllScope() ? "" : "focus"),
+    metric("Portfolio Value", money(cube.totalValue)),
     metric("Total Portfolio", money(cube.totalValue)),
-    metric("Portfolio Allocation", percent(selectedAllocation)),
-    metric("Selection Gain", money(selectedGain), selectedGain >= 0 ? "good" : "warn"),
-    ...(hasBeta ? [metric("Beta vs S&P (est.)", beta.toFixed(2))] : []),
+    metric("Portfolio Allocation", percent(1)),
+    metric("Selection Gain", money(allGain), allGain >= 0 ? "good" : "warn"),
+    ...(allHasBeta ? [metric("Beta vs S&P (est.)", (allBetaDen ? allBetaNum / allBetaDen : 0).toFixed(2))] : []),
   );
+
+  // Scope strip: the drilled asset class's summary, shown just above the drill-down detail.
+  // Hidden entirely at the All-Portfolio view (nothing drilled in) to avoid duplicating the top.
+  if (el.scopeSummary) {
+    if (isAllScope()) {
+      el.scopeSummary.replaceChildren();
+      el.scopeSummary.style.display = "none";
+    } else {
+      el.scopeSummary.style.display = "";
+      el.scopeSummary.replaceChildren(
+        metric(selectedLabel, money(selectedValue), "focus"),
+        metric("Portfolio Allocation", percent(selectedAllocation)),
+        metric("Selection Gain", money(selectedGain), selectedGain >= 0 ? "good" : "warn"),
+        ...(hasBeta ? [metric("Beta vs S&P (est.)", beta.toFixed(2))] : []),
+      );
+    }
+  }
 }
 
 function metric(label, value, tone = "") {
