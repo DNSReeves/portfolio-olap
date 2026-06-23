@@ -1455,6 +1455,24 @@ function renderPivot() {
     html += `<td class="num total">${money(grand)}</td></tr></tbody></table></div>`;
   }
 
+  {
+    // Dependency-free SVG donut shown UNDER the table (always on) — 1-D % breakdown by the Rows
+    // dimension (row totals; ignores any column split). Slices carry "pivotSlice" + data-cat for filter.
+    const R = 62, W = 30, CIRC = 2 * Math.PI * R, CX = 80, CY = 80;
+    const PALETTE = ["#1f77b4", "#2ca02c", "#d62728", "#9467bd", "#ff7f0e", "#17becf", "#8c564b", "#e377c2", "#bcbd22", "#5b8c5a", "#c49c2e", "#7f7f7f"];
+    const slices = rowCats.map((c) => ({ c, v: rowOnly[c] || 0 })).filter((s) => s.v > 0);
+    if (slices.length && grand) {
+      let off = 0, rings = "", legend = "";
+      slices.forEach((s, i) => {
+        const frac = s.v / grand, len = frac * CIRC, col = PALETTE[i % PALETTE.length];
+        rings += `<circle class="pivotSlice" data-cat="${e(s.c)}" cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${col}" stroke-width="${W}" stroke-dasharray="${len.toFixed(2)} ${(CIRC - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"><title>${e(s.c)} — ${percent(frac)} (${money(s.v)})</title></circle>`;
+        legend += `<button type="button" class="pivotSlice pivotLegItem" data-cat="${e(s.c)}"><span class="pivotLegSw" style="background:${col}"></span><span class="pivotLegLbl">${e(s.c)}</span><strong>${percent(frac)}</strong><em>${money(s.v)}</em></button>`;
+        off += len;
+      });
+      html += `<div class="pivotChart"><svg class="pivotDonut" viewBox="0 0 160 160" role="img" aria-label="${e(rowDim.label)} breakdown"><g transform="rotate(-90 ${CX} ${CY})">${rings}</g><text x="${CX}" y="${CY - 2}" class="pivotDonutLbl">${e(rowDim.label)}</text><text x="${CX}" y="${CY + 16}" class="pivotDonutTot">${money(grand)}</text></svg><div class="pivotLegend">${legend}</div></div>`;
+    }
+  }
+
   if (state.pivotCell) {
     const pc = state.pivotCell;
     const lbl = `${e(pivotDim(pc.rowKey).label)} = ${e(pc.rowVal)}` +
@@ -1462,6 +1480,14 @@ function renderPivot() {
     html += `<div class="pivotFilter">Holdings filtered to <strong>${lbl}</strong> <button id="pivotClear" type="button">✕ clear</button></div>`;
   }
   el.pivot.innerHTML = html;
+
+  el.pivot.querySelectorAll(".pivotSlice").forEach((sl) => {   // donut slice / legend → filter holdings to that row category
+    sl.addEventListener("click", () => {
+      state.pivotCell = { rowKey: state.pivotRow, rowVal: sl.dataset.cat, colKey: null, colVal: null };
+      render();
+      if (el.holdings) el.holdings.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
 
   // Full-screen toggle — CSS overlay (the native Fullscreen API isn't supported for arbitrary
   // elements on iPad Safari). The .pivotFull class lives on #pivot so it survives innerHTML rebuilds.

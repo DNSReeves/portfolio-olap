@@ -1202,6 +1202,21 @@ body.pivotFullOpen { overflow: hidden; }
 /* Freeze the top-left corner header cell too, so the header row's first column stays aligned with
    the frozen body column instead of scrolling with the data columns. */
 .pivotTable.matrix thead th:first-child { position: sticky; left: 0; z-index: 2; }
+/* Pivot donut chart — always rendered under the table; 1-D % breakdown by the Rows dimension. */
+.pivotChart { display: flex; flex-wrap: wrap; gap: 22px; align-items: center; padding: 14px 2px 4px; margin-top: 12px; border-top: 1px solid #eef2f4; }
+.pivotDonut { width: 200px; height: 200px; flex: 0 0 auto; }
+.pivotDonut .pivotSlice { cursor: pointer; transition: opacity .12s; }
+.pivotDonut .pivotSlice:hover { opacity: .8; }
+.pivotDonutLbl { text-anchor: middle; font-size: 9px; fill: #5b6b72; }
+.pivotDonutTot { text-anchor: middle; font-size: 13px; font-weight: 700; fill: #1c2a31; }
+.pivotLegend { display: flex; flex-direction: column; gap: 2px; min-width: 220px; flex: 1; }
+.pivotLegItem { display: flex; align-items: center; gap: 8px; padding: 3px 6px; border: none; background: none; cursor: pointer; border-radius: 6px; font-size: 12.5px; color: #1c2a31; text-align: left; width: 100%; font-family: inherit; }
+.pivotLegItem:hover { background: #eef2f4; }
+.pivotLegSw { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+.pivotLegLbl { flex: 1; }
+.pivotLegItem strong { font-variant-numeric: tabular-nums; }
+.pivotLegItem em { color: #5b6b72; font-style: normal; font-variant-numeric: tabular-nums; min-width: 84px; text-align: right; }
+.pivotEmpty { color: #5b6b72; font-size: 13px; padding: 12px; }
 .pivotTable td.empty { color: #c3ced3; text-align: center; }
 .pivotTable td.total, .pivotTable th.total { font-weight: 600; background: #f2f7f8; }
 .pivotTable tr.pivotTotal td, .pivotTable tr.pivotTotal th { font-weight: 700; border-top: 2px solid #cfd9dd; background: #eef4f5; }
