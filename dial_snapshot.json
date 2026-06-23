@@ -10,7 +10,7 @@
     "TR": 0.08,
     "GLD": 0.04
   },
-  "note": "Two-bucket dial: a fixed convex hedge (10% trend / 8% Treasuries / 4% gold) with equity dialed up and the cash floor as the remainder. Proxy backtest 2011\u20132026, monthly (understates intra-month drawdown). Suggest-only.",
+  "note": "Two-bucket dial: a fixed multi-mechanism crash hedge (10% trend = convexity / 8% Treasuries = ballast / 4% gold = diversifier) with equity dialed up and the cash floor as the remainder. Proxy backtest 2011\u20132026, monthly (understates intra-month drawdown). Suggest-only.",
   "all_equity": {
     "equity": 1.0,
     "cagr": 0.11881502505243247,

@@ -320,7 +320,7 @@ A bucket is hidden when nothing rolls into it. The percentage beside each bucket
 
 #### Convex Role groups
 
-The **convex role** describes a sleeve's job in the portfolio's "crash shape":
+The **convex role** describes a sleeve's job in the portfolio's "crash shape". Note that this lens captures only **tactical convexity** — the crash-hedge *instruments* you hold. A portfolio's *total* convexity has a second, often larger source: **structural convexity** from how the book is *sized and rebalanced* (volatility targeting), which a holdings classifier cannot see and which is shown separately in the **Sortino Overlay** panel. A volatility-managed book can be far more convex than its instrument labels suggest; the **Diversifier** role (gold, commodities) is *low-correlation ballast, not convexity* — a distinct property.
 
 | Role | Definition |
 |---|---|
