@@ -479,6 +479,22 @@ document.querySelector(".sectionNav")?.addEventListener("click", (ev) => {
   if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
+// Scrollspy — highlight the nav link whose section is currently near the top of the viewport.
+{
+  const navLinks = [...document.querySelectorAll(".sectionNav a")];
+  const order = navLinks.map((a) => (a.getAttribute("href") || "").slice(1));
+  const sections = order.map((id) => document.getElementById(id)).filter(Boolean);
+  if (sections.length && "IntersectionObserver" in window) {
+    const visible = new Set();
+    const spy = new IntersectionObserver((entries) => {
+      for (const en of entries) { if (en.isIntersecting) visible.add(en.target.id); else visible.delete(en.target.id); }
+      const activeId = order.find((id) => visible.has(id));   // topmost (DOM-order) visible section
+      navLinks.forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + activeId));
+    }, { rootMargin: "-56px 0px -65% 0px", threshold: 0 });    // active zone = just below the sticky bar
+    sections.forEach((s) => spy.observe(s));
+  }
+}
+
 initApp();
 
 function holding(ticker, assetName, shares, price, sleeve, costBasis) {
