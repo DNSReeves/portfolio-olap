@@ -62,6 +62,7 @@ EXTRA = [  # (code, tickers, name-keywords)
  ("LIQALTS",["CLSE","QLEIX","QLENX","BLNDX","REMIX"],["long/short","long short","market neutral","absolute return","delphi","145/45"]),
  ("TREND_FOLLOWING_MANAGED_FUTURES",["AHLPX","ASFYX"],[]),   # 2026-06-24: American Beacon AHL + ASG/AlphaSimplex managed-futures MFs (ticker-only; synced from agent etf_data.db → Convexity)
  ("OPTIONS",["PFIX","CAOS"],[]),                             # 2026-06-24: Simplify PFIX rate-hedge + Alpha Architect CAOS tail-risk — options-based → Convexity (operator reclassification)
+ ("OTHER",["BITC","BTOP","BTRN","PTLC","PTMC","PTNQ","PTEU","PTIN","PTBD","TRND"],[]),  # 2026-06-24: DE-classify from Convexity — Bitwise/GlobalX crypto-trend + Pacer Trendpilot equity/bond trend-OVERLAYS were swept in by the "trend"/"systematic" keywords; they are NOT crisis-alpha convexity (operator cleanup)
  ("PRCR",[],["blackstone private credit","blackstone priv","mlt-asst crdt","multi-asset credit","cliffwater","bdc","alternative lending","alt lending","lending rs","direct lending fund"]),
  ("PE_BUYOUT",[],["private capital","pe strategies","private equity","buyout"," lp class"]),
  ("REAL_ASSETS",["RAAX","RLY"],[]),   # LIQUID real-asset / real-return ETF baskets (FMP) — RAAX/RLY
