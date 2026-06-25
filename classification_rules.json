@@ -183,6 +183,7 @@
     "IUSB": "BONDS",
     "IVE": "LARGE_VALUE",
     "IVLU": "FOREIGN_LARGE_VALUE",
+    "IVOL": "OPTIONS",
     "IVV": "LARGE_BLEND",
     "IVW": "LARGE_GROWTH",
     "IWB": "LARGE_BLEND",
