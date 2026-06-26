@@ -1250,3 +1250,27 @@ body.pivotFullOpen { overflow: hidden; }
 .pivotFilter strong { color: #1c2a31; }
 .pivotFilter button { margin-left: 8px; border: 1px solid #cfd9dd; background: #fff; border-radius: 6px; padding: 2px 8px; cursor: pointer; color: #33444c; font-size: 12px; }
 .pivotFilter button:hover { background: #ecf0f2; }
+
+/* ── Risk Contribution panel (2026-06-26) ───────────────────────────────── */
+.rkCaveat {
+  margin: 10px 0 14px; padding: 9px 13px; font-size: 13px; line-height: 1.45;
+  background: #fff6e3; border: 1px solid #ecd9a6; border-left: 4px solid #e0a31f;
+  border-radius: 8px; color: #5a4a1f;
+}
+.rkWindows { display: flex; align-items: center; gap: 6px; margin: 12px 0 8px; font-size: 13px; color: #5b6b72; }
+.rkWin { border: 1px solid #cfd9dd; background: #ffffff; color: #2c3a41; cursor: pointer; padding: 4px 12px; border-radius: 7px; font: inherit; font-size: 13px; }
+.rkWin:hover { background: #eef2f4; }
+.rkWin.active { background: #287f8f; color: #ffffff; border-color: #287f8f; }
+.rkTable { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 13.5px; }
+.rkTable th { text-align: right; padding: 7px 10px; border-bottom: 2px solid #dfe6e9; color: #5b6b72; font-weight: 600; white-space: nowrap; }
+.rkTable th:first-child { text-align: left; }
+.rkTable td { padding: 7px 10px; border-bottom: 1px solid #eef2f4; vertical-align: middle; }
+.rkName { font-weight: 600; color: #1c2a31; }
+.rkNum { text-align: right; font-variant-numeric: tabular-nums; }
+.rkNeg { color: #1f8a4c; font-weight: 600; }
+.rkBarCell { min-width: 150px; white-space: nowrap; }
+.rkBar { display: inline-block; width: calc(100% - 44px); height: 10px; background: #eef2f4; border-radius: 5px; overflow: hidden; vertical-align: middle; }
+.rkBar span { display: block; height: 100%; background: #287f8f; }
+.rkBarCell em { display: inline-block; width: 38px; text-align: right; font-style: normal; font-variant-numeric: tabular-nums; color: #2c3a41; }
+.rkTable tr.rkConc td { background: #fdf3e6; }
+.rkTable tr.rkHedge td { background: #eef8f0; }
