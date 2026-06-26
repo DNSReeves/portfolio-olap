@@ -1109,59 +1109,65 @@ function renderOverlay() {
 function renderRisk() {
   if (!el.risk) return;
   const S = RISK_SNAPSHOT;
-  if (!S || !S.windows) { el.risk.innerHTML = ""; el.risk.style.display = "none"; return; }
+  if (!S || !S.data || !S.slices) { el.risk.innerHTML = ""; el.risk.style.display = "none"; return; }
   el.risk.style.display = "";
-  const winKey = (state.riskWindow && S.windows[state.riskWindow]) ? state.riskWindow : "3Y";
-  const W = S.windows[winKey] || S.windows["3Y"] || Object.values(S.windows)[0];
-  const wbtns = ["3Y", "1Y"].filter((k) => S.windows[k]).map((k) =>
+  const slices = S.slices;
+  const sliceKey = (state.riskSlice && S.data[state.riskSlice]) ? state.riskSlice : "Total";
+  const sliceLabel = (slices.find((s) => s.key === sliceKey) || {}).label || sliceKey;
+  const sliceWindows = ((S.data[sliceKey] || {}).windows) || {};
+  const winKey = (state.riskWindow && sliceWindows[state.riskWindow]) ? state.riskWindow : "3Y";
+  const W = sliceWindows[winKey] || sliceWindows["3Y"] || Object.values(sliceWindows)[0];
+  // slice <select> (Total → tax tracks → accounts), grouped; + window toggle
+  const groupLabel = { tax: "Tax track", account: "Account" };
+  const optgroups = ["all", "tax", "account"].map((g) => {
+    const items = slices.filter((s) => s.group === g);
+    if (!items.length) return "";
+    const opts = items.map((s) =>
+      `<option value="${escapeAttr(s.key)}" ${s.key === sliceKey ? "selected" : ""}>${escapeHtml(s.label)}${s.mv ? ` — $${(s.mv / 1e6).toFixed(1)}M` : ""}</option>`).join("");
+    return g === "all" ? opts : `<optgroup label="${groupLabel[g]}">${opts}</optgroup>`;
+  }).join("");
+  const wbtns = ["3Y", "1Y"].filter((k) => sliceWindows[k]).map((k) =>
     `<button class="rkWin ${k === winKey ? "active" : ""}" data-win="${k}">${k}</button>`).join("");
-  if (!W || W.error) {
-    el.risk.innerHTML = `<div class="panelHeader"><div><p class="eyebrow">Where the risk actually is</p><h2>Risk Contribution</h2></div></div>` +
-      `<p class="planNote">Not available for ${winKey}: ${escapeHtml((W && W.error) || "no snapshot")}. Re-run <code>portfolio_analysis.py</code>.</p><div class="rkWindows">${wbtns}</div>`;
+  const controls = `<div class="rkControls"><label class="rkSliceWrap">View <select class="rkSlice">${optgroups}</select></label><span class="rkWindows">Lookback ${wbtns}</span></div>`;
+  const header = `<div class="panelHeader"><div><p class="eyebrow">Where the risk actually is — capital vs risk, by asset class · <strong>standalone per slice</strong></p><h2>Risk Contribution</h2></div><span class="pill" title="${escapeAttr(S.method || "")}">${escapeHtml(sliceLabel)}</span></div>`;
+  const wire = () => {
+    const sel = el.risk.querySelector(".rkSlice");
+    if (sel) sel.addEventListener("change", () => { state.riskSlice = sel.value; renderRisk(); });
     el.risk.querySelectorAll(".rkWin").forEach((b) => b.addEventListener("click", () => { state.riskWindow = b.getAttribute("data-win"); renderRisk(); }));
+  };
+  if (!W || W.error) {
+    el.risk.innerHTML = header + controls +
+      `<p class="planNote">Not available for <strong>${escapeHtml(sliceLabel)}</strong> (${winKey}): ${escapeHtml((W && W.error) || "no data")}${W && W.marked != null ? ` — only ${W.marked} marked holding(s) with history` : ""}. Pick another slice, or re-run <code>portfolio_analysis.py</code>.</p>`;
+    wire();
     return;
   }
   const pf = W.portfolio;
   const rows = W.by_asset_class.map((r) => {
-    const conc = r.vol_pct - r.capital_pct_marked;        // risk-vs-capital gap
     const hedge = r.es_pct < 0;
+    const conc = r.vol_pct - r.capital_pct_marked;        // risk-vs-capital gap
     const cls = hedge ? "rkHedge" : (conc > 8 ? "rkConc" : "");
     const barW = Math.max(0, Math.min(100, r.vol_pct));
-    return `<tr class="${cls}">
-      <td class="rkName">${escapeHtml(r.key)}</td>
-      <td class="rkNum">${r.capital_pct_marked.toFixed(1)}</td>
-      <td class="rkBarCell"><div class="rkBar"><span style="width:${barW}%"></span></div><em>${r.vol_pct.toFixed(1)}</em></td>
-      <td class="rkNum">${r.beta_pct.toFixed(1)}</td>
-      <td class="rkNum ${hedge ? "rkNeg" : ""}">${r.es_pct.toFixed(1)}</td>
-    </tr>`;
+    return `<tr class="${cls}"><td class="rkName">${escapeHtml(r.key)}</td><td class="rkNum">${r.capital_pct_marked.toFixed(1)}</td><td class="rkBarCell"><div class="rkBar"><span style="width:${barW}%"></span></div><em>${r.vol_pct.toFixed(1)}</em></td><td class="rkNum">${r.beta_pct.toFixed(1)}</td><td class="rkNum ${hedge ? "rkNeg" : ""}">${r.es_pct.toFixed(1)}</td></tr>`;
   }).join("");
-  el.risk.innerHTML = `
-    <div class="panelHeader">
-      <div>
-        <p class="eyebrow">Where the risk actually is — capital vs risk, by asset class</p>
-        <h2>Risk Contribution</h2>
-      </div>
-      <span class="pill" title="${escapeAttr(S.method || "")}">marked ${(W.marked_weight * 100).toFixed(0)}% · ${winKey} daily · ${W.obs}d (${escapeHtml(W.start)}→${escapeHtml(W.end)})</span>
-    </div>
-    <div class="rkCaveat">⚠️ <strong>${(W.non_marked_weight * 100).toFixed(0)}%</strong> of the book ($${Math.round(W.non_marked_mv).toLocaleString()}) is <strong>non-marked</strong> (CDs / annuities / private / illiquid — no honest market series) and <strong>excluded</strong>. The risk %s below are of the measurable sub-book and sum to 100%.</div>
+  el.risk.innerHTML = header + controls + `
+    <div class="rkCaveat">⚠️ <strong>${(W.non_marked_weight * 100).toFixed(0)}%</strong> of <strong>${escapeHtml(sliceLabel)}</strong> ($${Math.round(W.non_marked_mv).toLocaleString()}) is <strong>non-marked</strong> (CDs / annuities / private / illiquid — no honest market series) and <strong>excluded</strong>. The risk %s below are of the measurable sub-book and sum to 100%.</div>
     <div class="planMetrics metrics">
       <div class="metric"><span>Volatility (annualized)</span><strong>${(pf.vol_annual * 100).toFixed(1)}%</strong></div>
       <div class="metric"><span>Portfolio beta (vs SPY)</span><strong>${pf.beta.toFixed(2)}</strong></div>
       <div class="metric"><span>Expected shortfall (worst ${(pf.es_alpha * 100).toFixed(0)}% days)</span><strong>${(pf.es_daily * 100).toFixed(2)}%/day</strong></div>
     </div>
-    <div class="rkWindows">Lookback: ${wbtns}</div>
     <table class="rkTable">
       <thead><tr>
         <th>Asset class</th>
         <th title="% of the marked (measurable) sub-book by capital">Capital&nbsp;%</th>
-        <th title="component contribution to portfolio volatility — Ledoit-Wolf shrinkage covariance">Vol&nbsp;%</th>
-        <th title="component contribution to portfolio beta">Beta&nbsp;%</th>
+        <th title="component contribution to THIS slice's volatility — Ledoit-Wolf shrinkage covariance">Vol&nbsp;%</th>
+        <th title="component contribution to THIS slice's beta">Beta&nbsp;%</th>
         <th title="component contribution to tail / expected-shortfall — NEGATIVE = helps in a crash">Tail&nbsp;%</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="planNote">Each column is an exact <strong>Euler decomposition</strong> (the parts sum to the whole). <strong>Vol&nbsp;% &gt; Capital&nbsp;%</strong> = the class carries more risk than money (a concentration, shaded); a <strong class="good">negative Tail&nbsp;%</strong> = a crash hedge that <em>reduces</em> drawdown (shaded green). Snapshot ${escapeHtml((S.generated || "").slice(0, 10))}.</div>`;
-  el.risk.querySelectorAll(".rkWin").forEach((b) => b.addEventListener("click", () => { state.riskWindow = b.getAttribute("data-win"); renderRisk(); }));
+    <div class="planNote">Each slice is decomposed <strong>standalone</strong> — its own &sigma;/&beta;/ES, weights renormalized inside the slice. Columns are exact <strong>Euler decompositions</strong>. <strong>Vol&nbsp;% &gt; Capital&nbsp;%</strong> = carries more risk than money (shaded amber); <strong class="good">negative Tail&nbsp;%</strong> = a crash hedge that <em>reduces</em> drawdown (shaded green). ${winKey} daily · ${W.obs}d (${escapeHtml(W.start)}&rarr;${escapeHtml(W.end)}) · snapshot ${escapeHtml((S.generated || "").slice(0, 10))}.</div>`;
+  wire();
 }
 
 // Convexity panel: (1) live composition by the 7 convex roles, Convexity foregrounded;

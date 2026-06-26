@@ -1274,3 +1274,6 @@ body.pivotFullOpen { overflow: hidden; }
 .rkBarCell em { display: inline-block; width: 38px; text-align: right; font-style: normal; font-variant-numeric: tabular-nums; color: #2c3a41; }
 .rkTable tr.rkConc td { background: #fdf3e6; }
 .rkTable tr.rkHedge td { background: #eef8f0; }
+.rkControls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin: 12px 0 10px; font-size: 13px; color: #5b6b72; }
+.rkSliceWrap { display: flex; align-items: center; gap: 8px; }
+.rkSlice { font: inherit; font-size: 13px; padding: 5px 10px; border: 1px solid #cfd9dd; border-radius: 7px; background: #ffffff; color: #1c2a31; max-width: 320px; }
