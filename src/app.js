@@ -1118,8 +1118,8 @@ function renderRisk() {
   const winKey = (state.riskWindow && sliceWindows[state.riskWindow]) ? state.riskWindow : "3Y";
   const W = sliceWindows[winKey] || sliceWindows["3Y"] || Object.values(sliceWindows)[0];
   // slice <select> (Total → tax tracks → accounts), grouped; + window toggle
-  const groupLabel = { tax: "Tax track", account: "Account" };
-  const optgroups = ["all", "tax", "account"].map((g) => {
+  const groupLabel = { tax: "Tax track", within: "Within asset class", account: "Account" };
+  const optgroups = ["all", "tax", "within", "account"].map((g) => {
     const items = slices.filter((s) => s.group === g);
     if (!items.length) return "";
     const opts = items.map((s) =>
