@@ -9,6 +9,8 @@
   <body>
     <div class="app">
       <aside class="sidebar">
+        <a class="forgeBack" id="forgeBack" href="#" title="Return to MarketForge"
+           style="display:block;margin:0 0 14px;padding:11px 14px;background:#1f6feb;color:#fff;border-radius:8px;text-align:center;text-decoration:none;font-weight:600;font-size:15px;">← Forge</a>
         <div class="brand">
           <div class="brandIcon">OL</div>
           <div>
@@ -201,6 +203,12 @@
         <article id="manualContent" class="manualContent"></article>
       </div>
     </dialog>
+    <script>
+      // Back to MarketForge — same host, port 8765 (/forge). Same-tab nav pairs with the
+      // Forge OLAP pill (also same-tab) so iPad Safari never has to juggle tabs.
+      document.getElementById('forgeBack').href =
+        location.protocol + '//' + location.hostname + ':8765/forge';
+    </script>
     <script type="module" src="./src/app.js?v=20260623s"></script>
   </body>
 </html>
