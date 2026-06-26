@@ -16,6 +16,11 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.3 — what's new
+
+- **Risk Contribution panel** — a new analytical lens (below Sortino Overlay) showing **capital % vs risk %** by asset class, so concentrations pop: a class small in capital but large in risk, or a crash hedge that *reduces* risk. Three measures (volatility, beta, tail / expected-shortfall), each an exact decomposition. A **View** selector decomposes any **slice standalone** — Total, each **tax track** (Taxable / Tax-free), **within** a broad asset class (Equity / Fixed Income / …), or **per account** — with a **3Y / 1Y** lookback toggle. See *Risk Contribution: where the risk actually is* below.
+- **Style × Size fix** — equity that lacks a US style-box (private equity, Emerging Markets, broad International) no longer mislabels as *Non-equity*; it now reads as **Private Equity**, **Emerging Markets**, **International**, or **Equity — other**. Only genuine non-equity (bonds / cash / alternatives) stays *Non-equity*.
+
 ### Version 2.2 — what's new
 
 - **Pivot / Matrix panel** — a new analytical lens below Convexity. Choose **Rows** (and optionally **Columns**) from any of seven dimensions to get a **1-D breakdown** (value + %) or a **2-D matrix / cross-tab** (value cells with row, column, and grand totals). Click any cell to filter the holdings table to that slice. Dimensions: Asset Class, Convex Role, Style × Size, Account, Liquidity, Sleeve, and **Region** (look-through). See *Pivot / Matrix: cross-tab any two dimensions* below.
@@ -358,7 +363,7 @@ The seven dimensions:
 | --- | --- |
 | **Asset Class** | the rollup bucket (Public Equity, Fixed Income, Real Assets, …) |
 | **Convex Role** | crash behavior (Growth, Duration, Convexity, …) |
-| **Style × Size** | equity box parsed from the sleeve (Large Blend, Small Value, …; non-equity → *Non-equity*) |
+| **Style × Size** | equity box parsed from the sleeve (Large Blend, Small Value, …). Equity without a US style-box reads as **Private Equity**, **Emerging Markets**, **International**, or **Equity — other**; only genuine non-equity (bonds / cash / alternatives) → *Non-equity* |
 | **Account** | the holding's account / entity (IRA, Living Trust, Partnership, …) |
 | **Liquidity** | Liquid vs Private (private real estate / credit / equity / alternatives) |
 | **Sleeve** | the granular sleeve itself |
@@ -367,6 +372,34 @@ The seven dimensions:
 **Region is look-through.** A fund is split across regions by its actual country breakdown (e.g. a total-international ETF lands partly in Foreign Developed and partly in Emerging Markets), so each fund's value is *apportioned* across the region cells rather than dumped into one. Region exposure comes from the warehouse's per-ETF country weightings (regenerated with the book; holdings with no country data — single stocks, bonds, private funds — show as *Unknown*). Because a look-through holding spans several cells, clicking a Region cell shows every holding with **any** exposure to it (so a holding can appear under more than one region).
 
 > Phase 2 will add a **Fixed Income: Duration × Credit Quality** matrix once per-ETF duration and credit-rating data is ingested into the warehouse.
+
+### Risk Contribution: where the risk actually is
+
+The **Risk Contribution** panel (below Sortino Overlay) answers a different question from the allocation views — not *where is my money*, but *where is my risk*. For each asset class it shows **% of capital** beside **% of portfolio risk**; the **gap** is the signal. A class that is 36% of capital but 57% of the risk is a concentration; a bond sleeve that is 22% of capital but 4% of risk is doing its job cheaply.
+
+**Three measures**, each an exact decomposition (the parts sum to the whole):
+
+| Column | What it measures |
+| --- | --- |
+| **Capital %** | the class's share of the measurable (marked) sub-book, by dollars |
+| **Vol %** | its contribution to portfolio **volatility** (Ledoit-Wolf shrinkage covariance over daily returns) |
+| **Beta %** | its contribution to portfolio **beta** vs the S&P 500 |
+| **Tail %** | its contribution to **expected shortfall** — the average loss on the worst 5% of days. A **negative** Tail % means the class *reduces* drawdown: a crash hedge. |
+
+Rows where **Vol % exceeds Capital %** (more risk than money) are shaded **amber** (a concentration); rows with a **negative Tail %** (a crash hedge) are shaded **green**.
+
+**Slice and dice — the View selector.** Each slice is decomposed **standalone**, as its own portfolio (its own volatility, beta, and tail, with weights renormalized *inside* the slice) — not a filtered view of the total. So "the taxable book is 58% of *its* risk in Large Blend" reads independently of the IRA. The groups:
+
+- **Total** — the whole marked book.
+- **Tax track** — **Taxable** vs **Tax-free** (IRA / RMD / TIAA). The taxable book is typically more equity-concentrated; the tax-free track, migrating toward Convex Core, is more balanced.
+- **Within asset class** — decompose *inside* a broad class. **Within Fixed Income**, for example, shows that Treasuries are a small share of bond capital but the largest share of bond *risk* (duration), while floating-rate bank loans are capital-heavy yet risk-cheap.
+- **Account** — each entity (Living Trust, Partnership, IRA, …) as its own portfolio. Thin accounts (an SMA whose holdings aren't in the warehouse) show a graceful "too few marked holdings" note and stay navigable.
+
+A **3Y / 1Y** toggle switches the lookback (3Y is the default — more regime coverage; 1Y is more responsive to the current regime).
+
+**Non-marked holdings are excluded.** CDs, fixed annuities, private real estate, and anything else with no honest market-price series have no measurable volatility, so they are left out of the risk math and renormalized away. A banner at the top of the panel states exactly how much of the slice (in $ and %) is non-marked, so the risk %s are never mistaken for the whole book — this is why a private-heavy account, or *Within Alternatives*, can show a high non-marked share.
+
+**How it's computed.** The decomposition can't run in the browser (it needs the price warehouse and a covariance estimator), so it is **precomputed** by `portfolio_analysis.py` into `risk_contribution_snapshot.json` and read read-only — the same model as the Sortino Overlay and Dial. Re-run `portfolio_analysis.py` after the book changes to refresh it; if the snapshot is absent, the panel hides itself.
 
 ### Reading the Holdings Table
 
@@ -590,6 +623,7 @@ If future versions add cloud sync, brokerage integrations, market data APIs, or 
 - There is no target allocation or rebalancing workflow yet.
 - Manual assignments are browser-local and do not automatically move between devices.
 - Classification is rule-based, not a full security master or AI classifier.
+- The Risk Contribution panel only measures holdings with a market-price series in the warehouse; non-marked holdings (CDs, annuities, private funds) are excluded, so a private-heavy slice covers only its marked portion (the panel's banner states the coverage).
 
 ## 6. Recommended Next Enhancements
 
