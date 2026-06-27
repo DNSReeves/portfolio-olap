@@ -358,6 +358,10 @@ const el = {
   manualDialog: document.querySelector("#manualDialog"),
   manualCloseButton: document.querySelector("#manualCloseButton"),
   manualContent: document.querySelector("#manualContent"),
+  manualSearchInput: document.querySelector("#manualSearchInput"),
+  manualSearchCount: document.querySelector("#manualSearchCount"),
+  manualSearchPrev: document.querySelector("#manualSearchPrev"),
+  manualSearchNext: document.querySelector("#manualSearchNext"),
 };
 
 el.csvFile.addEventListener("change", async (event) => {
@@ -484,6 +488,14 @@ el.splitter.addEventListener("keydown", handleSplitterKey);
 
 el.manualButton.addEventListener("click", openManual);
 el.manualCloseButton.addEventListener("click", () => el.manualDialog.close());
+if (el.manualSearchInput) {
+  el.manualSearchInput.addEventListener("input", runManualSearch);
+  el.manualSearchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); if (manualHits.length) focusManualHit(manualHitIndex + (e.shiftKey ? -1 : 1)); }
+  });
+}
+if (el.manualSearchNext) el.manualSearchNext.addEventListener("click", () => focusManualHit(manualHitIndex + 1));
+if (el.manualSearchPrev) el.manualSearchPrev.addEventListener("click", () => focusManualHit(manualHitIndex - 1));
 
 // Sticky section nav-bar → scroll the target panel into view. scrollIntoView handles both scroll
 // containers (main on desktop, the page on iPad portrait), unlike a bare fragment link.
@@ -2320,7 +2332,72 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, "&#096;");
 }
 
+// ── Find-in-guide: search the rendered manual, highlight matches, jump between them ──
+let manualOriginalHTML = "";
+let manualHits = [];
+let manualHitIndex = 0;
+
+function resetManualSearch() {
+  manualOriginalHTML = "";
+  manualHits = [];
+  manualHitIndex = 0;
+  if (el.manualSearchInput) el.manualSearchInput.value = "";
+  if (el.manualSearchCount) el.manualSearchCount.textContent = "";
+}
+
+function highlightManual(query) {
+  // Walk text nodes and wrap case-insensitive matches in <mark class="manualHit">. Returns the marks.
+  const hits = [];
+  const q = query.toLowerCase();
+  const walker = document.createTreeWalker(el.manualContent, NodeFilter.SHOW_TEXT, null);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const text = node.nodeValue;
+    const lower = text.toLowerCase();
+    if (!lower.includes(q)) continue;
+    const frag = document.createDocumentFragment();
+    let idx = lower.indexOf(q), last = 0;
+    while (idx !== -1) {
+      if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+      const mark = document.createElement("mark");
+      mark.className = "manualHit";
+      mark.textContent = text.slice(idx, idx + q.length);
+      frag.appendChild(mark);
+      hits.push(mark);
+      last = idx + q.length;
+      idx = lower.indexOf(q, last);
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+  }
+  return hits;
+}
+
+function runManualSearch() {
+  if (!manualOriginalHTML) return;
+  const q = (el.manualSearchInput.value || "").trim();
+  el.manualContent.innerHTML = manualOriginalHTML;        // reset before re-highlighting
+  manualHits = [];
+  manualHitIndex = 0;
+  if (q.length >= 2) manualHits = highlightManual(q);
+  if (!q) { el.manualSearchCount.textContent = ""; return; }
+  if (!manualHits.length) { el.manualSearchCount.textContent = "no matches"; return; }
+  focusManualHit(0);
+}
+
+function focusManualHit(i) {
+  if (!manualHits.length) return;
+  manualHits.forEach((m) => m.classList.remove("current"));
+  manualHitIndex = (i + manualHits.length) % manualHits.length;
+  const m = manualHits[manualHitIndex];
+  m.classList.add("current");
+  m.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.manualSearchCount.textContent = `${manualHitIndex + 1} / ${manualHits.length}`;
+}
+
 async function openManual() {
+  resetManualSearch();
   el.manualContent.innerHTML = "<p>Loading manual...</p>";
   el.manualDialog.showModal();
 
@@ -2330,6 +2407,7 @@ async function openManual() {
       throw new Error(`Manual request failed with ${response.status}`);
     }
     el.manualContent.innerHTML = renderMarkdown(await response.text());
+    manualOriginalHTML = el.manualContent.innerHTML;       // pristine copy for search resets
   } catch (error) {
     el.manualContent.innerHTML = `
       <h1>Manual Unavailable</h1>

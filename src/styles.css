@@ -1277,3 +1277,12 @@ body.pivotFullOpen { overflow: hidden; }
 .rkControls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin: 12px 0 10px; font-size: 13px; color: #5b6b72; }
 .rkSliceWrap { display: flex; align-items: center; gap: 8px; }
 .rkSlice { font: inherit; font-size: 13px; padding: 5px 10px; border: 1px solid #cfd9dd; border-radius: 7px; background: #ffffff; color: #1c2a31; max-width: 320px; }
+
+/* ── Find-in-guide (manual search) ──────────────────────────────────────── */
+.manualSearch { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; }
+.manualSearch input[type="search"] { flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 7px 11px; border: 1px solid #cfd9dd; border-radius: 8px; background: #ffffff; color: #1c2a31; }
+.manualSearchCount { font-size: 12px; color: #5b6b72; white-space: nowrap; min-width: 58px; text-align: right; }
+.manualSearch button { border: 1px solid #cfd9dd; background: #ffffff; color: #2c3a41; border-radius: 7px; width: 32px; height: 32px; cursor: pointer; font-size: 15px; line-height: 1; }
+.manualSearch button:hover { background: #eef2f4; }
+mark.manualHit { background: #ffe9a8; color: inherit; border-radius: 2px; padding: 0 1px; }
+mark.manualHit.current { background: #ffb300; box-shadow: 0 0 0 2px #ff9800; }

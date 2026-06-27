@@ -19,6 +19,7 @@ The implementation is a zero-dependency app. It runs in a browser using static H
 ### Version 2.3 — what's new
 
 - **Risk Contribution panel** — a new analytical lens (below Sortino Overlay) showing **capital % vs risk %** by asset class, so concentrations pop: a class small in capital but large in risk, or a crash hedge that *reduces* risk. Three measures (volatility, beta, tail / expected-shortfall), each an exact decomposition. Two selectors — **View** (Total / tax track / per account) and **Within** (a broad asset class *of that scope*) — decompose any slice **standalone**, so you can read e.g. the Living Trust's *equity* sub-book; with a **3Y / 1Y** lookback toggle. See *Risk Contribution: where the risk actually is* below.
+- **Find in guide** — a search box in the Guide highlights every match, jumps between them (Enter / Shift+Enter, or the ↑ ↓ buttons), and shows a match count.
 - **Style × Size fix** — equity that lacks a US style-box (private equity, Emerging Markets, broad International) no longer mislabels as *Non-equity*; it now reads as **Private Equity**, **Emerging Markets**, **International**, or **Equity — other**. Only genuine non-equity (bonds / cash / alternatives) stays *Non-equity*.
 
 ### Version 2.2 — what's new
