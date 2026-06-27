@@ -371,6 +371,8 @@ The seven dimensions:
 
 **Region is look-through.** A fund is split across regions by its actual country breakdown (e.g. a total-international ETF lands partly in Foreign Developed and partly in Emerging Markets), so each fund's value is *apportioned* across the region cells rather than dumped into one. Region exposure comes from the warehouse's per-ETF country weightings (regenerated with the book; holdings with no country data — single stocks, bonds, private funds — show as *Unknown*). Because a look-through holding spans several cells, clicking a Region cell shows every holding with **any** exposure to it (so a holding can appear under more than one region).
 
+**Within an asset class.** To break a single class into its sub-parts, cross-tab **Asset Class × Sleeve** (or **Asset Class × Style × Size**) — each class's row then shows its sub-sleeves in the cells — or pick **Sleeve** (or **Style × Size**) as Rows and click an Asset-Class cell to filter to just that class. This is the **capital** (dollar) view of a within-class breakdown. For the **risk-weighted** version — each sub-class's share of the class's *volatility / beta / tail*, not just its dollars — use the **Risk Contribution** panel's **Within asset class** view (next section). The two are complementary: Pivot answers *how much money* sits in each sub-part; Risk Contribution answers *how much risk* it carries.
+
 > Phase 2 will add a **Fixed Income: Duration × Credit Quality** matrix once per-ETF duration and credit-rating data is ingested into the warehouse.
 
 ### Risk Contribution: where the risk actually is
