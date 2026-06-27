@@ -18,7 +18,7 @@ The implementation is a zero-dependency app. It runs in a browser using static H
 
 ### Version 2.3 — what's new
 
-- **Risk Contribution panel** — a new analytical lens (below Sortino Overlay) showing **capital % vs risk %** by asset class, so concentrations pop: a class small in capital but large in risk, or a crash hedge that *reduces* risk. Three measures (volatility, beta, tail / expected-shortfall), each an exact decomposition. A **View** selector decomposes any **slice standalone** — Total, each **tax track** (Taxable / Tax-free), **within** a broad asset class (Equity / Fixed Income / …), or **per account** — with a **3Y / 1Y** lookback toggle. See *Risk Contribution: where the risk actually is* below.
+- **Risk Contribution panel** — a new analytical lens (below Sortino Overlay) showing **capital % vs risk %** by asset class, so concentrations pop: a class small in capital but large in risk, or a crash hedge that *reduces* risk. Three measures (volatility, beta, tail / expected-shortfall), each an exact decomposition. Two selectors — **View** (Total / tax track / per account) and **Within** (a broad asset class *of that scope*) — decompose any slice **standalone**, so you can read e.g. the Living Trust's *equity* sub-book; with a **3Y / 1Y** lookback toggle. See *Risk Contribution: where the risk actually is* below.
 - **Style × Size fix** — equity that lacks a US style-box (private equity, Emerging Markets, broad International) no longer mislabels as *Non-equity*; it now reads as **Private Equity**, **Emerging Markets**, **International**, or **Equity — other**. Only genuine non-equity (bonds / cash / alternatives) stays *Non-equity*.
 
 ### Version 2.2 — what's new
@@ -390,12 +390,13 @@ The **Risk Contribution** panel (below Sortino Overlay) answers a different ques
 
 Rows where **Vol % exceeds Capital %** (more risk than money) are shaded **amber** (a concentration); rows with a **negative Tail %** (a crash hedge) are shaded **green**.
 
-**Slice and dice — the View selector.** Each slice is decomposed **standalone**, as its own portfolio (its own volatility, beta, and tail, with weights renormalized *inside* the slice) — not a filtered view of the total. So "the taxable book is 58% of *its* risk in Large Blend" reads independently of the IRA. The groups:
+**Slice and dice — two selectors.** **View** picks the *scope*, each decomposed **standalone** — as its own portfolio (its own volatility, beta, and tail, with weights renormalized *inside* the scope), not a filtered view of the total. So "the taxable book is 58% of *its* risk in Large Blend" reads independently of the IRA. The scopes:
 
 - **Total** — the whole marked book.
 - **Tax track** — **Taxable** vs **Tax-free** (IRA / RMD / TIAA). The taxable book is typically more equity-concentrated; the tax-free track, migrating toward Convex Core, is more balanced.
-- **Within asset class** — decompose *inside* a broad class. **Within Fixed Income**, for example, shows that Treasuries are a small share of bond capital but the largest share of bond *risk* (duration), while floating-rate bank loans are capital-heavy yet risk-cheap.
 - **Account** — each entity (Living Trust, Partnership, IRA, …) as its own portfolio. Thin accounts (an SMA whose holdings aren't in the warehouse) show a graceful "too few marked holdings" note and stay navigable.
+
+The second selector, **Within**, decomposes *inside* a broad asset class **of the chosen scope** — Equity / Fixed Income / Alternatives / Cash — so you can read "the Living Trust's *equity* sub-book," or at Total scope the whole book's. **Within Fixed Income**, for example, shows that Treasuries are a small share of bond capital but the largest share of bond *risk* (duration), while floating-rate bank loans are capital-heavy yet risk-cheap. The Within options adapt to whatever the scope holds (an all-bond account offers only Fixed Income / Cash; a thin one offers none).
 
 A **3Y / 1Y** toggle switches the lookback (3Y is the default — more regime coverage; 1Y is more responsive to the current regime).
 

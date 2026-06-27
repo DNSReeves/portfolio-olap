@@ -1113,26 +1113,40 @@ function renderRisk() {
   el.risk.style.display = "";
   const slices = S.slices;
   const sliceKey = (state.riskSlice && S.data[state.riskSlice]) ? state.riskSlice : "Total";
-  const sliceLabel = (slices.find((s) => s.key === sliceKey) || {}).label || sliceKey;
-  const sliceWindows = ((S.data[sliceKey] || {}).windows) || {};
+  const sliceMeta = slices.find((s) => s.key === sliceKey) || {};
+  const scope = S.data[sliceKey] || S.data["Total"] || {};
+  // Scope × Within: an optional within-asset-class breakdown of the chosen scope (e.g. the
+  // Living Trust's equity sub-book). Reset/ignore the within if it isn't available in this scope.
+  const withinAvail = sliceMeta.within || [];
+  let withinKey = state.riskWithin;
+  if (withinKey && !withinAvail.includes(withinKey)) withinKey = null;
+  const source = (withinKey && scope.within && scope.within[withinKey]) ? scope.within[withinKey] : scope;
+  const sliceLabel = (sliceMeta.label || sliceKey) + (withinKey ? ` · Within ${withinKey}` : "");
+  const sliceWindows = (source.windows) || {};
   const winKey = (state.riskWindow && sliceWindows[state.riskWindow]) ? state.riskWindow : "3Y";
   const W = sliceWindows[winKey] || sliceWindows["3Y"] || Object.values(sliceWindows)[0];
-  // slice <select> (Total → tax tracks → accounts), grouped; + window toggle
-  const groupLabel = { tax: "Tax track", within: "Within asset class", account: "Account" };
-  const optgroups = ["all", "tax", "within", "account"].map((g) => {
+  // scope <select> (Total → tax tracks → accounts) + within <select> + window toggle
+  const groupLabel = { tax: "Tax track", account: "Account" };
+  const scopeOpts = ["all", "tax", "account"].map((g) => {
     const items = slices.filter((s) => s.group === g);
     if (!items.length) return "";
     const opts = items.map((s) =>
       `<option value="${escapeAttr(s.key)}" ${s.key === sliceKey ? "selected" : ""}>${escapeHtml(s.label)}${s.mv ? ` — $${(s.mv / 1e6).toFixed(1)}M` : ""}</option>`).join("");
     return g === "all" ? opts : `<optgroup label="${groupLabel[g]}">${opts}</optgroup>`;
   }).join("");
+  const withinOpts = `<option value="">(whole slice — by asset class)</option>` +
+    withinAvail.map((b) => `<option value="${escapeAttr(b)}" ${b === withinKey ? "selected" : ""}>Within ${escapeHtml(b)}</option>`).join("");
+  const withinSel = withinAvail.length
+    ? `<label class="rkSliceWrap">Within <select class="rkWithin">${withinOpts}</select></label>` : "";
   const wbtns = ["3Y", "1Y"].filter((k) => sliceWindows[k]).map((k) =>
     `<button class="rkWin ${k === winKey ? "active" : ""}" data-win="${k}">${k}</button>`).join("");
-  const controls = `<div class="rkControls"><label class="rkSliceWrap">View <select class="rkSlice">${optgroups}</select></label><span class="rkWindows">Lookback ${wbtns}</span></div>`;
+  const controls = `<div class="rkControls"><label class="rkSliceWrap">View <select class="rkSlice">${scopeOpts}</select></label>${withinSel}<span class="rkWindows">Lookback ${wbtns}</span></div>`;
   const header = `<div class="panelHeader"><div><p class="eyebrow">Where the risk actually is — capital vs risk, by asset class · <strong>standalone per slice</strong></p><h2>Risk Contribution</h2></div><span class="pill" title="${escapeAttr(S.method || "")}">${escapeHtml(sliceLabel)}</span></div>`;
   const wire = () => {
     const sel = el.risk.querySelector(".rkSlice");
-    if (sel) sel.addEventListener("change", () => { state.riskSlice = sel.value; renderRisk(); });
+    if (sel) sel.addEventListener("change", () => { state.riskSlice = sel.value; state.riskWithin = null; renderRisk(); });
+    const wsel = el.risk.querySelector(".rkWithin");
+    if (wsel) wsel.addEventListener("change", () => { state.riskWithin = wsel.value || null; renderRisk(); });
     el.risk.querySelectorAll(".rkWin").forEach((b) => b.addEventListener("click", () => { state.riskWindow = b.getAttribute("data-win"); renderRisk(); }));
   };
   if (!W || W.error) {
