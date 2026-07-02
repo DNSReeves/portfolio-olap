@@ -643,7 +643,7 @@ async function applyImport(sourceName = "CSV import") {
       brokerPreset: "generic",
       rowCount: normalized.holdings.length,
     };
-    await saveSnapshot(snapshot, normalized.holdings.map((holding) => toPositionValuation(holding, snapshot)));
+    await saveSnapshot(snapshot, normalized.holdings.map((holding, rowIndex) => toPositionValuation(holding, snapshot, rowIndex)));
     state.activeSnapshotId = snapshot.id;
     await refreshSnapshots();
   }
@@ -1921,10 +1921,13 @@ function buildPortfolioCube(holdings) {
   };
 }
 
-function toPositionValuation(holding, snapshot) {
+function toPositionValuation(holding, snapshot, rowIndex) {
   const assetKey = assignmentKey(holding.ticker, holding.assetName);
+  // rowIndex keeps the id unique for legitimate duplicate (ticker, account)
+  // rows (FCASH**/FNSXX/CASH sweep rows) — without it, IndexedDB put() silently
+  // overwrote earlier rows and every saved snapshot lost ~$141K (2026-07 review).
   return {
-    id: `${snapshot.id}-${assetKey}-${holding.brokerageAccount || "account"}`,
+    id: `${snapshot.id}-${assetKey}-${holding.brokerageAccount || "account"}-${rowIndex}`,
     snapshotId: snapshot.id,
     portfolioId: snapshot.portfolioId,
     valuationDate: holding.valuationDate || snapshot.valuationDate,

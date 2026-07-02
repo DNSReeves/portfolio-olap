@@ -155,14 +155,22 @@ def classify(ticker, desc):
     return "UNCLASSIFIED"
 
 tot=defaultdict(float); roll=defaultdict(float); uncl=[]
-for path in glob.glob(f"{PDIR}/*.csv"):
+seen_fid_accts={}  # Account Number -> first file; overlapping Fidelity exports repeat accounts (2026-07 review: Z70420263 was double-counted, +$118,751.45)
+for path in sorted(glob.glob(f"{PDIR}/*.csv")):
     base=os.path.basename(path)
     if base.startswith("Fidelity") and "AQR_FLEX45" not in base:
+        skipped=defaultdict(float)
         for r in csv.DictReader(open(path,encoding="utf-8-sig")):
             sym=(r.get("Symbol") or "").strip().upper().lstrip("-"); mv=_num(r.get("Current Value"))
             if not sym or mv is None or "brokerage" in sym.lower(): continue
+            acct=(r.get("Account Number") or "").strip()
+            if acct and seen_fid_accts.get(acct, base)!=base:
+                skipped[acct]+=mv; continue
+            if acct: seen_fid_accts.setdefault(acct, base)
             c=classify(sym,r.get("Description")); tot[c]+=mv; roll[sleeve_to_convex.get(c,"Other")]+=mv
             if c=="UNCLASSIFIED": uncl.append((sym,(r.get("Description") or "")[:34],mv))
+        for acct,mv in skipped.items():
+            print(f"  ⚠ {base}: account {acct} already counted from {seen_fid_accts[acct]} — skipped duplicate rows (${mv:,.2f})")
     elif "AQR_FLEX45" in base:
         rows=list(csv.DictReader(open(path,encoding="utf-8-sig"))); net=sum(_num(r.get("Current Value")) or 0 for r in rows)
         tot["LIQALTS"]+=net; roll["Convexity"]+=net  # SMA collapsed (pipeline ingest)
