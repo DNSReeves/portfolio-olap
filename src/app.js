@@ -65,6 +65,13 @@ const DEFAULT_SLEEVES = [
   "Cash",
   "Private Alternatives",
   "Real Assets",
+  // 2026-07 review: these four exist in classification_rules.json (and the live
+  // book holds three of them) but were missing here, so the sleeve <select>
+  // rendered BLANK for their rows and a stray click permanently mis-sleeved.
+  "Options",
+  "Multi-Asset",
+  "Private Real Estate",
+  "Diversified Emerging Markets",
   "Other",
   "Other / Unclassified",
   "Unclassified",
@@ -1294,7 +1301,10 @@ function renderDial(cube) {
   if (!S || !S.grid || !S.grid.length) { el.dial.innerHTML = ""; el.dial.style.display = "none"; return; }
   el.dial.style.display = "";
   const total = cube.totalValue || 0;
-  const exp = S.expenses_per_yr || 360000;
+  // honor the user-edited Planning expenses first — the Dial and Planning
+  // panels used to compute cash-floor years from DIFFERENT expense figures
+  // (2026-07 review): Planning used the editable value, Dial the snapshot's.
+  const exp = state.planning.expenses ?? S.expenses_per_yr ?? 360000;
   const ev = state.planning.dialEquityPct ?? 0.59;
   const g = S.grid.reduce((a, b) => Math.abs(b.equity - ev) < Math.abs(a.equity - ev) ? b : a, S.grid[0]);
   const ae = S.all_equity;
@@ -1438,7 +1448,12 @@ function renderMapper() {
       return label;
     }),
   );
-  el.errors.replaceChildren(...state.errors.slice(0, 5).map((error) => span(error)));
+  // every entry here is a DROPPED row (money missing from the book) — never
+  // hide the count (2026-07 review: silent truncation to 5).
+  el.errors.replaceChildren(
+    ...state.errors.slice(0, 5).map((error) => span(error)),
+    ...(state.errors.length > 5 ? [span(`… +${state.errors.length - 5} more rows dropped (${state.errors.length} total)`)] : []),
+  );
 }
 
 function renderSnapshots() {
@@ -1600,7 +1615,10 @@ function _pivotCatsByValue(dim, holdings) {
     const d = _distOf(dim, h);
     for (const c in d) totals[c] = (totals[c] || 0) + v * d[c];
   }
-  let cats = Object.keys(totals).filter((c) => totals[c] > 0);
+  // keep net-NEGATIVE categories too (2026-07 review: the short-option hedge
+  // sleeve, Options = −$43,342, vanished from the rows while the Total row
+  // still included it — an unexplained reconciliation gap). Drop only ~zero.
+  let cats = Object.keys(totals).filter((c) => Math.abs(totals[c]) > 0.005);
   if (dim.order) {
     const ord = dim.order();
     cats.sort((a, b) => ((ord.indexOf(a) + 1) || 999) - ((ord.indexOf(b) + 1) || 999) || totals[b] - totals[a]);
@@ -1672,7 +1690,7 @@ function renderPivot() {
       html += `<tr><th>${e(r)}</th>`;
       for (const c of colCats) {
         const v = cell[r + "" + c] || 0;
-        html += v > 0
+        html += Math.abs(v) > 0.005
           ? `<td class="num pivotCell" data-row="${e(r)}" data-col="${e(c)}" title="${e(r)} × ${e(c)} — ${percent(v / grand)} of book">${money(v)}</td>`
           : `<td class="num empty">·</td>`;
       }
@@ -1721,10 +1739,14 @@ function renderPivot() {
       // donut → % breakdown by the Rows dimension (row totals; ignores any column split). Slices carry "pivotSlice".
       const R = 62, W = 30, CIRC = 2 * Math.PI * R, CX = 80, CY = 80;
       const slices = rowCats.map((c) => ({ c, v: rowOnly[c] || 0 })).filter((s) => s.v > 0);
-      if (slices.length && grand) {
+      // donut fractions use the POSITIVE total, not the net grand — with a
+      // net-negative category excluded from the slices but included in grand,
+      // the arcs summed past 100% and overlapped (2026-07 review).
+      const posTotal = slices.reduce((t, s) => t + s.v, 0);
+      if (slices.length && posTotal) {
         let off = 0, rings = "", legend = "";
         slices.forEach((s, i) => {
-          const frac = s.v / grand, len = frac * CIRC, col = PALETTE[i % PALETTE.length];
+          const frac = s.v / posTotal, len = frac * CIRC, col = PALETTE[i % PALETTE.length];
           rings += `<circle class="pivotSlice" data-cat="${e(s.c)}" cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${col}" stroke-width="${W}" stroke-dasharray="${len.toFixed(2)} ${(CIRC - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"><title>${e(s.c)} — ${percent(frac)} (${money(s.v)})</title></circle>`;
           legend += `<button type="button" class="pivotSlice pivotLegItem" data-cat="${e(s.c)}"><span class="pivotLegSw" style="background:${col}"></span><span class="pivotLegLbl">${e(s.c)}</span><strong>${percent(frac)}</strong><em>${money(s.v)}</em></button>`;
           off += len;
@@ -1855,7 +1877,12 @@ function renderHoldings() {
         glCell(g.marketValue, g.costBasis, g.sleeve === "Options");
       if (isAll) {
         const select = document.createElement("select");
-        select.innerHTML = DEFAULT_SLEEVES.map((sleeve) => `<option value="${escapeAttr(sleeve)}">${escapeHtml(sleeve)}</option>`).join("");
+        // include the row's CURRENT sleeve even if it's not in the default list
+        // (rules taxonomy grows independently) — an absent <option> left the
+        // select blank with selectedIndex −1 (2026-07 review).
+        const sleeveOpts = DEFAULT_SLEEVES.includes(g.sleeve)
+          ? DEFAULT_SLEEVES : [...DEFAULT_SLEEVES, g.sleeve];
+        select.innerHTML = sleeveOpts.map((sleeve) => `<option value="${escapeAttr(sleeve)}">${escapeHtml(sleeve)}</option>`).join("");
         select.value = g.sleeve;
         select.addEventListener("change", () => {
           for (const h of g.lots) {            // reassigning a merged row moves every underlying lot
