@@ -1,6 +1,11 @@
 const APP_VERSION = "v2.3";
 
-const DEFAULT_SLEEVES = [
+// DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
+// classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
+// generated taxonomy (sleeves / nameToParent / assetClassOfSleeve) so they can't
+// drift from portfolio_analysis.py + build_classification_rules.py (2026-07-03
+// Class-C consolidation, P3-05/23/27/32). They stay `let` for that reason.
+let DEFAULT_SLEEVES = [
   "Equity",
   "Public Equity",
   "Private Equity",
@@ -102,63 +107,52 @@ const COLUMN_ALIASES = {
   valuationDate: ["valuation date", "as of date", "as-of date", "statement date", "price date", "date"],
 };
 
-const TICKER_RULES = [
-  { sleeve: "Large Cap Tech", tickers: ["AAPL", "MSFT", "NVDA", "GOOGL", "GOOG", "META", "AMZN", "AVGO"], words: ["technology", "software", "semiconductor"] },
-  { sleeve: "Large Growth", tickers: ["VUG", "QQQ", "QQQM", "IWF", "SCHG", "SPYG", "VOOG"], words: ["large growth"] },
-  { sleeve: "Large Blend", tickers: ["SPY", "VOO", "IVV", "VTI", "ITOT", "SCHB"], words: ["large blend", "total stock market"] },
-  { sleeve: "Large Value", tickers: ["VTV", "IVE", "IWD", "SCHV"], words: ["large value"] },
-  { sleeve: "Mid-Cap Growth", tickers: ["VOT", "IWP", "MDYG"], words: ["mid cap growth", "mid-cap growth"] },
-  { sleeve: "Mid-Cap Blend", tickers: ["VO", "IJH", "IWR", "SCHM"], words: ["mid cap blend", "mid-cap blend"] },
-  { sleeve: "Mid-Cap Value", tickers: ["VOE", "IWS", "MDYV"], words: ["mid cap value", "mid-cap value"] },
-  { sleeve: "Small Growth", tickers: ["VBK", "IWO", "IJT"], words: ["small growth"] },
-  { sleeve: "Small Blend", tickers: ["VB", "IWM", "IJR", "SCHA"], words: ["small blend"] },
-  { sleeve: "Small Value", tickers: ["VBR", "IWN", "IJS", "AVUV"], words: ["small value"] },
-  { sleeve: "Precious Metals", tickers: ["GLD", "IAU", "SLV", "SGOL"], words: ["gold", "silver", "precious metals"] },
-  { sleeve: "Broad Commodities", tickers: ["DBC", "PDBC", "USO"], words: ["commodity", "commodities", "broad basket"] },
-  { sleeve: "Trend Following Managed Futures", tickers: ["DBMF"], words: ["trend following managed futures"] },
-  { sleeve: "Managed Futures", tickers: ["KMLM", "CTA", "FMF"], words: ["managed futures"] },
-  { sleeve: "Trend Following", tickers: ["TFPN", "RSST"], words: ["trend following", "trend"] },
-  { sleeve: "International", tickers: ["VXUS"], words: ["international", "developed markets"] },
-  { sleeve: "Foreign Large Blend", tickers: ["VEA", "IEFA", "SCHF", "EFA"], words: ["foreign large blend"] },
-  { sleeve: "Foreign Large Growth", tickers: ["EFG", "VIGI"], words: ["foreign large growth"] },
-  { sleeve: "Foreign Large Value", tickers: ["EFV", "IVLU"], words: ["foreign large value"] },
-  { sleeve: "Foreign Small/Mid Blend", tickers: ["VSS", "SCZ", "SCHC"], words: ["foreign small mid", "foreign small/mid blend"] },
-  { sleeve: "Emerging Markets", tickers: ["EEM", "VWO", "IEMG", "SCHE"], words: ["emerging"] },
-  { sleeve: "Communications", tickers: ["XLC", "VOX", "IYZ"], words: ["communications sector"] },
-  { sleeve: "Consumer Cyclical", tickers: ["XLY", "VCR", "IYC"], words: ["consumer cyclical", "consumer discretionary"] },
-  { sleeve: "Consumer Defensive", tickers: ["XLP", "VDC", "IYK"], words: ["consumer defensive", "consumer staples"] },
-  { sleeve: "Equity Energy", tickers: ["XLE", "VDE", "IYE"], words: ["energy sector", "equity energy"] },
-  { sleeve: "Equity Precious Metals", tickers: ["GDX", "GDXJ", "RING"], words: ["equity precious metals", "gold miners"] },
-  { sleeve: "Industrials", tickers: ["XLI", "VIS", "IYJ"], words: ["industrials sector"] },
-  { sleeve: "Infrastructure", tickers: ["IGF", "PAVE", "IFRA"], words: ["infrastructure"] },
-  { sleeve: "Natural Resources", tickers: ["IGE", "GNR", "NANR"], words: ["natural resources"] },
-  { sleeve: "Technology", tickers: ["XLK", "VGT", "IYW", "FTEC"], words: ["technology sector"] },
-  { sleeve: "Health", tickers: ["XLV", "VHT", "IYH"], words: ["health sector", "healthcare"] },
-  { sleeve: "Financial", tickers: ["XLF", "VFH", "IYF"], words: ["financial sector"] },
-  { sleeve: "Real Estate", tickers: ["VNQ", "IYR", "XLRE", "SCHH"], words: ["real estate", "reit"] },
-  { sleeve: "Utilities", tickers: ["XLU", "VPU", "IDU"], words: ["utilities sector"] },
-  { sleeve: "Junk Bonds", tickers: ["HYG", "JNK", "USHY", "SJNK", "HYLB", "ANGL"], words: ["high yield", "junk bond", "below investment grade"] },
-  { sleeve: "Corporate Bonds", tickers: ["LQD", "VCIT", "VCLT", "IGIB", "IGSB", "VTC"], words: ["corporate bond", "investment grade corporate"] },
-  { sleeve: "Municipal Bonds", tickers: ["MUB", "VTEB", "TFI", "PZA", "HYD", "SHM"], words: ["municipal", "muni", "tax exempt"] },
-  { sleeve: "Core / Multisector Bonds", tickers: ["BND", "AGG", "TLT", "IEF", "SHY", "TIP"], words: ["bond", "treasury", "fixed income"] },
-  { sleeve: "Direct Lending", tickers: ["BIZD", "PSP"], words: ["direct lending", "middle market lending"] },
-  { sleeve: "Private Credit", tickers: ["PC", "PRCR"], words: ["private credit", "private debt"] },
-  { sleeve: "Cash", tickers: ["CASH", "SWVXX", "SPAXX", "VMFXX", "FDRXX", "BIL", "SGOV"], words: ["cash", "money market"] },
-];
-
-// Shared classifier rules — single source of truth with portfolio_analysis.py.
-// Loaded from ./classification_rules.json at boot (see loadClassificationRules / initApp).
-// When present it supersedes the legacy TICKER_RULES above; if the fetch fails the app
-// degrades gracefully to TICKER_RULES so classification never hard-breaks.
+// Shared classifier rules — THE single source of truth, generated by
+// build_classification_rules.py from custom_sleeve_definitions.json and shared verbatim
+// with portfolio_analysis.py. Loaded from ./classification_rules.json at boot (see
+// loadClassificationRules / initApp). There is deliberately NO in-code fallback table:
+// the old hand-maintained TICKER_RULES was removed in the 2026-07-03 Class-C consolidation
+// because a silently-diverging second copy is worse than a loud failure. If the fetch fails
+// autoClassify returns null (everything → Unclassified) and a red banner tells the operator
+// the classifier is degraded (see #rulesBanner / applyTaxonomyMaps).
 let CLASSIFICATION_RULES = null;
 
 async function loadClassificationRules() {
   try {
     const res = await fetch("./classification_rules.json", { cache: "no-store" });
     if (res.ok) CLASSIFICATION_RULES = await res.json();
+    else CLASSIFICATION_RULES = null;
   } catch (error) {
-    CLASSIFICATION_RULES = null; // legacy TICKER_RULES fallback
+    CLASSIFICATION_RULES = null;
   }
+  applyTaxonomyMaps();   // override the literal taxonomy fallbacks (or leave them + show the banner)
+}
+
+// The taxonomy SSOT: when classification_rules.json is present, override the literal
+// DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* fallbacks with the generated sleeves /
+// nameToParent / assetClassOfSleeve so the three consumers (this app, portfolio_analysis.py,
+// the generator) can never drift (2026-07-03 Class-C, P3-05/23/27/32). On failure the
+// literals stay in place and rulesBanner is shown so the operator knows the view is degraded.
+function applyTaxonomyMaps() {
+  const R = CLASSIFICATION_RULES;
+  const ok = !!(R && Array.isArray(R.sleeves) && R.sleeves.length && R.nameToParent && R.assetClassOfSleeve);
+  if (ok) {
+    DEFAULT_SLEEVES = R.sleeves.slice();
+    // nameToParent maps every sleeve → parent-name-or-null; SLEEVE_PARENTS only carries the
+    // non-null edges (a root sleeve simply has no entry), matching the literal's shape.
+    SLEEVE_PARENTS = {};
+    for (const [name, parent] of Object.entries(R.nameToParent)) if (parent) SLEEVE_PARENTS[name] = parent;
+    // Rebuild the look-through asset-class sets from the emitted per-sleeve class.
+    _AC_EQUITY = new Set();
+    _AC_BOND = new Set();
+    _AC_CASH = new Set();
+    for (const [name, ac] of Object.entries(R.assetClassOfSleeve)) {
+      if (ac === "Equity") _AC_EQUITY.add(name);
+      else if (ac === "Bond") _AC_BOND.add(name);
+      else if (ac === "Cash") _AC_CASH.add(name);
+    }
+  }
+  if (typeof el !== "undefined" && el && el.rulesBanner) el.rulesBanner.hidden = ok;
 }
 
 // Precomputed Sortino-overlay backtest (portfolio_analysis.py → overlay_snapshot.json).
@@ -219,7 +213,7 @@ async function loadRegionExposure() {
   }
 }
 
-const SLEEVE_PARENTS = {
+let SLEEVE_PARENTS = {
   "Public Equity": "Equity",
   "Private Equity": "Equity",
   "Buyout": "Private Equity",
@@ -347,6 +341,8 @@ const el = {
   bookBanner: document.querySelector("#bookBanner"),
   bookReload: document.querySelector("#bookReload"),
   bookDismiss: document.querySelector("#bookDismiss"),
+  rulesBanner: document.querySelector("#rulesBanner"),
+  rulesReload: document.querySelector("#rulesReload"),
   sampleButton: document.querySelector("#sampleButton"),
   largeSampleButton: document.querySelector("#largeSampleButton"),
   importPanelButton: document.querySelector("#importPanelButton"),
@@ -447,6 +443,10 @@ el.bookDismiss?.addEventListener("click", () => {
   if (sig) localStorage.setItem("olap.bookBannerDismissed", sig);   // don't re-nag until it changes again
   hideBookBanner();
 });
+
+// The rules banner is a hard error (classifier degraded) — the only action is a full reload
+// to re-attempt the fetch; it is NOT dismissable (unlike the book banner) by design.
+el.rulesReload?.addEventListener("click", () => location.reload());
 
 // Sample-data loaders now live inside the Guide dialog; close it on click so the
 // freshly loaded data is visible behind it.
@@ -1553,9 +1553,9 @@ function liquidityOfSleeve(sleeve) {
 // security-level: pure sleeves map 1:1, while composite/alternative funds are decomposed into a
 // typical underlying mix so the view leans toward an eMoney-style allocation. The split weights below
 // are deliberate assumptions — tweak freely (no $ reconciliation intended).
-const _AC_EQUITY = new Set(["Large Blend", "Large Growth", "Large Value", "Small Value", "Small Blend", "Small Growth", "Mid-Cap Value", "Mid-Cap Blend", "Mid-Cap Growth", "International", "Foreign Large Value", "Foreign Large Blend", "Emerging Markets", "Industrials", "Utilities", "Technology", "Equity Energy", "Real Estate", "Natural Resources"]);
-const _AC_BOND = new Set(["Core / Multisector Bonds", "Municipal Bonds", "Bank Loans / Floating Rate", "Treasuries / Duration", "Corporate Bonds", "Junk Bonds"]);
-const _AC_CASH = new Set(["Cash", "CDs"]);
+let _AC_EQUITY = new Set(["Large Blend", "Large Growth", "Large Value", "Small Value", "Small Blend", "Small Growth", "Mid-Cap Value", "Mid-Cap Blend", "Mid-Cap Growth", "International", "Foreign Large Value", "Foreign Large Blend", "Emerging Markets", "Industrials", "Utilities", "Technology", "Equity Energy", "Real Estate", "Natural Resources"]);
+let _AC_BOND = new Set(["Core / Multisector Bonds", "Municipal Bonds", "Bank Loans / Floating Rate", "Treasuries / Duration", "Corporate Bonds", "Junk Bonds"]);
+let _AC_CASH = new Set(["Cash", "CDs"]);
 const _SLEEVE_ASSET_SPLIT = {        // composite funds → approximate underlying equity/bond/cash/alt mix
   "Liquid Alternatives": { Equity: 0.60, Bond: 0.10, Alternatives: 0.30 },   // AQR Flex — equity-tilted long/short + alt strategies
   "Multi-Asset": { Equity: 0.55, Bond: 0.40, Cash: 0.05 },                   // balanced
@@ -2250,10 +2250,11 @@ function classifyHolding(ticker, assetName, importedSleeve) {
   return auto ? { sleeve: auto, source: "auto" } : { sleeve: "Unclassified", source: "unclassified" };
 }
 
-// Mirrors portfolio_analysis.py classify_code(): exact ticker → name keyword (in array
-// order) → CUSIP fallback → null. Returns the display sleeve NAME (via codeToName), or
-// null when nothing matches (→ Unclassified). Falls back to legacy TICKER_RULES if the
-// shared rules file failed to load.
+// Mirrors portfolio_analysis.py classify_code(): exact ticker → longest name keyword →
+// CUSIP fallback → null. Returns the display sleeve NAME (via codeToName), or null when
+// nothing matches (→ Unclassified). If the shared rules file failed to load there is NO
+// fallback table (removed in the Class-C consolidation) — everything routes to Unclassified
+// and the red rulesBanner warns the operator the classifier is degraded.
 function autoClassify(ticker, assetName) {
   const t = normalizeTicker(ticker);
   const name = assetName.toLowerCase();
@@ -2282,8 +2283,7 @@ function autoClassify(ticker, assetName) {
     }
     return code ? (R.codeToName[code] || code) : null;
   }
-  const match = TICKER_RULES.find((rule) => rule.tickers.includes(t) || rule.words.some((word) => name.includes(word)));
-  return match ? match.sleeve : null;
+  return null;   // rules failed to load → Unclassified (rulesBanner is showing)
 }
 
 function assignmentKey(ticker, assetName) {
