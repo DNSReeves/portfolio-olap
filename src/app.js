@@ -650,9 +650,11 @@ async function applyImport(sourceName = "CSV import") {
       brokerPreset: "generic",
       rowCount: normalized.holdings.length,
     };
-    await saveSnapshot(snapshot, normalized.holdings.map((holding, rowIndex) => toPositionValuation(holding, snapshot, rowIndex)));
-    state.activeSnapshotId = snapshot.id;
-    await refreshSnapshots();
+    const saved = await saveSnapshot(snapshot, normalized.holdings.map((holding, rowIndex) => toPositionValuation(holding, snapshot, rowIndex)));
+    if (saved) {                                    // P3-35: cancelled replace keeps the existing snapshot
+      state.activeSnapshotId = snapshot.id;
+      await refreshSnapshots();
+    }
   }
   render();
 }
@@ -2025,24 +2027,56 @@ async function ensureDefaultPortfolio() {
   }
 }
 
+// P3-35 (2026-07-03): saving a snapshot for a date that already has one now (a)
+// CONFIRMS the replace, showing old-vs-new row counts + totals, so a partial
+// single-broker upload can't silently wipe the consolidated ~$17M snapshot for
+// that date, and (b) does the delete+write in ONE transaction over both stores,
+// so an interruption can't leave a half-replaced (silently wrong) snapshot.
+// Returns true if written, false if the user cancelled.
 async function saveSnapshot(snapshot, valuations) {
   const existingSnapshots = (await getAllFromStore("portfolio_snapshots")).filter(
     (item) => item.portfolioId === snapshot.portfolioId && item.valuationDate === snapshot.valuationDate,
   );
-  for (const existing of existingSnapshots) {
-    await deleteFromStore("portfolio_snapshots", existing.id);
-    const existingValuations = (await getAllFromStore("position_valuations")).filter(
-      (valuation) => valuation.snapshotId === existing.id,
+  let oldValuations = [];
+  if (existingSnapshots.length) {
+    const oldIds = new Set(existingSnapshots.map((item) => item.id));
+    oldValuations = (await getAllFromStore("position_valuations")).filter((v) => oldIds.has(v.snapshotId));
+    const oldTotal = oldValuations.reduce((sum, v) => sum + (Number(v.marketValue) || 0), 0);
+    const newTotal = valuations.reduce((sum, v) => sum + (Number(v.marketValue) || 0), 0);
+    const money = (n) => `$${Math.round(n).toLocaleString()}`;
+    const proceed = typeof confirm !== "function" || confirm(
+      `A snapshot for ${snapshot.valuationDate} already exists and will be REPLACED:\n\n` +
+      `    existing:  ${oldValuations.length} rows · ${money(oldTotal)}\n` +
+      `    new:       ${valuations.length} rows · ${money(newTotal)}\n\n` +
+      `Replace it?  (Cancel keeps the existing snapshot — do that if you only uploaded ` +
+      `ONE broker's file for a date that already holds the full consolidated book.)`,
     );
-    for (const valuation of existingValuations) {
-      await deleteFromStore("position_valuations", valuation.id);
-    }
+    if (!proceed) return false;
   }
+  await replaceSnapshotAtomic(
+    snapshot, valuations,
+    existingSnapshots.map((s) => s.id),
+    oldValuations.map((v) => v.id),
+  );
+  return true;
+}
 
-  await putInStore("portfolio_snapshots", snapshot);
-  for (const valuation of valuations) {
-    await putInStore("position_valuations", valuation);
-  }
+// Atomic delete-old + write-new across BOTH stores in a single readwrite
+// transaction. Deletes are issued before puts, so a new valuation that reuses an
+// old deterministic id survives (IndexedDB runs requests in issue order).
+function replaceSnapshotAtomic(snapshot, valuations, oldSnapshotIds, oldValuationIds) {
+  return new Promise((resolve, reject) => {
+    const tx = state.db.transaction(["portfolio_snapshots", "position_valuations"], "readwrite");
+    const snaps = tx.objectStore("portfolio_snapshots");
+    const vals = tx.objectStore("position_valuations");
+    oldSnapshotIds.forEach((id) => snaps.delete(id));
+    oldValuationIds.forEach((id) => vals.delete(id));
+    snaps.put(snapshot);
+    valuations.forEach((valuation) => vals.put(valuation));
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
 }
 
 function openPortfolioDb() {
@@ -2137,15 +2171,32 @@ function parseCsvRows(input) {
   return rows;
 }
 
+// P3-36 (2026-07-03): two-pass, priority-ordered, claim-once column detection.
+// The old single-pass "first header that exact-OR-substring matches ANY alias" let
+// a bare alias win over a later exact one and let one header serve two fields:
+// "Account Name" was claimed as assetName ("account name".includes("name")) so
+// name-keyword classification ran against the account nickname; a Schwab
+// "% of Acct (% of Account)" column was claimed as `account`. Fix:
+//   • exact normalized equality across ALL headers first, substring only as a
+//     fallback second (so an exact "Security Name" beats a substring "Account Name");
+//   • iterate each field's aliases in PRIORITY order (find the header per alias);
+//   • never let a header already claimed by an earlier field be reclaimed;
+//   • ignore "%" columns entirely — a percentage is never a mapped dimension.
 function detectColumnMapping(headers) {
   const mapping = {};
-  Object.entries(COLUMN_ALIASES).forEach(([field, aliases]) => {
-    const match = headers.find((header) => {
-      const normalized = normalizeHeader(header);
-      return aliases.some((alias) => normalized === normalizeHeader(alias) || normalized.includes(normalizeHeader(alias)));
-    });
-    if (match) mapping[field] = match;
-  });
+  const claimed = new Set();
+  const cand = headers.filter((h) => !h.includes("%")).map((h) => ({ raw: h, norm: normalizeHeader(h) }));
+  const claim = (field, pred) => {
+    if (mapping[field]) return;
+    for (const alias of COLUMN_ALIASES[field]) {
+      const na = normalizeHeader(alias);
+      const hit = cand.find((h) => !claimed.has(h.raw) && pred(h.norm, na));
+      if (hit) { mapping[field] = hit.raw; claimed.add(hit.raw); return; }
+    }
+  };
+  const fields = Object.keys(COLUMN_ALIASES);
+  fields.forEach((field) => claim(field, (hn, an) => hn === an));       // pass 1: exact
+  fields.forEach((field) => claim(field, (hn, an) => hn.includes(an))); // pass 2: substring fallback
   return mapping;
 }
 
