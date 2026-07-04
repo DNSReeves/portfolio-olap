@@ -27,7 +27,7 @@ OLAP_RULES = [
  ("Broad Commodities",["DBC","PDBC","USO","GSG"],["commodity","commodities","broad basket"]),
  ("Trend Following Managed Futures",["DBMF"],["trend following managed futures"]),
  ("Managed Futures",["KMLM","CTA","FMF","WTMF"],["managed futures"]),
- ("Trend Following",["TFPN","RSST"],["trend following","trend"]),
+ ("Trend Following",["TFPN","RSST"],["trend following"]),   # P3-15: dropped bare 'trend' (swept crypto-trend / trendpilot OVERLAYS into Convexity); pin real trend funds by ticker
  ("International",["VXUS","IEV","VEU","ACWX"],["international","developed markets","europe"]),
  ("Foreign Large Blend",["VEA","IEFA","SCHF","EFA","DODFX","MFAPX","ACWI","DXJ"],["foreign large blend","international stock","internatl stock","intl advantage","intl equity"]),   # DXJ = WisdomTree Japan hedged (FMP)
  ("Foreign Large Growth",["EFG","VIGI"],["foreign large growth"]),
@@ -50,7 +50,7 @@ OLAP_RULES = [
  ("Junk Bonds",["HYG","JNK","USHY","SJNK","HYLB","ANGL","HYEM"],["high yield","junk bond","below investment grade"]),
  ("Corporate Bonds",["LQD","VCIT","VCLT","IGIB","IGSB","VTC","VCSH","IBDW"],["corporate bond","investment grade corporate"]),   # IBDW = iBonds target-maturity corporate
  ("Municipal Bonds",["MUB","VTEB","TFI","PZA","HYD","SHM"],["municipal","muni","tax exempt","tax-free","auth rev","rev ref","sales tax rev","wtr & sew","wtr & swr","swr rev","fin auth rev","pub pwr","gen oblig"," sch dist"," unif sd","util rev"," go bds"]),
- ("Core / Multisector Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","clo","collateralized loan","ultrashort","ultra short","ultrasho","short duration income"]),
+ ("Core / Multisector Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA","CLOA"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","collateralized loan","ultrashort","ultra short","ultrasho","short duration income"]),   # P3-15: dropped bare 'clo' (matched CLOSED-END etc.); CLOA pinned by ticker
  ("Direct Lending",["BIZD","PSP"],["direct lending","middle market lending"]),
  ("Private Credit",["PC","PRCR"],["private credit","private debt","enhanced lending","credit fund class"]),
  ("Cash",["CASH","SWVXX","SPAXX","VMFXX","FDRXX","BIL","SGOV","SNVXX","SNAXX","FZFXX","XBIL","BOXX","MINT","SHV","FNSXX","FDRXX","SPRXX"],["cash","money market","money mkt","mmkt","money inv","money ultra","prime advantage","government money","short maturity","6 month bill"]),
@@ -111,6 +111,33 @@ def role(code):
 sleeve_to_convex = {s["code"]: role(s["code"]) for s in tax["sleeves"]}
 for p in PROPOSED: sleeve_to_convex[p] = role(p)
 
+# ── SSOT maps for the consumers (2026-07-03 Class-C consolidation) ────────────
+# Both olap/src/app.js and portfolio_analysis.py used to hand-maintain drifted
+# copies of the taxonomy (DEFAULT_SLEEVES, SLEEVE_PARENTS, _AC_EQUITY/_BROAD_*).
+# Emit them from the ONE taxonomy source so they can't drift again.
+CODE2NAME = {s["code"]: s["name"] for s in tax["sleeves"]}
+# name → parent NAME (the hierarchy app.js keys money aggregation off of).
+name_to_parent = {
+    s["name"]: (CODE2NAME.get(s["parent"]) if s.get("parent") else None)
+    for s in tax["sleeves"]
+}
+# ordered display-name list (app.js DEFAULT_SLEEVES).
+sleeves_list = [s["name"] for s in tax["sleeves"]]
+# base asset-class bucket per sleeve (app.js _AC_* / pa _BROAD_*). Derived from the
+# convex role so the equity set is COMPLETE (P3-23/32: the hand lists missed ~14
+# sector/foreign equity sleeves → they leaked into 'Alternatives'). CDs is Cash
+# though its convex role is Income; Annuity/Stable stays Alternatives (unchanged).
+def asset_class(code):
+    if code in {"CASH", "CDS"}: return "Cash"
+    # composite / stable-value sleeves keep an Alternatives BASE — the consumers
+    # refine them via their own approximate underlying-mix splits (unchanged behavior).
+    if code in {"ANNUITY_STABLE", "MULTI_ASSET"}: return "Alternatives"
+    r = role(code)
+    if r in {"Income", "Duration"}: return "Bond"
+    if r == "Growth": return "Equity"
+    return "Alternatives"
+asset_class_of_sleeve = {s["name"]: asset_class(s["code"]) for s in tax["sleeves"]}
+
 out = {
  "version":"1.0", "taxonomyRef":"custom_sleeve_definitions.json",
  "note":"SHARED classifier for olap/src/app.js (classifyHolding) and portfolio_analysis.py (classify). "
@@ -123,6 +150,9 @@ out = {
    {"code":"REINSURANCE","name":"Reinsurance / Insurance-Linked","parent":"PRIVATE_ALTERNATIVES","why":"Stone Ridge — true diversifier; currently mapped to PRIVATE_ALTERNATIVES"},
  ],
  "codeToName": {s["code"]: s["name"] for s in tax["sleeves"]},
+ "sleeves": sleeves_list,
+ "nameToParent": name_to_parent,
+ "assetClassOfSleeve": asset_class_of_sleeve,
  "tickerRules": dict(sorted(ticker_rules.items())),
  "nameRules": name_rules,
  "fallbackRules": [
