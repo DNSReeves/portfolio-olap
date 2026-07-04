@@ -2261,8 +2261,16 @@ function autoClassify(ticker, assetName) {
   if (R) {
     let code = R.tickerRules[t];
     if (!code) {
-      const nr = R.nameRules.find((rule) => rule.keywords.some((k) => name.includes(k)));
-      code = nr && nr.code;
+      // P3-16 (2026-07-03): LONGEST matched keyword wins (specificity beats array
+      // order — 'treasury' over 'bond', 'international' over 'core equity'); mirrors
+      // portfolio_analysis.classify_code + the generator reference classify().
+      let best = null, bestLen = -1;
+      for (const rule of R.nameRules) {
+        for (const k of rule.keywords) {
+          if (k.length > bestLen && name.includes(k)) { best = rule.code; bestLen = k.length; }
+        }
+      }
+      code = best;
     }
     if (!code) {
       for (const fb of R.fallbackRules) {
