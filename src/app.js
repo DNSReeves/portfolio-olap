@@ -1888,15 +1888,31 @@ function renderHoldings() {
         select.value = g.sleeve;
         select.addEventListener("change", () => {
           for (const h of g.lots) {            // reassigning a merged row moves every underlying lot
-            state.assignments[assignmentKey(h.ticker, h.assetName)] = select.value;
+            if (h.importedSleeve && select.value === h.importedSleeve) {
+              // back to the imported sleeve → CLEAR the override so the import wins again
+              delete state.assignments[assignmentKey(h.ticker, h.assetName)];
+              h.assignmentSource = "imported";
+            } else {
+              state.assignments[assignmentKey(h.ticker, h.assetName)] = select.value;
+              h.assignmentSource = "manual";
+            }
             h.sleeve = select.value;
-            h.assignmentSource = "manual";
           }
           saveJson("assignments", state.assignments);
           saveJson("holdings", state.holdings);
           render();
         });
         tr.querySelector(".sleeveCell").appendChild(select);
+        // Override badge: a manual sleeve sitting on top of a DIFFERENT imported one. Makes a
+        // sticky (possibly stale) manual override visible instead of silently winning (2026-07 review).
+        const ov = g.lots.find((h) => h.assignmentSource === "manual" && h.importedSleeve && h.importedSleeve !== g.sleeve);
+        if (ov) {
+          const badge = document.createElement("small");
+          badge.textContent = "override";
+          badge.title = `Manual override — imported as “${ov.importedSleeve}”. Set this to “${ov.importedSleeve}” to clear.`;
+          badge.style.cssText = "margin-left:6px;padding:1px 6px;border:1px solid #b45309;color:#b45309;border-radius:9px;font-size:9.5px;font-weight:600;vertical-align:middle";
+          tr.querySelector(".sleeveCell").appendChild(badge);
+        }
       }
       return tr;
     }),
@@ -2233,6 +2249,7 @@ function normalizeHoldings(rows, mapping, fallbackValuationDate) {
       marketValue,
       sleeve: assignment.sleeve,
       assignmentSource: assignment.source,
+      importedSleeve: read(row, mapping.sleeve).trim(),   // what the CSV carried (for the override badge)
       costBasis: optionalNumber(read(row, mapping.costBasis)),
       beta: optionalNumber(read(row, mapping.beta)),
       sourceRow: row,
@@ -2242,10 +2259,15 @@ function normalizeHoldings(rows, mapping, fallbackValuationDate) {
 }
 
 function classifyHolding(ticker, assetName, importedSleeve) {
-  const sleeve = importedSleeve.trim();
-  if (sleeve) return { sleeve, source: "imported" };
+  const imported = importedSleeve.trim();
   const manual = state.assignments[assignmentKey(ticker, assetName)];
+  // 2026-07 review: a deliberate MANUAL override wins over the imported (and auto) sleeve — honoring
+  // the UI's promise that "manual sleeve edits are saved locally and reused on future imports". The
+  // old order (imported > manual) silently discarded the correction on the next Load Full Book, whose
+  // rows carry an authoritative Sleeve column. A manual sleeve sitting on top of a DIFFERENT imported
+  // one is badged in the table (see the All-view sleeveCell) so a stale override is never invisible.
   if (manual) return { sleeve: manual, source: "manual" };
+  if (imported) return { sleeve: imported, source: "imported" };
   const auto = autoClassify(ticker, assetName);
   return auto ? { sleeve: auto, source: "auto" } : { sleeve: "Unclassified", source: "unclassified" };
 }
