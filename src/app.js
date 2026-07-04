@@ -1042,6 +1042,12 @@ function renderPlanning(cube) {
         `<div class="planTaxRow"><span>${escapeHtml(s.name)}</span><em>${money(s.gain)} gain</em><strong>${money(s.tax)}</strong></div>`).join("")
     : `<div class="planNote">${hasCostBasis ? "No embedded gains." : "Import cost basis to compute embedded tax."}</div>`;
 
+  // P3-34 caveat: holdings with NO cost basis are excluded from the gain + embedded-tax numbers
+  // above (rather than silently counted as 100% gain). Surface how much of the book that is.
+  const noBasisNote = cube.noBasisValue > 0
+    ? `<div class="planNote">⚠ ${money(cube.noBasisValue)} (${((cube.noBasisValue / cube.totalValue) * 100).toFixed(1)}% of book) has no cost basis — excluded from gain &amp; embedded tax.</div>`
+    : "";
+
   const fmtInt = (n) => Number(n).toLocaleString("en-US");
   const cfgField = (key, label, value, opts = {}) =>
     `<label class="planField"><span>${label}</span><input ${opts.money ? 'type="text" inputmode="numeric"' : 'type="number" step="any"'} data-plan="${key}" value="${opts.money ? fmtInt(value) : value}" />${opts.suffix ? `<em>${opts.suffix}</em>` : ""}</label>`;
@@ -1065,6 +1071,7 @@ function renderPlanning(cube) {
     <div class="planTax">
       <p class="eyebrow">Embedded tax by sleeve (LT, if sold)</p>
       ${taxRows}
+      ${noBasisNote}
     </div>`;
 
   el.planning.querySelectorAll("input[data-plan]").forEach((input) => {
@@ -1935,7 +1942,16 @@ function renderHoldings() {
 
 function buildPortfolioCube(holdings) {
   const totalValue = holdings.reduce((sum, holding) => sum + holding.marketValue, 0);
-  const totalCostBasis = holdings.reduce((sum, holding) => sum + (holding.costBasis || 0), 0);
+  // 2026-07 review (P3-34): ONE unrealized-gain convention. A holding's basis is "present" iff the
+  // CSV field parsed (costBasis != null — a genuine $0 basis counts, a missing field does not). Gains
+  // are summed over present-basis holdings only, so the headline 'Unrealized gain' and the per-sleeve
+  // embedded-tax breakdown reconcile — they used `costBasis || 0` (missing → full MV as gain) vs a
+  // truthiness test (missing → 0), and differed by the full value of every basis-less row.
+  const hasBasis = (h) => h.costBasis !== undefined && h.costBasis !== null;
+  const gainOf = (h) => (hasBasis(h) ? h.marketValue - h.costBasis : 0);
+  const totalCostBasis = holdings.reduce((sum, h) => sum + (hasBasis(h) ? h.costBasis : 0), 0);
+  const noBasisValue = holdings.filter((h) => !hasBasis(h)).reduce((sum, h) => sum + h.marketValue, 0);
+  const unrealizedGain = holdings.reduce((sum, h) => sum + gainOf(h), 0);
   const sleeveMap = new Map();
 
   holdings.forEach((holding) => {
@@ -1943,7 +1959,7 @@ function buildPortfolioCube(holdings) {
     const current = sleeveMap.get(sleeve) || { sleeve, value: 0, count: 0, unrealizedGain: 0 };
     current.value += holding.marketValue;
     current.count += 1;
-    current.unrealizedGain += holding.costBasis ? holding.marketValue - holding.costBasis : 0;
+    current.unrealizedGain += gainOf(holding);
     sleeveMap.set(sleeve, current);
   });
 
@@ -1958,7 +1974,8 @@ function buildPortfolioCube(holdings) {
   return {
     totalValue,
     totalCostBasis,
-    unrealizedGain: totalValue - totalCostBasis,
+    unrealizedGain,
+    noBasisValue,
     classifiedValue: totalValue - unclassifiedValue,
     unclassifiedValue,
     sleeves,
