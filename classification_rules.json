@@ -343,6 +343,7 @@
     "CAOS": "OPTIONS",
     "CASH": "CASH",
     "CLOA": "BONDS",
+    "CLOZ": "BANK_LOANS",
     "CLSE": "LIQALTS",
     "CTA": "MANAGED_FUTURES",
     "DBC": "BROAD_COMMODITIES",
@@ -428,6 +429,8 @@
     "IYR": "REAL_ESTATE",
     "IYW": "TECHNOLOGY",
     "IYZ": "COMMUNICATIONS",
+    "JAAA": "BANK_LOANS",
+    "JBBB": "BANK_LOANS",
     "JEPI": "LARGE_BLEND",
     "JNK": "JUNK_BONDS",
     "JPIE": "BONDS",
@@ -448,6 +451,7 @@
     "NASA": "INDUSTRIALS",
     "NVDA": "LARGE_CAP_TECH",
     "OEF": "LARGE_BLEND",
+    "PAAA": "BANK_LOANS",
     "PAVE": "INFRASTRUCTURE",
     "PC": "PRCR",
     "PDBC": "BROAD_COMMODITIES",
@@ -647,7 +651,14 @@
         "russell top 200 growth",
         "quality growth",
         "morningstar growth",
-        "blue chip growth"
+        "blue chip growth",
+        "u.s. growth",
+        "us growth",
+        "nasdaq composite",
+        "growth stock",
+        "active growth",
+        "focused growth",
+        "growth opportunities"
       ],
       "code": "LARGE_GROWTH"
     },
@@ -687,7 +698,22 @@
         "us quality",
         "quality large cap",
         "kld 400",
-        "quantitative momentum"
+        "quantitative momentum",
+        "large company",
+        "russell 3000",
+        "s&p 1500",
+        "select 500",
+        "transform 500",
+        "strive 500",
+        "essential 40",
+        "motley fool 100",
+        "capital strength",
+        "research enhanced",
+        "fundamental u.s. large",
+        "fundamental us large",
+        "top 20 u.s",
+        "nasdaq top",
+        "rafi us 1000"
       ],
       "code": "LARGE_BLEND"
     },
@@ -708,7 +734,11 @@
         "strategic dividend",
         "s&p dividend",
         "morningstar value",
-        "quantitative value"
+        "quantitative value",
+        "u.s. value",
+        "us value",
+        "marketwide value",
+        "dynamic value"
       ],
       "code": "LARGE_VALUE"
     },
@@ -737,7 +767,9 @@
         "s&p 400",
         "smid core",
         "smid cap",
-        "small and mid cap"
+        "small and mid cap",
+        "russell 2500",
+        "extended market"
       ],
       "code": "MID_CAP_BLEND"
     },
@@ -766,7 +798,10 @@
         "small cap core",
         "small-cap core",
         "micro cap",
-        "microcap"
+        "microcap",
+        "small company",
+        "fundamental u.s. small",
+        "fundamental us small"
       ],
       "code": "SMALL_BLEND"
     },
@@ -822,7 +857,15 @@
         "global select equity",
         "global 100",
         "global value",
-        "islamic world"
+        "islamic world",
+        "total world",
+        "world equity",
+        "world ex-us",
+        "world ex us",
+        "global dow",
+        "asia 50",
+        "asia ex japan",
+        "asia pacific ex"
       ],
       "code": "INTERNATIONAL"
     },
@@ -872,7 +915,16 @@
         "betabuilders japan",
         "betabuilders canada",
         "betabuilders developed",
-        "betabuilders europe"
+        "betabuilders europe",
+        "ftse canada",
+        "ftse united kingdom",
+        "msci sweden",
+        "dax germany",
+        "euro stoxx",
+        "developed world",
+        "overseas equity",
+        "international large company",
+        "international research enhanced"
       ],
       "code": "FOREIGN_LARGE_BLEND"
     },
@@ -901,7 +953,8 @@
     {
       "keywords": [
         "foreign small mid",
-        "foreign small/mid blend"
+        "foreign small/mid blend",
+        "international small company"
       ],
       "code": "FOREIGN_SMALL_MID_BLEND"
     },
@@ -937,7 +990,20 @@
         "msci kuwait",
         "msci chile",
         "ftse taiwan",
-        "ftse south korea"
+        "ftse south korea",
+        "china large-cap",
+        "s&p china",
+        "china a-shares",
+        "csi 300",
+        "china alphadex",
+        "india earnings",
+        "india 50",
+        "nifty",
+        "india consumer",
+        "vietnam",
+        "africa",
+        "latin america",
+        "star market"
       ],
       "code": "EMERGING_MARKETS"
     },
@@ -946,7 +1012,9 @@
         "communications sector",
         "telecom",
         "social media",
-        "5g"
+        "5g",
+        "comm services",
+        "communication services"
       ],
       "code": "COMMUNICATIONS"
     },
@@ -985,7 +1053,9 @@
         "mlp etf",
         "global energy",
         "msci energy",
-        "wind energy"
+        "wind energy",
+        "coal",
+        "energy exploration"
       ],
       "code": "EQUITY_ENERGY"
     },
@@ -1008,7 +1078,10 @@
         "defense industry",
         "transportation",
         "global industrials",
-        "msci industrials"
+        "msci industrials",
+        "manufacturing",
+        "reshoring",
+        "producer durables"
       ],
       "code": "INDUSTRIALS"
     },
@@ -1031,7 +1104,8 @@
         "mining producers",
         "lithium",
         "global materials",
-        "msci materials"
+        "msci materials",
+        "agribusiness"
       ],
       "code": "NATURAL_RESOURCES"
     },
@@ -1053,7 +1127,15 @@
         "internet",
         "bitcoin miners",
         "crypto miners",
-        "ethereum miners"
+        "ethereum miners",
+        "tech leaders",
+        "future tech",
+        "expanded tech",
+        "quantum computing",
+        "photonics",
+        "video gaming",
+        "esports",
+        "self-driving"
       ],
       "code": "TECHNOLOGY"
     },
@@ -1082,7 +1164,8 @@
         "s&p bank",
         "insurance",
         "global financials",
-        "msci financials"
+        "msci financials",
+        "financial services"
       ],
       "code": "FINANCIAL"
     },
@@ -1090,13 +1173,19 @@
       "keywords": [
         "real estate",
         "reit",
-        "homebuilders"
+        "homebuilders",
+        "home construction"
       ],
       "code": "REAL_ESTATE"
     },
     {
       "keywords": [
-        "utilities sector"
+        "utilities sector",
+        "water resources",
+        "water etf",
+        "global water",
+        "msci utilities",
+        "global utilities"
       ],
       "code": "UTILITIES"
     },
@@ -1112,7 +1201,9 @@
     {
       "keywords": [
         "corporate bond",
-        "investment grade corporate"
+        "investment grade corporate",
+        "preferred",
+        "convertible"
       ],
       "code": "CORPORATE_BONDS"
     },
@@ -1161,7 +1252,9 @@
         "emerging markets corporate",
         "sukuk",
         "mortgage-backed",
-        "mortgage backed"
+        "mortgage backed",
+        "securitized",
+        "total world bond"
       ],
       "code": "BONDS"
     },
@@ -1266,7 +1359,9 @@
       "keywords": [
         "senior loan",
         "bank loan",
-        "floating rate"
+        "floating rate",
+        "aaa clo",
+        "bbb clo"
       ],
       "code": "BANK_LOANS"
     },
