@@ -353,6 +353,7 @@
     "DFAV": "LARGE_VALUE",
     "DFSV": "SMALL_VALUE",
     "DGRO": "LARGE_VALUE",
+    "DIVB": "LARGE_VALUE",
     "DODFX": "FOREIGN_LARGE_BLEND",
     "DXJ": "FOREIGN_LARGE_BLEND",
     "DYNF": "LARGE_BLEND",
@@ -362,16 +363,21 @@
     "EFG": "FOREIGN_LARGE_GROWTH",
     "EFV": "FOREIGN_LARGE_VALUE",
     "EQIX": "REAL_ESTATE",
+    "ESGE": "EMERGING_MARKETS",
     "FDRXX": "CASH",
     "FLOT": "BANK_LOANS",
     "FLRN": "BANK_LOANS",
     "FLXR": "BONDS",
     "FMF": "MANAGED_FUTURES",
+    "FNGS": "TECHNOLOGY",
     "FNSXX": "CASH",
+    "FTCB": "CORPORATE_BONDS",
     "FTEC": "TECHNOLOGY",
+    "FTSD": "TREASURIES",
     "FZFXX": "CASH",
     "GDX": "EQUITY_PRECIOUS_METALS",
     "GDXJ": "EQUITY_PRECIOUS_METALS",
+    "GEME": "EMERGING_MARKETS",
     "GLD": "PRECIOUS_METALS",
     "GLDM": "PRECIOUS_METALS",
     "GNMA": "BONDS",
@@ -379,6 +385,7 @@
     "GOOG": "LARGE_CAP_TECH",
     "GOOGL": "LARGE_CAP_TECH",
     "GOVT": "TREASURIES",
+    "GQGU": "LARGE_BLEND",
     "GSG": "BROAD_COMMODITIES",
     "HDEF": "FOREIGN_LARGE_VALUE",
     "HST": "REAL_ESTATE",
@@ -398,6 +405,7 @@
     "IFRA": "INFRASTRUCTURE",
     "IGE": "NATURAL_RESOURCES",
     "IGF": "INFRASTRUCTURE",
+    "IGHG": "CORPORATE_BONDS",
     "IGIB": "CORPORATE_BONDS",
     "IGSB": "CORPORATE_BONDS",
     "IJH": "MID_CAP_BLEND",
@@ -435,8 +443,10 @@
     "JNK": "JUNK_BONDS",
     "JPIE": "BONDS",
     "KMLM": "MANAGED_FUTURES",
+    "LDUR": "BONDS",
     "LFEQ": "OTHER",
     "LIFT": "TREASURIES",
+    "LMBS": "BONDS",
     "LQD": "CORPORATE_BONDS",
     "MBB": "BONDS",
     "MDYG": "MID_CAP_GROWTH",
@@ -451,6 +461,7 @@
     "NASA": "INDUSTRIALS",
     "NVDA": "LARGE_CAP_TECH",
     "OEF": "LARGE_BLEND",
+    "OPPJ": "FOREIGN_LARGE_BLEND",
     "PAAA": "BANK_LOANS",
     "PAVE": "INFRASTRUCTURE",
     "PC": "PRCR",
@@ -467,6 +478,8 @@
     "PTNQ": "OTHER",
     "PWRD": "INDUSTRIALS",
     "PZA": "MUNICIPAL_BONDS",
+    "QDEF": "LARGE_VALUE",
+    "QDF": "LARGE_VALUE",
     "QLEIX": "LIQALTS",
     "QLENX": "LIQALTS",
     "QQQ": "LARGE_GROWTH",
@@ -502,6 +515,7 @@
     "SNVXX": "CASH",
     "SPAXX": "CASH",
     "SPLG": "LARGE_BLEND",
+    "SPRX": "TECHNOLOGY",
     "SPRXX": "CASH",
     "SPY": "LARGE_BLEND",
     "SPYG": "LARGE_GROWTH",
@@ -658,7 +672,9 @@
         "growth stock",
         "active growth",
         "focused growth",
-        "growth opportunities"
+        "growth opportunities",
+        "capital group growth",
+        "dynamic growth"
       ],
       "code": "LARGE_GROWTH"
     },
@@ -713,7 +729,17 @@
         "fundamental us large",
         "top 20 u.s",
         "nasdaq top",
-        "rafi us 1000"
+        "rafi us 1000",
+        "u.s. multifactor",
+        "us multifactor",
+        "u.s. factor",
+        "multifactor us equity",
+        "u.s. equity index",
+        "u.s. equity research",
+        "us equity market",
+        "u.s. equity strategy",
+        "select u.s. equity",
+        "ftse usa"
       ],
       "code": "LARGE_BLEND"
     },
@@ -738,7 +764,12 @@
         "u.s. value",
         "us value",
         "marketwide value",
-        "dynamic value"
+        "dynamic value",
+        "value line dividend",
+        "largecap dividend",
+        "total dividend",
+        "shareholder yield",
+        "u.s. core dividend"
       ],
       "code": "LARGE_VALUE"
     },
@@ -769,7 +800,10 @@
         "smid cap",
         "small and mid cap",
         "russell 2500",
-        "extended market"
+        "extended market",
+        "enhanced mid cap",
+        "small-mid multifactor",
+        "small & mid cap"
       ],
       "code": "MID_CAP_BLEND"
     },
@@ -865,7 +899,10 @@
         "global dow",
         "asia 50",
         "asia ex japan",
-        "asia pacific ex"
+        "asia pacific ex",
+        "global growth",
+        "world ex u.s.",
+        "world (ex-us)"
       ],
       "code": "INTERNATIONAL"
     },
@@ -946,7 +983,8 @@
         "international quality dividend",
         "intl quality dividend",
         "international dividend growth",
-        "global select dividend"
+        "global select dividend",
+        "foreign shareholder yield"
       ],
       "code": "FOREIGN_LARGE_VALUE"
     },
@@ -962,6 +1000,8 @@
       "keywords": [
         "emerging markets",
         "emerging",
+        "emerging shareholder yield",
+        "msci uae",
         "msci china",
         "msci india",
         "msci brazil",
@@ -1055,7 +1095,10 @@
         "msci energy",
         "wind energy",
         "coal",
-        "energy exploration"
+        "energy exploration",
+        "energy alphadex",
+        "alerian mlp",
+        "nuclear renaissance"
       ],
       "code": "EQUITY_ENERGY"
     },
@@ -1081,7 +1124,13 @@
         "msci industrials",
         "manufacturing",
         "reshoring",
-        "producer durables"
+        "producer durables",
+        "space & defense",
+        "defense industrials",
+        "global jets",
+        "american industrial renaissance",
+        "u.s. electrification",
+        "industrials momentum"
       ],
       "code": "INDUSTRIALS"
     },
@@ -1105,7 +1154,8 @@
         "lithium",
         "global materials",
         "msci materials",
-        "agribusiness"
+        "agribusiness",
+        "agriculture producers"
       ],
       "code": "NATURAL_RESOURCES"
     },
@@ -1135,7 +1185,19 @@
         "photonics",
         "video gaming",
         "esports",
-        "self-driving"
+        "self-driving",
+        "a.i. innovation",
+        "future ai",
+        "ai enablers",
+        "ai value chain",
+        "ai revolution",
+        "intelligent machines",
+        "exponential technologies",
+        "frontier tech",
+        "tech independence",
+        "ark innovation",
+        "innovation leaders",
+        "quantum"
       ],
       "code": "TECHNOLOGY"
     },
@@ -1149,9 +1211,11 @@
         "pharmaceutical",
         "medical devices",
         "genomics",
+        "genomic",
         "global health",
         "msci health",
-        "health & wellness"
+        "health & wellness",
+        "medical breakthroughs"
       ],
       "code": "HEALTH"
     },
@@ -1165,7 +1229,9 @@
         "insurance",
         "global financials",
         "msci financials",
-        "financial services"
+        "financial services",
+        "select financial",
+        "financials alphadex"
       ],
       "code": "FINANCIAL"
     },
@@ -1185,7 +1251,9 @@
         "water etf",
         "global water",
         "msci utilities",
-        "global utilities"
+        "global utilities",
+        "utilities alphadex",
+        "reaves utilities"
       ],
       "code": "UTILITIES"
     },
@@ -1254,7 +1322,8 @@
         "mortgage-backed",
         "mortgage backed",
         "securitized",
-        "total world bond"
+        "total world bond",
+        "total return tactical"
       ],
       "code": "BONDS"
     },
@@ -1312,9 +1381,11 @@
         "buffer",
         "buffered",
         "defined outcome",
+        "defined protection",
         "power buffer",
         "target outcome",
-        "floor etf"
+        "floor etf",
+        "autocallable growth"
       ],
       "code": "OPTIONS"
     },
@@ -1324,7 +1395,9 @@
         "multi-asset",
         "multi asset",
         "balanced allocation",
-        "flexible allocation"
+        "flexible allocation",
+        "moderate allocation",
+        "core balanced"
       ],
       "code": "MULTI_ASSET"
     },
