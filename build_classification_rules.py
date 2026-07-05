@@ -14,11 +14,11 @@ CODES = {s["code"] for s in tax["sleeves"]}
 # ── OLAP's existing rules (from app.js, keyed by sleeve NAME) ──────────────────
 OLAP_RULES = [
  ("Large Cap Tech",["AAPL","MSFT","NVDA","GOOGL","GOOG","META","AMZN","AVGO"],["technology","software","semiconductor"]),
- ("Large Growth",["VUG","QQQ","QQQM","IWF","SCHG","SPYG","VOOG","IVW"],["large growth","large cap growth","large-cap growth","nasdaq 100","nasdaq-100"]),
- ("Large Blend",["SPY","VOO","IVV","VTI","ITOT","SCHB","IWB","DFAC","AVUS","SPLG","DFAU","OEF","DYNF","QUAL","USMV","MTUM","JEPI"],["large blend","total stock market","s&p 500","core equity","russell 1000","large cap core","large-cap core","large cap blend","large-cap blend","msci usa","enhanced large","broad market"]),   # JEPI = S&P equity + covered calls (equity income, NOT a bond)  ·  broad factor terms (equal weight / low vol / momentum) intentionally NOT keyworded — they cross geography & sector and hijack EM / Treasury / sector funds
- ("Large Value",["VTV","IVE","IWD","SCHV","SCHD","DGRO","VIG","DFAV","VLUE"],["large value","dividend equity","dividend appreciation","high dividend"]),   # 'large cap value' / 'quality dividend' / 'dividend growth' NOT keyworded — they beat 'international' (13) and steal foreign dividend/value funds
+ ("Large Growth",["VUG","QQQ","QQQM","IWF","SCHG","SPYG","VOOG","IVW"],["large growth","large cap growth","large-cap growth","nasdaq 100","nasdaq-100","mega cap growth","mega-cap growth","russell top 200 growth","quality growth"]),
+ ("Large Blend",["SPY","VOO","IVV","VTI","ITOT","SCHB","IWB","DFAC","AVUS","SPLG","DFAU","OEF","DYNF","QUAL","USMV","MTUM","JEPI"],["large blend","total stock market","s&p 500","core equity","russell 1000","large cap core","large-cap core","large cap blend","large-cap blend","msci usa","enhanced large","broad market","u.s. large cap","us large cap","u.s. large-cap","us large-cap","large cap equity","mega cap","mega-cap","russell top 200","momentum factor","quality factor"]),   # JEPI = S&P equity + covered calls  ·  'momentum/quality factor' kept (guarded by 'intl … factor' below); bare 'multifactor'/'equity factor' NOT keyworded — they beat 'small-cap'(9)/'international'(13) and steal small-cap & foreign factor funds
+ ("Large Value",["VTV","IVE","IWD","SCHV","SCHD","DGRO","VIG","DFAV","VLUE"],["large value","dividend equity","dividend appreciation","high dividend","large cap value","mega cap value","value factor","dividend multiplier"]),   # 'large cap value'/'value factor' re-added WITH 'international large cap value'/'intl value factor' guards (below) that win by length
  ("Mid-Cap Growth",["VOT","IWP","MDYG"],["mid cap growth","mid-cap growth"]),
- ("Mid-Cap Blend",["VO","IJH","IWR","SCHM"],["mid cap blend","mid-cap blend","mid cap core","mid-cap core","midcap","s&p midcap","mid-cap"]),
+ ("Mid-Cap Blend",["VO","IJH","IWR","SCHM"],["mid cap blend","mid-cap blend","mid cap core","mid-cap core","midcap","s&p midcap","mid-cap","mid cap equity","u.s. mid cap","us mid cap","small-mid cap","small/mid cap","s&p 400"]),   # bare 'small mid cap' dropped — ties 'mid cap value'(13) and flips value funds to blend
  ("Mid-Cap Value",["VOE","IWS","MDYV"],["mid cap value","mid-cap value"]),
  ("Small Growth",["VBK","IWO","IJT"],["small growth","small cap growth","small-cap growth"]),
  ("Small Blend",["VB","IWM","IJR","SCHA"],["small blend","small cap","small-cap","smallcap","russell 2000","small cap core","small-cap core","micro cap","microcap"]),   # 's&p smallcap' dropped — beat 'technology' and pulled the S&P SmallCap sector-tech fund out of Tech
@@ -29,20 +29,20 @@ OLAP_RULES = [
  ("Managed Futures",["KMLM","CTA","FMF","WTMF"],["managed futures"]),
  ("Trend Following",["TFPN","RSST"],["trend following"]),   # P3-15: dropped bare 'trend' (swept crypto-trend / trendpilot OVERLAYS into Convexity); pin real trend funds by ticker
  ("International",["VXUS","IEV","VEU","ACWX"],["international","developed markets","europe"]),
- ("Foreign Large Blend",["VEA","IEFA","SCHF","EFA","DODFX","MFAPX","ACWI","DXJ"],["foreign large blend","international stock","internatl stock","intl advantage","intl equity","msci eafe","eafe","developed ex-us","developed ex us","ftse developed","msci japan","msci germany","msci united kingdom","msci canada","msci australia","msci switzerland","msci france","msci spain","msci italy","ftse japan"]),   # DXJ = WisdomTree Japan hedged (FMP)
+ ("Foreign Large Blend",["VEA","IEFA","SCHF","EFA","DODFX","MFAPX","ACWI","DXJ"],["foreign large blend","international stock","internatl stock","intl advantage","intl equity","msci eafe","eafe","developed ex-us","developed ex us","ftse developed","msci japan","msci germany","msci united kingdom","msci canada","msci australia","msci switzerland","msci france","msci spain","msci italy","ftse japan","international large cap","intl quality factor","intl momentum factor","international quality factor","international momentum factor","msci world","msci acwi","msci eurozone","msci pacific","msci netherlands","msci finland","msci austria","msci israel","msci singapore","msci hong kong","msci belgium","msci denmark","msci norway","msci new zealand","msci ireland"]),   # DXJ = WisdomTree Japan hedged (FMP)  ·  'international/intl … factor' + 'international large cap' guards win over the bare US factor/cap keywords
  ("Foreign Large Growth",["EFG","VIGI"],["foreign large growth"]),
- ("Foreign Large Value",["EFV","IVLU","VYMI","HDEF"],["foreign large value","international high dividend"]),
+ ("Foreign Large Value",["EFV","IVLU","VYMI","HDEF"],["foreign large value","international high dividend","international large cap value","intl value factor","international value factor"]),
  ("Foreign Small/Mid Blend",["VSS","SCZ","SCHC"],["foreign small mid","foreign small/mid blend"]),
- ("Emerging Markets",["EEM","VWO","IEMG","SCHE"],["emerging markets","emerging","msci china","msci india","msci brazil","msci mexico","msci taiwan","msci south korea","msci indonesia","msci saudi arabia","msci south africa","msci turkey","msci thailand","msci malaysia","ftse china","ftse india","ftse brazil"]),
- ("Communications",["XLC","VOX","IYZ"],["communications sector","telecom","social media"]),
+ ("Emerging Markets",["EEM","VWO","IEMG","SCHE"],["emerging markets","emerging","msci china","msci india","msci brazil","msci mexico","msci taiwan","msci south korea","msci indonesia","msci saudi arabia","msci south africa","msci turkey","msci thailand","msci malaysia","ftse china","ftse india","ftse brazil","msci peru","msci colombia","msci poland","msci philippines","msci qatar","msci egypt","msci greece","msci hungary","msci argentina","msci vietnam","msci kuwait","msci chile"]),
+ ("Communications",["XLC","VOX","IYZ"],["communications sector","telecom","social media","5g"]),
  ("Consumer Cyclical",["XLY","VCR","IYC"],["consumer cyclical","consumer discretionary","e-commerce"]),
  ("Consumer Defensive",["XLP","VDC","IYK"],["consumer defensive","consumer staples"]),
- ("Equity Energy",["XLE","VDE","IYE"],["energy sector","equity energy","clean energy","solar","renewable energy","uranium","nuclear energy","oil & gas","oil and gas","midstream"]),
+ ("Equity Energy",["XLE","VDE","IYE"],["energy sector","equity energy","clean energy","solar","renewable energy","uranium","nuclear energy","oil & gas","oil and gas","midstream","clean power","green energy","clean edge"]),
  ("Equity Precious Metals",["GDX","GDXJ","RING"],["equity precious metals","gold miners"]),
- ("Industrials",["XLI","VIS","IYJ","PWRD","NASA"],["industrials sector","aerospace","defense etf","airlines"]),   # PWRD = energy-transition; NASA = space economy / aerospace (FMP)
+ ("Industrials",["XLI","VIS","IYJ","PWRD","NASA"],["industrials sector","aerospace","defense etf","airlines","defense tech","aerospace & defense","space tech","defense industry"]),   # PWRD = energy-transition; NASA = space economy / aerospace (FMP)
  ("Infrastructure",["IGF","PAVE","IFRA"],["infrastructure"]),
  ("Natural Resources",["IGE","GNR","NANR","REMX"],["natural resources","rare earth","strategic metals"]),
- ("Technology",["XLK","VGT","IYW","FTEC"],["technology sector","artificial intelligence","robotics","cybersecurity","cyber security","fintech","cloud computing","blockchain"]),
+ ("Technology",["XLK","VGT","IYW","FTEC"],["technology sector","artificial intelligence","robotics","cybersecurity","cyber security","fintech","cloud computing","blockchain","magnificent seven","metaverse","next gen connectivity"]),
  ("Health",["XLV","VHT","IYH"],["health sector","healthcare","health care","biotechnology","biotech","pharmaceutical","medical devices","genomics"]),
  ("Financial",["XLF","VFH","IYF"],["financial sector","regional bank","capital markets"]),
  ("Real Estate",["VNQ","IYR","XLRE","SCHH","HST","PLD","EQIX"],["real estate","reit","homebuilders"]),   # HST/PLD/EQIX = REIT stocks (FMP)
@@ -68,6 +68,7 @@ EXTRA = [  # (code, tickers, name-keywords)
  ("REAL_ASSETS",["RAAX","RLY"],[]),   # LIQUID real-asset / real-return ETF baskets (FMP) — RAAX/RLY
  ("PRIVATE_REAL_ESTATE",[],["real estate fund","real estate income","reit trust","park place","stallion","income property","jones lang"]),   # illiquid private RE funds (Stallion/BREIT/Park Place/Jones Lang)
  ("MULTI_ASSET",["BCAT"],["capital allocation","multi-asset","multi asset","balanced allocation","flexible allocation"]),   # BCAT = BlackRock Capital Allocation Term Trust
+ ("SECTOR_EQUITY",[],["kensho","new economies"]),   # S&P Kensho thematic-sector baskets (new-economy composites)
  ("PRIVATE_ALTERNATIVES",[],["reinsurance","risk premium","risk prmm","insurance-linked"," ils"]),
  # Treasuries route to a PROPOSED code (see proposedTaxonomyAdditions); falls to BONDS if absent
  ("TREASURIES",["IEF","TLT","VGIT","VGLT","SHY","GOVT","IEI","EDV","TIP","VTIP","TLTW","TLH","LIFT"],["treasury","treas","t-bond","t-note","govt bond","inflation protected","tips"]),   # TLH=10-20y Treasury; LIFT=LifeX Treasury-backed income
@@ -218,6 +219,15 @@ _SELFTEST = [
     ("ZEMEQ", "DIMENSIONAL EMERGING MARKETS CORE EQUITY", "EMERGING_MARKETS"),   # EM equity → EM
     ("ZEMHY", "VIRTUS EMERGING MARKETS HIGH YIELD BOND", "JUNK_BONDS"),   # EM bond must NOT go to EM equity
     ("ZEMFI", "DOUBLELINE EMERGING MARKETS FIXED INCOME", "BONDS"),       # EM fixed income stays a bond
+    # 2026-07-05: round-2 Other·Equity extension + geography guards
+    ("ZAVLV", "AVANTIS U.S. LARGE CAP VALUE ETF", "LARGE_VALUE"),         # US large-cap value → Large Value
+    ("ZAVIV", "AVANTIS INTERNATIONAL LARGE CAP VALUE ETF", "FOREIGN_LARGE_VALUE"),   # 'international large cap value' guard wins
+    ("ZVFMO", "VANGUARD U.S. MOMENTUM FACTOR ETF", "LARGE_BLEND"),        # US factor → Large Blend
+    ("ZIMTM", "ISHARES MSCI INTL MOMENTUM FACTOR ETF", "FOREIGN_LARGE_BLEND"),   # 'intl momentum factor' guard wins
+    ("ZMGK", "VANGUARD MEGA CAP GROWTH ETF", "LARGE_GROWTH"),             # mega cap growth → Large Growth
+    ("ZEWN", "ISHARES MSCI NETHERLANDS ETF", "FOREIGN_LARGE_BLEND"),      # developed single-country
+    ("ZEPOL", "ISHARES MSCI POLAND ETF", "EMERGING_MARKETS"),             # EM single-country
+    ("ZKOMP", "SPDR S&P KENSHO NEW ECONOMIES COMPOSITE ETF", "SECTOR_EQUITY"),   # kensho → Sector Equity
 ]
 for _t, _d, _want in _SELFTEST:
     _got = classify(_t, _d)

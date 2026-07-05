@@ -637,7 +637,11 @@
         "large cap growth",
         "large-cap growth",
         "nasdaq 100",
-        "nasdaq-100"
+        "nasdaq-100",
+        "mega cap growth",
+        "mega-cap growth",
+        "russell top 200 growth",
+        "quality growth"
       ],
       "code": "LARGE_GROWTH"
     },
@@ -654,7 +658,17 @@
         "large-cap blend",
         "msci usa",
         "enhanced large",
-        "broad market"
+        "broad market",
+        "u.s. large cap",
+        "us large cap",
+        "u.s. large-cap",
+        "us large-cap",
+        "large cap equity",
+        "mega cap",
+        "mega-cap",
+        "russell top 200",
+        "momentum factor",
+        "quality factor"
       ],
       "code": "LARGE_BLEND"
     },
@@ -663,7 +677,11 @@
         "large value",
         "dividend equity",
         "dividend appreciation",
-        "high dividend"
+        "high dividend",
+        "large cap value",
+        "mega cap value",
+        "value factor",
+        "dividend multiplier"
       ],
       "code": "LARGE_VALUE"
     },
@@ -682,7 +700,13 @@
         "mid-cap core",
         "midcap",
         "s&p midcap",
-        "mid-cap"
+        "mid-cap",
+        "mid cap equity",
+        "u.s. mid cap",
+        "us mid cap",
+        "small-mid cap",
+        "small/mid cap",
+        "s&p 400"
       ],
       "code": "MID_CAP_BLEND"
     },
@@ -785,7 +809,27 @@
         "msci france",
         "msci spain",
         "msci italy",
-        "ftse japan"
+        "ftse japan",
+        "international large cap",
+        "intl quality factor",
+        "intl momentum factor",
+        "international quality factor",
+        "international momentum factor",
+        "msci world",
+        "msci acwi",
+        "msci eurozone",
+        "msci pacific",
+        "msci netherlands",
+        "msci finland",
+        "msci austria",
+        "msci israel",
+        "msci singapore",
+        "msci hong kong",
+        "msci belgium",
+        "msci denmark",
+        "msci norway",
+        "msci new zealand",
+        "msci ireland"
       ],
       "code": "FOREIGN_LARGE_BLEND"
     },
@@ -798,7 +842,10 @@
     {
       "keywords": [
         "foreign large value",
-        "international high dividend"
+        "international high dividend",
+        "international large cap value",
+        "intl value factor",
+        "international value factor"
       ],
       "code": "FOREIGN_LARGE_VALUE"
     },
@@ -827,7 +874,19 @@
         "msci malaysia",
         "ftse china",
         "ftse india",
-        "ftse brazil"
+        "ftse brazil",
+        "msci peru",
+        "msci colombia",
+        "msci poland",
+        "msci philippines",
+        "msci qatar",
+        "msci egypt",
+        "msci greece",
+        "msci hungary",
+        "msci argentina",
+        "msci vietnam",
+        "msci kuwait",
+        "msci chile"
       ],
       "code": "EMERGING_MARKETS"
     },
@@ -835,7 +894,8 @@
       "keywords": [
         "communications sector",
         "telecom",
-        "social media"
+        "social media",
+        "5g"
       ],
       "code": "COMMUNICATIONS"
     },
@@ -865,7 +925,10 @@
         "nuclear energy",
         "oil & gas",
         "oil and gas",
-        "midstream"
+        "midstream",
+        "clean power",
+        "green energy",
+        "clean edge"
       ],
       "code": "EQUITY_ENERGY"
     },
@@ -881,7 +944,11 @@
         "industrials sector",
         "aerospace",
         "defense etf",
-        "airlines"
+        "airlines",
+        "defense tech",
+        "aerospace & defense",
+        "space tech",
+        "defense industry"
       ],
       "code": "INDUSTRIALS"
     },
@@ -908,7 +975,10 @@
         "cyber security",
         "fintech",
         "cloud computing",
-        "blockchain"
+        "blockchain",
+        "magnificent seven",
+        "metaverse",
+        "next gen connectivity"
       ],
       "code": "TECHNOLOGY"
     },
@@ -1078,6 +1148,13 @@
         "flexible allocation"
       ],
       "code": "MULTI_ASSET"
+    },
+    {
+      "keywords": [
+        "kensho",
+        "new economies"
+      ],
+      "code": "SECTOR_EQUITY"
     },
     {
       "keywords": [
