@@ -633,7 +633,11 @@
     },
     {
       "keywords": [
-        "large growth"
+        "large growth",
+        "large cap growth",
+        "large-cap growth",
+        "nasdaq 100",
+        "nasdaq-100"
       ],
       "code": "LARGE_GROWTH"
     },
@@ -643,7 +647,14 @@
         "total stock market",
         "s&p 500",
         "core equity",
-        "russell 1000"
+        "russell 1000",
+        "large cap core",
+        "large-cap core",
+        "large cap blend",
+        "large-cap blend",
+        "msci usa",
+        "enhanced large",
+        "broad market"
       ],
       "code": "LARGE_BLEND"
     },
@@ -666,7 +677,12 @@
     {
       "keywords": [
         "mid cap blend",
-        "mid-cap blend"
+        "mid-cap blend",
+        "mid cap core",
+        "mid-cap core",
+        "midcap",
+        "s&p midcap",
+        "mid-cap"
       ],
       "code": "MID_CAP_BLEND"
     },
@@ -679,20 +695,31 @@
     },
     {
       "keywords": [
-        "small growth"
+        "small growth",
+        "small cap growth",
+        "small-cap growth"
       ],
       "code": "SMALL_GROWTH"
     },
     {
       "keywords": [
-        "small blend"
+        "small blend",
+        "small cap",
+        "small-cap",
+        "smallcap",
+        "russell 2000",
+        "small cap core",
+        "small-cap core",
+        "micro cap",
+        "microcap"
       ],
       "code": "SMALL_BLEND"
     },
     {
       "keywords": [
         "small value",
-        "small cap value"
+        "small cap value",
+        "small-cap value"
       ],
       "code": "SMALL_VALUE"
     },
@@ -743,7 +770,22 @@
         "international stock",
         "internatl stock",
         "intl advantage",
-        "intl equity"
+        "intl equity",
+        "msci eafe",
+        "eafe",
+        "developed ex-us",
+        "developed ex us",
+        "ftse developed",
+        "msci japan",
+        "msci germany",
+        "msci united kingdom",
+        "msci canada",
+        "msci australia",
+        "msci switzerland",
+        "msci france",
+        "msci spain",
+        "msci italy",
+        "ftse japan"
       ],
       "code": "FOREIGN_LARGE_BLEND"
     },
@@ -769,20 +811,39 @@
     },
     {
       "keywords": [
-        "emerging"
+        "emerging markets",
+        "emerging",
+        "msci china",
+        "msci india",
+        "msci brazil",
+        "msci mexico",
+        "msci taiwan",
+        "msci south korea",
+        "msci indonesia",
+        "msci saudi arabia",
+        "msci south africa",
+        "msci turkey",
+        "msci thailand",
+        "msci malaysia",
+        "ftse china",
+        "ftse india",
+        "ftse brazil"
       ],
       "code": "EMERGING_MARKETS"
     },
     {
       "keywords": [
-        "communications sector"
+        "communications sector",
+        "telecom",
+        "social media"
       ],
       "code": "COMMUNICATIONS"
     },
     {
       "keywords": [
         "consumer cyclical",
-        "consumer discretionary"
+        "consumer discretionary",
+        "e-commerce"
       ],
       "code": "CONSUMER_CYCLICAL"
     },
@@ -796,7 +857,15 @@
     {
       "keywords": [
         "energy sector",
-        "equity energy"
+        "equity energy",
+        "clean energy",
+        "solar",
+        "renewable energy",
+        "uranium",
+        "nuclear energy",
+        "oil & gas",
+        "oil and gas",
+        "midstream"
       ],
       "code": "EQUITY_ENERGY"
     },
@@ -809,7 +878,10 @@
     },
     {
       "keywords": [
-        "industrials sector"
+        "industrials sector",
+        "aerospace",
+        "defense etf",
+        "airlines"
       ],
       "code": "INDUSTRIALS"
     },
@@ -829,27 +901,43 @@
     },
     {
       "keywords": [
-        "technology sector"
+        "technology sector",
+        "artificial intelligence",
+        "robotics",
+        "cybersecurity",
+        "cyber security",
+        "fintech",
+        "cloud computing",
+        "blockchain"
       ],
       "code": "TECHNOLOGY"
     },
     {
       "keywords": [
         "health sector",
-        "healthcare"
+        "healthcare",
+        "health care",
+        "biotechnology",
+        "biotech",
+        "pharmaceutical",
+        "medical devices",
+        "genomics"
       ],
       "code": "HEALTH"
     },
     {
       "keywords": [
-        "financial sector"
+        "financial sector",
+        "regional bank",
+        "capital markets"
       ],
       "code": "FINANCIAL"
     },
     {
       "keywords": [
         "real estate",
-        "reit"
+        "reit",
+        "homebuilders"
       ],
       "code": "REAL_ESTATE"
     },
@@ -863,7 +951,8 @@
       "keywords": [
         "high yield",
         "junk bond",
-        "below investment grade"
+        "below investment grade",
+        "emerging markets high yield"
       ],
       "code": "JUNK_BONDS"
     },
@@ -909,7 +998,14 @@
         "ultrashort",
         "ultra short",
         "ultrasho",
-        "short duration income"
+        "short duration income",
+        "emerging markets bond",
+        "emerging market bond",
+        "emerging markets debt",
+        "emerging markets fixed",
+        "emerging markets local",
+        "emerging markets sovereign",
+        "emerging markets corporate"
       ],
       "code": "BONDS"
     },
@@ -961,6 +1057,17 @@
         "145/45"
       ],
       "code": "LIQALTS"
+    },
+    {
+      "keywords": [
+        "buffer",
+        "buffered",
+        "defined outcome",
+        "power buffer",
+        "target outcome",
+        "floor etf"
+      ],
+      "code": "OPTIONS"
     },
     {
       "keywords": [

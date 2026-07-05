@@ -14,43 +14,43 @@ CODES = {s["code"] for s in tax["sleeves"]}
 # ── OLAP's existing rules (from app.js, keyed by sleeve NAME) ──────────────────
 OLAP_RULES = [
  ("Large Cap Tech",["AAPL","MSFT","NVDA","GOOGL","GOOG","META","AMZN","AVGO"],["technology","software","semiconductor"]),
- ("Large Growth",["VUG","QQQ","QQQM","IWF","SCHG","SPYG","VOOG","IVW"],["large growth"]),
- ("Large Blend",["SPY","VOO","IVV","VTI","ITOT","SCHB","IWB","DFAC","AVUS","SPLG","DFAU","OEF","DYNF","QUAL","USMV","MTUM","JEPI"],["large blend","total stock market","s&p 500","core equity","russell 1000"]),   # JEPI = S&P equity + covered calls (equity income, NOT a bond)
- ("Large Value",["VTV","IVE","IWD","SCHV","SCHD","DGRO","VIG","DFAV","VLUE"],["large value","dividend equity","dividend appreciation","high dividend"]),
+ ("Large Growth",["VUG","QQQ","QQQM","IWF","SCHG","SPYG","VOOG","IVW"],["large growth","large cap growth","large-cap growth","nasdaq 100","nasdaq-100"]),
+ ("Large Blend",["SPY","VOO","IVV","VTI","ITOT","SCHB","IWB","DFAC","AVUS","SPLG","DFAU","OEF","DYNF","QUAL","USMV","MTUM","JEPI"],["large blend","total stock market","s&p 500","core equity","russell 1000","large cap core","large-cap core","large cap blend","large-cap blend","msci usa","enhanced large","broad market"]),   # JEPI = S&P equity + covered calls (equity income, NOT a bond)  ·  broad factor terms (equal weight / low vol / momentum) intentionally NOT keyworded — they cross geography & sector and hijack EM / Treasury / sector funds
+ ("Large Value",["VTV","IVE","IWD","SCHV","SCHD","DGRO","VIG","DFAV","VLUE"],["large value","dividend equity","dividend appreciation","high dividend"]),   # 'large cap value' / 'quality dividend' / 'dividend growth' NOT keyworded — they beat 'international' (13) and steal foreign dividend/value funds
  ("Mid-Cap Growth",["VOT","IWP","MDYG"],["mid cap growth","mid-cap growth"]),
- ("Mid-Cap Blend",["VO","IJH","IWR","SCHM"],["mid cap blend","mid-cap blend"]),
+ ("Mid-Cap Blend",["VO","IJH","IWR","SCHM"],["mid cap blend","mid-cap blend","mid cap core","mid-cap core","midcap","s&p midcap","mid-cap"]),
  ("Mid-Cap Value",["VOE","IWS","MDYV"],["mid cap value","mid-cap value"]),
- ("Small Growth",["VBK","IWO","IJT"],["small growth"]),
- ("Small Blend",["VB","IWM","IJR","SCHA"],["small blend"]),
- ("Small Value",["VBR","IWN","IJS","AVUV","DFSV"],["small value","small cap value"]),
+ ("Small Growth",["VBK","IWO","IJT"],["small growth","small cap growth","small-cap growth"]),
+ ("Small Blend",["VB","IWM","IJR","SCHA"],["small blend","small cap","small-cap","smallcap","russell 2000","small cap core","small-cap core","micro cap","microcap"]),   # 's&p smallcap' dropped — beat 'technology' and pulled the S&P SmallCap sector-tech fund out of Tech
+ ("Small Value",["VBR","IWN","IJS","AVUV","DFSV"],["small value","small cap value","small-cap value"]),
  ("Precious Metals",["GLD","IAU","SLV","SGOL","GLDM"],["silver","precious metals"]),   # P3-15: dropped bare 'gold' (matched GOLDMAN SACHS bonds); bullion ETFs stay ticker-pinned
  ("Broad Commodities",["DBC","PDBC","USO","GSG"],["commodity","commodities","broad basket"]),
  ("Trend Following Managed Futures",["DBMF"],["trend following managed futures"]),
  ("Managed Futures",["KMLM","CTA","FMF","WTMF"],["managed futures"]),
  ("Trend Following",["TFPN","RSST"],["trend following"]),   # P3-15: dropped bare 'trend' (swept crypto-trend / trendpilot OVERLAYS into Convexity); pin real trend funds by ticker
  ("International",["VXUS","IEV","VEU","ACWX"],["international","developed markets","europe"]),
- ("Foreign Large Blend",["VEA","IEFA","SCHF","EFA","DODFX","MFAPX","ACWI","DXJ"],["foreign large blend","international stock","internatl stock","intl advantage","intl equity"]),   # DXJ = WisdomTree Japan hedged (FMP)
+ ("Foreign Large Blend",["VEA","IEFA","SCHF","EFA","DODFX","MFAPX","ACWI","DXJ"],["foreign large blend","international stock","internatl stock","intl advantage","intl equity","msci eafe","eafe","developed ex-us","developed ex us","ftse developed","msci japan","msci germany","msci united kingdom","msci canada","msci australia","msci switzerland","msci france","msci spain","msci italy","ftse japan"]),   # DXJ = WisdomTree Japan hedged (FMP)
  ("Foreign Large Growth",["EFG","VIGI"],["foreign large growth"]),
  ("Foreign Large Value",["EFV","IVLU","VYMI","HDEF"],["foreign large value","international high dividend"]),
  ("Foreign Small/Mid Blend",["VSS","SCZ","SCHC"],["foreign small mid","foreign small/mid blend"]),
- ("Emerging Markets",["EEM","VWO","IEMG","SCHE"],["emerging"]),
- ("Communications",["XLC","VOX","IYZ"],["communications sector"]),
- ("Consumer Cyclical",["XLY","VCR","IYC"],["consumer cyclical","consumer discretionary"]),
+ ("Emerging Markets",["EEM","VWO","IEMG","SCHE"],["emerging markets","emerging","msci china","msci india","msci brazil","msci mexico","msci taiwan","msci south korea","msci indonesia","msci saudi arabia","msci south africa","msci turkey","msci thailand","msci malaysia","ftse china","ftse india","ftse brazil"]),
+ ("Communications",["XLC","VOX","IYZ"],["communications sector","telecom","social media"]),
+ ("Consumer Cyclical",["XLY","VCR","IYC"],["consumer cyclical","consumer discretionary","e-commerce"]),
  ("Consumer Defensive",["XLP","VDC","IYK"],["consumer defensive","consumer staples"]),
- ("Equity Energy",["XLE","VDE","IYE"],["energy sector","equity energy"]),
+ ("Equity Energy",["XLE","VDE","IYE"],["energy sector","equity energy","clean energy","solar","renewable energy","uranium","nuclear energy","oil & gas","oil and gas","midstream"]),
  ("Equity Precious Metals",["GDX","GDXJ","RING"],["equity precious metals","gold miners"]),
- ("Industrials",["XLI","VIS","IYJ","PWRD","NASA"],["industrials sector"]),   # PWRD = energy-transition; NASA = space economy / aerospace (FMP)
+ ("Industrials",["XLI","VIS","IYJ","PWRD","NASA"],["industrials sector","aerospace","defense etf","airlines"]),   # PWRD = energy-transition; NASA = space economy / aerospace (FMP)
  ("Infrastructure",["IGF","PAVE","IFRA"],["infrastructure"]),
  ("Natural Resources",["IGE","GNR","NANR","REMX"],["natural resources","rare earth","strategic metals"]),
- ("Technology",["XLK","VGT","IYW","FTEC"],["technology sector"]),
- ("Health",["XLV","VHT","IYH"],["health sector","healthcare"]),
- ("Financial",["XLF","VFH","IYF"],["financial sector"]),
- ("Real Estate",["VNQ","IYR","XLRE","SCHH","HST","PLD","EQIX"],["real estate","reit"]),   # HST/PLD/EQIX = REIT stocks (FMP)
+ ("Technology",["XLK","VGT","IYW","FTEC"],["technology sector","artificial intelligence","robotics","cybersecurity","cyber security","fintech","cloud computing","blockchain"]),
+ ("Health",["XLV","VHT","IYH"],["health sector","healthcare","health care","biotechnology","biotech","pharmaceutical","medical devices","genomics"]),
+ ("Financial",["XLF","VFH","IYF"],["financial sector","regional bank","capital markets"]),
+ ("Real Estate",["VNQ","IYR","XLRE","SCHH","HST","PLD","EQIX"],["real estate","reit","homebuilders"]),   # HST/PLD/EQIX = REIT stocks (FMP)
  ("Utilities",["XLU","VPU","IDU"],["utilities sector"]),
- ("Junk Bonds",["HYG","JNK","USHY","SJNK","HYLB","ANGL","HYEM"],["high yield","junk bond","below investment grade"]),
+ ("Junk Bonds",["HYG","JNK","USHY","SJNK","HYLB","ANGL","HYEM"],["high yield","junk bond","below investment grade","emerging markets high yield"]),   # EM-HY compound beats bare 'emerging markets' (16) so EM junk stays a bond
  ("Corporate Bonds",["LQD","VCIT","VCLT","IGIB","IGSB","VTC","VCSH","IBDW"],["corporate bond","investment grade corporate"]),   # IBDW = iBonds target-maturity corporate
  ("Municipal Bonds",["MUB","VTEB","TFI","PZA","HYD","SHM"],["municipal","muni","tax exempt","tax-free","auth rev","rev ref","sales tax rev","wtr & sew","wtr & swr","swr rev","fin auth rev","pub pwr","gen oblig"," sch dist"," unif sd","util rev"," go bds"]),
- ("Core / Multisector Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA","CLOA"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","collateralized loan","ultrashort","ultra short","ultrasho","short duration income"]),   # P3-15: dropped bare 'clo' (matched CLOSED-END etc.); CLOA pinned by ticker
+ ("Core / Multisector Bonds",["BND","AGG","BNDX","IUSB","SCHZ","JPIE","FLXR","VWOB","BIV","MBB","VMBS","GNMA","CLOA"],["bond","fixed income","aggregate","flexible income","income etf","multisector","universal","collateralized loan","ultrashort","ultra short","ultrasho","short duration income","emerging markets bond","emerging market bond","emerging markets debt","emerging markets fixed","emerging markets local","emerging markets sovereign","emerging markets corporate"]),   # P3-15: dropped bare 'clo' (matched CLOSED-END etc.); CLOA pinned by ticker  ·  EM-debt compounds beat bare 'emerging markets' so EM bonds stay bonds
  ("Direct Lending",["BIZD","PSP"],["direct lending","middle market lending"]),
  ("Private Credit",["PC","PRCR"],["private credit","private debt","enhanced lending","credit fund class"]),
  ("Cash",["CASH","SWVXX","SPAXX","VMFXX","FDRXX","BIL","SGOV","SNVXX","SNAXX","FZFXX","XBIL","BOXX","MINT","SHV","FNSXX","FDRXX","SPRXX"],["cash","money market","money mkt","mmkt","money inv","money ultra","prime advantage","government money","short maturity","6 month bill"]),
@@ -61,7 +61,7 @@ EXTRA = [  # (code, tickers, name-keywords)
  ("TREND_FOLLOWING_MANAGED_FUTURES",["AQMNX","AQMIX","AQMRX"],["aqr managed futures","systematic trend"]),
  ("LIQALTS",["CLSE","QLEIX","QLENX","BLNDX","REMIX"],["long/short","long short","market neutral","absolute return","delphi","145/45"]),
  ("TREND_FOLLOWING_MANAGED_FUTURES",["AHLPX","ASFYX","RSBT"],[]),   # 2026-06-24/25: American Beacon AHL + ASG/AlphaSimplex MFs + RSBT (Return Stacked Bonds & MF — ticker-pin so the bond-name marker doesn't steal it to Income) → Convexity
- ("OPTIONS",["PFIX","CAOS","IVOL"],[]),                      # 2026-06-24/25: Simplify PFIX rate-hedge + Alpha Architect CAOS tail-risk + IVOL (long swaption-vol + TIPS rate-vol play) — options-based → Convexity (operator reclassification)
+ ("OPTIONS",["PFIX","CAOS","IVOL"],["buffer","buffered","defined outcome","power buffer","target outcome","floor etf"]),   # PFIX/CAOS/IVOL options hedges + defined-outcome/buffer ETFs (Innovator/FT Vest/Allianz) — option-structured, not plain equity (2026-07-04)
  ("OTHER",["BITC","BTOP","BTRN","PTLC","PTMC","PTNQ","PTEU","PTIN","PTBD","TRND","AETH","THMZ","LFEQ","WBIN","WBIT","TACE","TAEQ","TEGS","HYTR","TFFI","STRN","TRDF","VMOT"],[]),  # 2026-06-24: DE-classify from Convexity — Bitwise/GlobalX crypto-trend + Pacer Trendpilot equity/bond trend-OVERLAYS were swept in by the "trend"/"systematic" keywords; they are NOT crisis-alpha convexity (operator cleanup)
  ("PRCR",[],["blackstone private credit","blackstone priv","mlt-asst crdt","multi-asset credit","cliffwater","bdc","alternative lending","alt lending","lending rs","direct lending fund"]),
  ("PE_BUYOUT",[],["private capital","pe strategies","private equity","buyout"," lp class"]),
@@ -206,6 +206,18 @@ _SELFTEST = [
     ("ZGDX", "VANECK GOLD MINERS FUND", "EQUITY_PRECIOUS_METALS"),         # 'gold miners' beats (dropped) 'gold'
     ("SPY 09/18/2026 585.00 P", "PUT STATE STREET SPDR", "OPTIONS"),       # option-expiry fallback (P3-14)
     ("ZEVCE", "EATON VANCE CLOSED END FUND", "UNCLASSIFIED"),              # 'clo' no longer steals a closed-end fund
+    # 2026-07-04: name-rule extension to shrink the "Other · Equity" fallback in the FACET Engine tab
+    ("ZSCSC", "ISHARES CORE S&P SMALL-CAP ETF", "SMALL_BLEND"),            # 'small-cap' → Small Blend
+    ("ZEWSP", "INVESCO S&P 500 EQUAL WEIGHT ETF", "LARGE_BLEND"),         # 'equal weight' → Large Blend
+    ("ZMEAF", "ISHARES MSCI EAFE ETF", "FOREIGN_LARGE_BLEND"),            # 'msci eafe' → Foreign Large Blend
+    ("ZMIND", "ISHARES MSCI INDIA ETF", "EMERGING_MARKETS"),              # 'msci india' → EM (not 'indiana' munis)
+    ("ZINDMU", "INDIANA ST FIN AUTH REV BDS", "MUNICIPAL_BONDS"),         # 'india' must NOT steal an Indiana muni
+    ("ZBUF", "INNOVATOR U.S. EQUITY POWER BUFFER ETF", "OPTIONS"),        # 'power buffer' → Options (defined-outcome)
+    ("ZCYB", "FIRST TRUST NASDAQ CYBERSECURITY ETF", "TECHNOLOGY"),       # 'cybersecurity' → Technology
+    ("ZBIO", "ISHARES BIOTECHNOLOGY ETF", "HEALTH"),                      # 'biotech' → Health
+    ("ZEMEQ", "DIMENSIONAL EMERGING MARKETS CORE EQUITY", "EMERGING_MARKETS"),   # EM equity → EM
+    ("ZEMHY", "VIRTUS EMERGING MARKETS HIGH YIELD BOND", "JUNK_BONDS"),   # EM bond must NOT go to EM equity
+    ("ZEMFI", "DOUBLELINE EMERGING MARKETS FIXED INCOME", "BONDS"),       # EM fixed income stays a bond
 ]
 for _t, _d, _want in _SELFTEST:
     _got = classify(_t, _d)
