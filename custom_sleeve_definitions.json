@@ -338,6 +338,13 @@
       "morningstarCategoryHint": "Commodities Broad Basket"
     },
     {
+      "code": "CRYPTO",
+      "name": "Crypto",
+      "parent": null,
+      "morningstarArea": "Digital Assets",
+      "description": "Spot digital-asset ETFs (Bitcoin / Ethereum trusts) and crypto covered-call strategies. Liquid alternative — convex role Other-Alt (a volatile risk asset, NOT a protective diversifier/reserve)."
+    },
+    {
       "code": "ALTERNATIVES",
       "name": "Alternatives",
       "parent": null,

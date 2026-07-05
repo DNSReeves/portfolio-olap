@@ -72,6 +72,7 @@
     "COMMODITIES": "Commodities",
     "PRECIOUS_METALS": "Precious Metals",
     "BROAD_COMMODITIES": "Broad Commodities",
+    "CRYPTO": "Crypto",
     "ALTERNATIVES": "Alternatives",
     "LIQALTS": "Liquid Alternatives",
     "MANAGED_FUTURES": "Managed Futures",
@@ -145,6 +146,7 @@
     "Commodities",
     "Precious Metals",
     "Broad Commodities",
+    "Crypto",
     "Alternatives",
     "Liquid Alternatives",
     "Managed Futures",
@@ -218,6 +220,7 @@
     "Commodities": null,
     "Precious Metals": "Commodities",
     "Broad Commodities": "Commodities",
+    "Crypto": null,
     "Alternatives": null,
     "Liquid Alternatives": "Alternatives",
     "Managed Futures": "Liquid Alternatives",
@@ -291,6 +294,7 @@
     "Commodities": "Alternatives",
     "Precious Metals": "Alternatives",
     "Broad Commodities": "Alternatives",
+    "Crypto": "Alternatives",
     "Alternatives": "Alternatives",
     "Liquid Alternatives": "Alternatives",
     "Managed Futures": "Alternatives",
@@ -1046,7 +1050,10 @@
         "next gen connectivity",
         "global tech",
         "internet of things",
-        "internet"
+        "internet",
+        "bitcoin miners",
+        "crypto miners",
+        "ethereum miners"
       ],
       "code": "TECHNOLOGY"
     },
@@ -1237,6 +1244,14 @@
     },
     {
       "keywords": [
+        "bitcoin",
+        "ethereum",
+        "digital asset"
+      ],
+      "code": "CRYPTO"
+    },
+    {
+      "keywords": [
         "treasury",
         "treas",
         "t-bond",
@@ -1359,6 +1374,7 @@
     "COMMODITIES": "Diversifier",
     "PRECIOUS_METALS": "Diversifier",
     "BROAD_COMMODITIES": "Diversifier",
+    "CRYPTO": "Other-Alt",
     "ALTERNATIVES": "Other-Alt",
     "LIQALTS": "Convexity",
     "MANAGED_FUTURES": "Convexity",

@@ -42,7 +42,7 @@ OLAP_RULES = [
  ("Industrials",["XLI","VIS","IYJ","PWRD","NASA"],["industrials sector","aerospace","defense etf","airlines","defense tech","aerospace & defense","space tech","defense industry","transportation","global industrials","msci industrials"]),   # PWRD = energy-transition; NASA = space economy / aerospace (FMP)
  ("Infrastructure",["IGF","PAVE","IFRA"],["infrastructure"]),
  ("Natural Resources",["IGE","GNR","NANR","REMX"],["natural resources","rare earth","strategic metals","materials","basic materials","metals & mining","metals and mining","copper miners","mining producers","lithium","global materials","msci materials"]),
- ("Technology",["XLK","VGT","IYW","FTEC"],["technology sector","artificial intelligence","robotics","cybersecurity","cyber security","fintech","cloud computing","blockchain","magnificent seven","metaverse","next gen connectivity","global tech","internet of things","internet"]),
+ ("Technology",["XLK","VGT","IYW","FTEC"],["technology sector","artificial intelligence","robotics","cybersecurity","cyber security","fintech","cloud computing","blockchain","magnificent seven","metaverse","next gen connectivity","global tech","internet of things","internet","bitcoin miners","crypto miners","ethereum miners"]),   # crypto-MINER equities → Technology (beat 'bitcoin'/'ethereum'→Crypto by length)
  ("Health",["XLV","VHT","IYH"],["health sector","healthcare","health care","biotechnology","biotech","pharmaceutical","medical devices","genomics","global health","msci health","health & wellness"]),
  ("Financial",["XLF","VFH","IYF"],["financial sector","regional bank","capital markets","bank etf","s&p bank","insurance","global financials","msci financials"]),
  ("Real Estate",["VNQ","IYR","XLRE","SCHH","HST","PLD","EQIX"],["real estate","reit","homebuilders"]),   # HST/PLD/EQIX = REIT stocks (FMP)
@@ -69,6 +69,7 @@ EXTRA = [  # (code, tickers, name-keywords)
  ("PRIVATE_REAL_ESTATE",[],["real estate fund","real estate income","reit trust","park place","stallion","income property","jones lang"]),   # illiquid private RE funds (Stallion/BREIT/Park Place/Jones Lang)
  ("MULTI_ASSET",["BCAT"],["capital allocation","multi-asset","multi asset","balanced allocation","flexible allocation"]),   # BCAT = BlackRock Capital Allocation Term Trust
  ("SECTOR_EQUITY",[],["kensho","new economies"]),   # S&P Kensho thematic-sector baskets ('sector rotation' dropped — it stole bond/fixed-income sector-rotation funds into equity)
+ ("CRYPTO",[],["bitcoin","ethereum","digital asset"]),   # spot BTC/ETH trusts + crypto covered-call (miscoded asset_class=Equity upstream) → Crypto sleeve.  'bitcoin/crypto miners' guarded to Technology below (they are equities, not spot crypto)
  ("PRIVATE_ALTERNATIVES",[],["reinsurance","risk premium","risk prmm","insurance-linked"," ils"]),
  # Treasuries route to a PROPOSED code (see proposedTaxonomyAdditions); falls to BONDS if absent
  ("TREASURIES",["IEF","TLT","VGIT","VGLT","SHY","GOVT","IEI","EDV","TIP","VTIP","TLTW","TLH","LIFT"],["treasury","treas","t-bond","t-note","govt bond","inflation protected","tips"]),   # TLH=10-20y Treasury; LIFT=LifeX Treasury-backed income
@@ -104,7 +105,8 @@ def role(code):
     if code in {"PRECIOUS_METALS","BROAD_COMMODITIES","COMMODITIES"}: return "Diversifier"
     if code in {"LIQALTS","MANAGED_FUTURES","TREND_FOLLOWING","TREND_FOLLOWING_MANAGED_FUTURES","OPTIONS"}: return "Convexity"
     if code in {"PREQ","PE_BUYOUT","PE_GROWTH_EQUITY","PE_VENTURE_CAPITAL","PE_SECONDARIES",
-                "PRIVATE_ALTERNATIVES","REAL_ASSETS","PRIVATE_REAL_ESTATE","PRCR","DIRECT_LENDING","ALTERNATIVES"}: return "Other-Alt"
+                "PRIVATE_ALTERNATIVES","REAL_ASSETS","PRIVATE_REAL_ESTATE","PRCR","DIRECT_LENDING","ALTERNATIVES",
+                "CRYPTO"}: return "Other-Alt"   # crypto = liquid volatile alt, NOT a protective reserve/diversifier
     if code in {"TREASURIES"}: return "Duration"
     if code in {"BONDS_CREDIT","PUBLIC_BONDS","BONDS","JUNK_BONDS","CORPORATE_BONDS","MUNICIPAL_BONDS","BANK_LOANS","CDS","ANNUITY_STABLE"}: return "Income"
     if code in {"OTHER","UNCLASSIFIED","OTHER_UNCLASSIFIED"}: return "Other"
@@ -244,6 +246,10 @@ _SELFTEST = [
     ("ZFENY", "FIDELITY MSCI ENERGY INDEX ETF", "EQUITY_ENERGY"),                 # MSCI sector → Equity Energy
     ("ZASCE", "ALLSPRING SMID CORE ETF", "MID_CAP_BLEND"),                        # SMID → Mid-Cap Blend
     ("ZBBJP", "JPMORGAN BETABUILDERS JAPAN ETF", "FOREIGN_LARGE_BLEND"),          # BetaBuilders single-country
+    # 2026-07-05: new Crypto sleeve
+    ("ZIBIT", "ISHARES BITCOIN TRUST ETF", "CRYPTO"),                             # spot BTC → Crypto
+    ("ZETHA", "ISHARES ETHEREUM TRUST ETF", "CRYPTO"),                            # spot ETH → Crypto
+    ("ZWGMI", "VALKYRIE BITCOIN MINERS ETF", "TECHNOLOGY"),                       # crypto MINER equity, NOT spot crypto
 ]
 for _t, _d, _want in _SELFTEST:
     _got = classify(_t, _d)
