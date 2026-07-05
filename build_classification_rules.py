@@ -61,7 +61,7 @@ EXTRA = [  # (code, tickers, name-keywords)
  ("TREND_FOLLOWING_MANAGED_FUTURES",["AQMNX","AQMIX","AQMRX"],["aqr managed futures","systematic trend"]),
  ("LIQALTS",["CLSE","QLEIX","QLENX","BLNDX","REMIX"],["long/short","long short","market neutral","absolute return","delphi","145/45"]),
  ("TREND_FOLLOWING_MANAGED_FUTURES",["AHLPX","ASFYX","RSBT"],[]),   # 2026-06-24/25: American Beacon AHL + ASG/AlphaSimplex MFs + RSBT (Return Stacked Bonds & MF — ticker-pin so the bond-name marker doesn't steal it to Income) → Convexity
- ("OPTIONS",["PFIX","CAOS","IVOL","IVVB"],["buffer","buffered","defined outcome","defined protection","power buffer","target outcome","floor etf","autocallable growth"]),   # 'autocallable growth' only (autocallable-INCOME stays a bond — incl. CAIE book holding); covered-call INCOME funds NOT routed here (they are income, not convexity)   # PFIX/CAOS/IVOL options hedges + defined-outcome/buffer ETFs (Innovator/FT Vest/Allianz) — option-structured, not plain equity (2026-07-04)
+ ("OPTIONS",["PFIX","CAOS","IVOL","IVVB","VXX","VXZ","VXXB","VXZB"],["buffer","buffered","defined outcome","defined protection","power buffer","target outcome","floor etf","autocallable growth"]),   # VXX/VXZ = long-VIX-futures ETNs (crash convexity) — pinned so the greedy 's&p 500' keyword in their "S&P 500 VIX…" name can't mislabel them Large Blend   # 'autocallable growth' only (autocallable-INCOME stays a bond — incl. CAIE book holding); covered-call INCOME funds NOT routed here (they are income, not convexity)   # PFIX/CAOS/IVOL options hedges + defined-outcome/buffer ETFs (Innovator/FT Vest/Allianz) — option-structured, not plain equity (2026-07-04)
  ("OTHER",["BITC","BTOP","BTRN","PTLC","PTMC","PTNQ","PTEU","PTIN","PTBD","TRND","AETH","THMZ","LFEQ","WBIN","WBIT","TACE","TAEQ","TEGS","HYTR","TFFI","STRN","TRDF","VMOT"],[]),  # 2026-06-24: DE-classify from Convexity — Bitwise/GlobalX crypto-trend + Pacer Trendpilot equity/bond trend-OVERLAYS were swept in by the "trend"/"systematic" keywords; they are NOT crisis-alpha convexity (operator cleanup)
  ("PRCR",[],["blackstone private credit","blackstone priv","mlt-asst crdt","multi-asset credit","cliffwater","bdc","alternative lending","alt lending","lending rs","direct lending fund"]),
  ("PE_BUYOUT",[],["private capital","pe strategies","private equity","buyout"," lp class"]),
@@ -312,6 +312,7 @@ _SELFTEST = [
     ("ZDRAM", "ROUNDHILL MEMORY ETF", "TECHNOLOGY"),                              # memory (semis) → Technology
     ("ZNETZ", "ENGINE NO. 1 TRANSFORM CLIMATE ETF", "EQUITY_ENERGY"),            # climate-transition equity → Equity Energy
     ("ZCSD", "INVESCO S&P SPIN-OFF ETF", "MID_CAP_BLEND"),                        # spin-off → Mid-Cap Blend
+    ("VXX", "IPATH SERIES B S&P 500 VIX SHORT-TERM FUTURES ETN", "OPTIONS"),      # long-VIX ETN (pinned) — 's&p 500' must NOT make it Large Blend
 ]
 for _t, _d, _want in _SELFTEST:
     _got = classify(_t, _d)
