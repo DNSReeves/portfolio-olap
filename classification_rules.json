@@ -348,6 +348,7 @@
     "CLOA": "BONDS",
     "CLOZ": "BANK_LOANS",
     "CLSE": "LIQALTS",
+    "COPY": "LARGE_VALUE",
     "CTA": "MANAGED_FUTURES",
     "DBC": "BROAD_COMMODITIES",
     "DBMF": "TREND_FOLLOWING_MANAGED_FUTURES",
@@ -370,6 +371,7 @@
     "EQIX": "REAL_ESTATE",
     "ESGE": "EMERGING_MARKETS",
     "ESGV": "LARGE_BLEND",
+    "FAD": "MID_CAP_GROWTH",
     "FDRR": "LARGE_VALUE",
     "FDRXX": "CASH",
     "FLOT": "BANK_LOANS",
@@ -427,6 +429,7 @@
     "IVLU": "FOREIGN_LARGE_VALUE",
     "IVOL": "OPTIONS",
     "IVV": "LARGE_BLEND",
+    "IVVB": "OPTIONS",
     "IVW": "LARGE_GROWTH",
     "IWB": "LARGE_BLEND",
     "IWD": "LARGE_VALUE",
@@ -840,7 +843,8 @@
         "enhanced mid cap",
         "small-mid multifactor",
         "small & mid cap",
-        "multifactor mid cap"
+        "multifactor mid cap",
+        "spin-off"
       ],
       "code": "MID_CAP_BLEND"
     },
@@ -941,7 +945,8 @@
         "global growth",
         "world ex u.s.",
         "world (ex-us)",
-        "worldwide"
+        "worldwide",
+        "all equity markets"
       ],
       "code": "INTERNATIONAL"
     },
@@ -1138,7 +1143,8 @@
         "energy exploration",
         "energy alphadex",
         "alerian mlp",
-        "nuclear renaissance"
+        "nuclear renaissance",
+        "transform climate"
       ],
       "code": "EQUITY_ENERGY"
     },
@@ -1215,6 +1221,7 @@
         "global tech",
         "internet of things",
         "internet",
+        "memory etf",
         "bitcoin miners",
         "crypto miners",
         "ethereum miners",
@@ -1255,7 +1262,8 @@
         "global health",
         "msci health",
         "health & wellness",
-        "medical breakthroughs"
+        "medical breakthroughs",
+        "cannabis"
       ],
       "code": "HEALTH"
     },
