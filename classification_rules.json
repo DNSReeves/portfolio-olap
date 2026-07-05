@@ -319,8 +319,10 @@
     "AETH": "OTHER",
     "AGG": "BONDS",
     "AHLPX": "TREND_FOLLOWING_MANAGED_FUTURES",
+    "AKRE": "LARGE_GROWTH",
     "AMZN": "LARGE_CAP_TECH",
     "ANGL": "JUNK_BONDS",
+    "APUE": "LARGE_BLEND",
     "AQMIX": "TREND_FOLLOWING_MANAGED_FUTURES",
     "AQMNX": "TREND_FOLLOWING_MANAGED_FUTURES",
     "AQMRX": "TREND_FOLLOWING_MANAGED_FUTURES",
@@ -342,6 +344,7 @@
     "BTRN": "OTHER",
     "CAOS": "OPTIONS",
     "CASH": "CASH",
+    "CGDG": "LARGE_VALUE",
     "CLOA": "BONDS",
     "CLOZ": "BANK_LOANS",
     "CLSE": "LIQALTS",
@@ -355,6 +358,8 @@
     "DGRO": "LARGE_VALUE",
     "DIVB": "LARGE_VALUE",
     "DODFX": "FOREIGN_LARGE_BLEND",
+    "DSTL": "LARGE_BLEND",
+    "DVY": "LARGE_VALUE",
     "DXJ": "FOREIGN_LARGE_BLEND",
     "DYNF": "LARGE_BLEND",
     "EDV": "TREASURIES",
@@ -364,6 +369,8 @@
     "EFV": "FOREIGN_LARGE_VALUE",
     "EQIX": "REAL_ESTATE",
     "ESGE": "EMERGING_MARKETS",
+    "ESGV": "LARGE_BLEND",
+    "FDRR": "LARGE_VALUE",
     "FDRXX": "CASH",
     "FLOT": "BANK_LOANS",
     "FLRN": "BANK_LOANS",
@@ -371,6 +378,7 @@
     "FMF": "MANAGED_FUTURES",
     "FNGS": "TECHNOLOGY",
     "FNSXX": "CASH",
+    "FPX": "LARGE_GROWTH",
     "FTCB": "CORPORATE_BONDS",
     "FTEC": "TECHNOLOGY",
     "FTSD": "TREASURIES",
@@ -388,6 +396,7 @@
     "GQGU": "LARGE_BLEND",
     "GSG": "BROAD_COMMODITIES",
     "HDEF": "FOREIGN_LARGE_VALUE",
+    "HNDL": "MULTI_ASSET",
     "HST": "REAL_ESTATE",
     "HYD": "MUNICIPAL_BONDS",
     "HYEM": "JUNK_BONDS",
@@ -441,8 +450,10 @@
     "JBBB": "BANK_LOANS",
     "JEPI": "LARGE_BLEND",
     "JNK": "JUNK_BONDS",
+    "JPEF": "LARGE_BLEND",
     "JPIE": "BONDS",
     "KMLM": "MANAGED_FUTURES",
+    "LCAP": "LARGE_BLEND",
     "LDUR": "BONDS",
     "LFEQ": "OTHER",
     "LIFT": "TREASURIES",
@@ -469,6 +480,7 @@
     "PFIX": "OPTIONS",
     "PLD": "REAL_ESTATE",
     "PRCR": "PRCR",
+    "PRFZ": "MID_CAP_BLEND",
     "PSP": "DIRECT_LENDING",
     "PTBD": "OTHER",
     "PTEU": "OTHER",
@@ -500,10 +512,12 @@
     "SCHF": "FOREIGN_LARGE_BLEND",
     "SCHG": "LARGE_GROWTH",
     "SCHH": "REAL_ESTATE",
+    "SCHK": "LARGE_BLEND",
     "SCHM": "MID_CAP_BLEND",
     "SCHV": "LARGE_VALUE",
     "SCHZ": "BONDS",
     "SCZ": "FOREIGN_SMALL_MID_BLEND",
+    "SDOG": "LARGE_VALUE",
     "SGOL": "PRECIOUS_METALS",
     "SGOV": "CASH",
     "SHM": "MUNICIPAL_BONDS",
@@ -524,10 +538,13 @@
     "SWVXX": "CASH",
     "TACE": "OTHER",
     "TAEQ": "OTHER",
+    "TCAF": "LARGE_BLEND",
+    "TDVG": "LARGE_BLEND",
     "TEGS": "OTHER",
     "TFFI": "OTHER",
     "TFI": "MUNICIPAL_BONDS",
     "TFPN": "TREND_FOLLOWING",
+    "TGRT": "LARGE_GROWTH",
     "THMZ": "OTHER",
     "TIP": "TREASURIES",
     "TLH": "TREASURIES",
@@ -535,6 +552,7 @@
     "TLTW": "TREASURIES",
     "TRDF": "OTHER",
     "TRND": "OTHER",
+    "TVAL": "LARGE_VALUE",
     "USFR": "BANK_LOANS",
     "USHY": "JUNK_BONDS",
     "USMV": "LARGE_BLEND",
@@ -578,6 +596,7 @@
     "VTIP": "TREASURIES",
     "VTV": "LARGE_VALUE",
     "VUG": "LARGE_GROWTH",
+    "VV": "LARGE_BLEND",
     "VWO": "EMERGING_MARKETS",
     "VWOB": "BONDS",
     "VXUS": "INTERNATIONAL",
@@ -595,7 +614,8 @@
     "XLRE": "REAL_ESTATE",
     "XLU": "UTILITIES",
     "XLV": "HEALTH",
-    "XLY": "CONSUMER_CYCLICAL"
+    "XLY": "CONSUMER_CYCLICAL",
+    "XMAG": "LARGE_BLEND"
   },
   "nameRules": [
     {
@@ -674,7 +694,10 @@
         "focused growth",
         "growth opportunities",
         "capital group growth",
-        "dynamic growth"
+        "dynamic growth",
+        "concentrated equity",
+        "hypergrowth",
+        "us select growth"
       ],
       "code": "LARGE_GROWTH"
     },
@@ -739,7 +762,15 @@
         "us equity market",
         "u.s. equity strategy",
         "select u.s. equity",
-        "ftse usa"
+        "ftse usa",
+        "factor large cap",
+        "u.s. equity factor",
+        "multi-factor u.s. equity",
+        "u.s. momentum",
+        "u.s. minimum volatility",
+        "us high profitability",
+        "us sustainability core",
+        "s&p 100"
       ],
       "code": "LARGE_BLEND"
     },
@@ -769,7 +800,11 @@
         "largecap dividend",
         "total dividend",
         "shareholder yield",
-        "u.s. core dividend"
+        "u.s. core dividend",
+        "active value",
+        "dividend value",
+        "large-cap value",
+        "valuation large cap"
       ],
       "code": "LARGE_VALUE"
     },
@@ -777,7 +812,8 @@
       "keywords": [
         "mid cap growth",
         "mid-cap growth",
-        "smid growth"
+        "smid growth",
+        "next gen 100"
       ],
       "code": "MID_CAP_GROWTH"
     },
@@ -803,7 +839,8 @@
         "extended market",
         "enhanced mid cap",
         "small-mid multifactor",
-        "small & mid cap"
+        "small & mid cap",
+        "multifactor mid cap"
       ],
       "code": "MID_CAP_BLEND"
     },
@@ -843,7 +880,8 @@
       "keywords": [
         "small value",
         "small cap value",
-        "small-cap value"
+        "small-cap value",
+        "targeted value"
       ],
       "code": "SMALL_VALUE"
     },
@@ -902,7 +940,8 @@
         "asia pacific ex",
         "global growth",
         "world ex u.s.",
-        "world (ex-us)"
+        "world (ex-us)",
+        "worldwide"
       ],
       "code": "INTERNATIONAL"
     },
@@ -1043,7 +1082,8 @@
         "vietnam",
         "africa",
         "latin america",
-        "star market"
+        "star market",
+        "em core ex-china"
       ],
       "code": "EMERGING_MARKETS"
     },
@@ -1397,7 +1437,8 @@
         "balanced allocation",
         "flexible allocation",
         "moderate allocation",
-        "core balanced"
+        "core balanced",
+        "u.s. efficient core"
       ],
       "code": "MULTI_ASSET"
     },
@@ -1412,7 +1453,9 @@
       "keywords": [
         "bitcoin",
         "ethereum",
-        "digital asset"
+        "digital asset",
+        "xrp",
+        "hyperliquid"
       ],
       "code": "CRYPTO"
     },
