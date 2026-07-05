@@ -641,7 +641,9 @@
         "mega cap growth",
         "mega-cap growth",
         "russell top 200 growth",
-        "quality growth"
+        "quality growth",
+        "morningstar growth",
+        "blue chip growth"
       ],
       "code": "LARGE_GROWTH"
     },
@@ -668,7 +670,14 @@
         "mega-cap",
         "russell top 200",
         "momentum factor",
-        "quality factor"
+        "quality factor",
+        "morningstar u.s. equity",
+        "wide moat",
+        "moat etf",
+        "market factor tilt",
+        "blue chip",
+        "dow jones industrial",
+        "dow jones u.s."
       ],
       "code": "LARGE_BLEND"
     },
@@ -681,7 +690,14 @@
         "large cap value",
         "mega cap value",
         "value factor",
-        "dividend multiplier"
+        "dividend multiplier",
+        "rising dividend",
+        "dividend leaders",
+        "dividend achievers",
+        "superdividend",
+        "strategic dividend",
+        "s&p dividend",
+        "morningstar value"
       ],
       "code": "LARGE_VALUE"
     },
@@ -784,7 +800,14 @@
       "keywords": [
         "international",
         "developed markets",
-        "europe"
+        "europe",
+        "global dividend",
+        "global equity",
+        "global stock market",
+        "global select equity",
+        "global 100",
+        "global value",
+        "islamic world"
       ],
       "code": "INTERNATIONAL"
     },
@@ -845,7 +868,13 @@
         "international high dividend",
         "international large cap value",
         "intl value factor",
-        "international value factor"
+        "international value factor",
+        "international dividend",
+        "intl dividend",
+        "international quality dividend",
+        "intl quality dividend",
+        "international dividend growth",
+        "global select dividend"
       ],
       "code": "FOREIGN_LARGE_VALUE"
     },
@@ -903,7 +932,8 @@
       "keywords": [
         "consumer cyclical",
         "consumer discretionary",
-        "e-commerce"
+        "e-commerce",
+        "retail"
       ],
       "code": "CONSUMER_CYCLICAL"
     },
@@ -928,7 +958,9 @@
         "midstream",
         "clean power",
         "green energy",
-        "clean edge"
+        "clean edge",
+        "hydrogen",
+        "mlp etf"
       ],
       "code": "EQUITY_ENERGY"
     },
@@ -948,7 +980,8 @@
         "defense tech",
         "aerospace & defense",
         "space tech",
-        "defense industry"
+        "defense industry",
+        "transportation"
       ],
       "code": "INDUSTRIALS"
     },
@@ -962,7 +995,14 @@
       "keywords": [
         "natural resources",
         "rare earth",
-        "strategic metals"
+        "strategic metals",
+        "materials",
+        "basic materials",
+        "metals & mining",
+        "metals and mining",
+        "copper miners",
+        "mining producers",
+        "lithium"
       ],
       "code": "NATURAL_RESOURCES"
     },
@@ -978,7 +1018,10 @@
         "blockchain",
         "magnificent seven",
         "metaverse",
-        "next gen connectivity"
+        "next gen connectivity",
+        "global tech",
+        "internet of things",
+        "internet"
       ],
       "code": "TECHNOLOGY"
     },
@@ -999,7 +1042,10 @@
       "keywords": [
         "financial sector",
         "regional bank",
-        "capital markets"
+        "capital markets",
+        "bank etf",
+        "s&p bank",
+        "insurance"
       ],
       "code": "FINANCIAL"
     },
@@ -1075,7 +1121,8 @@
         "emerging markets fixed",
         "emerging markets local",
         "emerging markets sovereign",
-        "emerging markets corporate"
+        "emerging markets corporate",
+        "sukuk"
       ],
       "code": "BONDS"
     },
