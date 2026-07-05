@@ -677,7 +677,13 @@
         "market factor tilt",
         "blue chip",
         "dow jones industrial",
-        "dow jones u.s."
+        "dow jones u.s.",
+        "betabuilders u.s. equity",
+        "u.s. quality",
+        "us quality",
+        "quality large cap",
+        "kld 400",
+        "quantitative momentum"
       ],
       "code": "LARGE_BLEND"
     },
@@ -697,14 +703,16 @@
         "superdividend",
         "strategic dividend",
         "s&p dividend",
-        "morningstar value"
+        "morningstar value",
+        "quantitative value"
       ],
       "code": "LARGE_VALUE"
     },
     {
       "keywords": [
         "mid cap growth",
-        "mid-cap growth"
+        "mid-cap growth",
+        "smid growth"
       ],
       "code": "MID_CAP_GROWTH"
     },
@@ -722,7 +730,10 @@
         "us mid cap",
         "small-mid cap",
         "small/mid cap",
-        "s&p 400"
+        "s&p 400",
+        "smid core",
+        "smid cap",
+        "small and mid cap"
       ],
       "code": "MID_CAP_BLEND"
     },
@@ -852,7 +863,12 @@
         "msci denmark",
         "msci norway",
         "msci new zealand",
-        "msci ireland"
+        "msci ireland",
+        "ftse pacific",
+        "betabuilders japan",
+        "betabuilders canada",
+        "betabuilders developed",
+        "betabuilders europe"
       ],
       "code": "FOREIGN_LARGE_BLEND"
     },
@@ -915,7 +931,9 @@
         "msci argentina",
         "msci vietnam",
         "msci kuwait",
-        "msci chile"
+        "msci chile",
+        "ftse taiwan",
+        "ftse south korea"
       ],
       "code": "EMERGING_MARKETS"
     },
@@ -960,7 +978,10 @@
         "green energy",
         "clean edge",
         "hydrogen",
-        "mlp etf"
+        "mlp etf",
+        "global energy",
+        "msci energy",
+        "wind energy"
       ],
       "code": "EQUITY_ENERGY"
     },
@@ -981,7 +1002,9 @@
         "aerospace & defense",
         "space tech",
         "defense industry",
-        "transportation"
+        "transportation",
+        "global industrials",
+        "msci industrials"
       ],
       "code": "INDUSTRIALS"
     },
@@ -1002,7 +1025,9 @@
         "metals and mining",
         "copper miners",
         "mining producers",
-        "lithium"
+        "lithium",
+        "global materials",
+        "msci materials"
       ],
       "code": "NATURAL_RESOURCES"
     },
@@ -1034,7 +1059,10 @@
         "biotech",
         "pharmaceutical",
         "medical devices",
-        "genomics"
+        "genomics",
+        "global health",
+        "msci health",
+        "health & wellness"
       ],
       "code": "HEALTH"
     },
@@ -1045,7 +1073,9 @@
         "capital markets",
         "bank etf",
         "s&p bank",
-        "insurance"
+        "insurance",
+        "global financials",
+        "msci financials"
       ],
       "code": "FINANCIAL"
     },
@@ -1122,7 +1152,9 @@
         "emerging markets local",
         "emerging markets sovereign",
         "emerging markets corporate",
-        "sukuk"
+        "sukuk",
+        "mortgage-backed",
+        "mortgage backed"
       ],
       "code": "BONDS"
     },
