@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.3";
+const APP_VERSION = "v2.4";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -307,6 +307,7 @@ const state = {
   dbError: "",
   splitPercent: loadJson(SPLIT_STORAGE_KEY, 45),
   planning: loadJson("planning", { expenses: 360000, reserveTarget: 1500000, taxLT: 0.238, taxST: 0.408 }),
+  hiddenAccounts: new Set(loadJson("hiddenAccounts", [])),   // account-source toggles (persisted; empty = all on)
 };
 
 const el = {
@@ -314,6 +315,7 @@ const el = {
   appVersion: document.querySelector("#appVersion"),
   manualVersion: document.querySelector("#manualVersion"),
   metrics: document.querySelector("#dashboard"),
+  acctFilter: document.querySelector("#acctFilter"),
   scopeSummary: document.querySelector("#scopeSummary"),
   planning: document.querySelector("#planning"),
   convexity: document.querySelector("#convexity"),
@@ -660,10 +662,11 @@ async function applyImport(sourceName = "CSV import") {
 }
 
 function render() {
-  const cube = buildPortfolioCube(state.holdings);
+  const cube = buildPortfolioCube(visibleHoldings());        // account toggles apply upstream of everything
   state._cube = cube;   // stashed so the dial slider can re-render without a full rebuild
   applyWorkspaceSplit();
   renderTitle();
+  renderAccountFilter();
   renderMarketRef();
   renderSleeves(cube);
   renderMetrics(cube);
@@ -715,9 +718,67 @@ function handleSplitterKey(event) {
 
 function renderTitle() {
   const all = isAllScope();
-  el.viewLabel.textContent = all ? "Portfolio overview" : (state.selectedBucket ? "Bucket drill-down" : "Sleeve drill-down");
+  let label = all ? "Portfolio overview" : (state.selectedBucket ? "Bucket drill-down" : "Sleeve drill-down");
+  if (accountFilterActive()) {
+    const total = distinctAccounts().length;
+    const on = total - distinctAccounts().filter(([k]) => state.hiddenAccounts.has(k)).length;
+    label += ` · ${on} of ${total} accounts`;               // the active filter is never silent
+  }
+  el.viewLabel.textContent = label;
   el.viewTitle.textContent = all ? "Investment Portfolio" : selectionLabel();
   el.holdingsTitle.textContent = all ? "All Holdings" : `${selectionLabel()} Holdings`;
+}
+
+// The account-source pill row: presets (All / Self-managed / Advisor) + one toggle pill per
+// account (largest first, with its market value). Hidden entirely for single-account books.
+function renderAccountFilter() {
+  if (!el.acctFilter) return;
+  const accounts = distinctAccounts();
+  // keep the row visible whenever a filter is ACTIVE — a persisted hidden account plus a
+  // single-account import would otherwise blank every panel with no recovery UI
+  if (accounts.length < 2 && !accountFilterActive()) { el.acctFilter.innerHTML = ""; el.acctFilter.style.display = "none"; return; }
+  el.acctFilter.style.display = "";
+  const names = accounts.map(([k]) => k);
+  const advisor = names.filter((n) => ADVISOR_ACCOUNTS.has(n));
+  const self = names.filter((n) => !ADVISOR_ACCOUNTS.has(n));
+  const isAll = !names.some((n) => state.hiddenAccounts.has(n));
+  const isSelf = self.length && self.every((n) => !state.hiddenAccounts.has(n))
+    && advisor.length > 0 && advisor.every((n) => state.hiddenAccounts.has(n));
+  const isAdv = advisor.length && advisor.every((n) => !state.hiddenAccounts.has(n))
+    && self.length > 0 && self.every((n) => state.hiddenAccounts.has(n));
+  const presets = [
+    ["all", "All", isAll], ["self", "Self-managed", isSelf], ["advisor", "Advisor", isAdv],
+  ].map(([key, lbl, on]) =>
+    `<button class="acctPreset ${on ? "on" : ""}" data-preset="${key}">${lbl}</button>`).join("");
+  const pills = accounts.map(([name, mv]) => {
+    const on = !state.hiddenAccounts.has(name);
+    return `<button class="acctPill ${on ? "on" : "off"}" data-acct="${escapeAttr(name)}"
+      title="${on ? "Click to exclude" : "Click to include"} — $${(mv / 1e6).toFixed(2)}M">
+      ${escapeHtml(name)} <em>$${(mv / 1e6).toFixed(1)}M</em></button>`;
+  }).join("");
+  el.acctFilter.innerHTML =
+    `<span class="acctLabel" title="Account sources included in every client-computed panel below. Dial / Overlay / Risk are precomputed snapshots and carry a caveat badge when this filter is active.">Accounts</span>${presets}<span class="acctDivider"></span>${pills}`;
+  el.acctFilter.querySelectorAll(".acctPill").forEach((b) => b.addEventListener("click", () => {
+    const name = b.getAttribute("data-acct");
+    if (state.hiddenAccounts.has(name)) state.hiddenAccounts.delete(name);
+    else state.hiddenAccounts.add(name);
+    saveHiddenAccounts();
+    render();
+  }));
+  el.acctFilter.querySelectorAll(".acctPreset").forEach((b) => b.addEventListener("click", () => {
+    const key = b.getAttribute("data-preset");
+    state.hiddenAccounts = new Set(
+      key === "all" ? [] : key === "self" ? advisor : self);
+    saveHiddenAccounts();
+    render();
+  }));
+}
+
+// Caveat badge for the PRECOMPUTED panels (Dial / Overlay / Risk): their numbers come from
+// portfolio_analysis.py slices and cannot honor an arbitrary account toggle set in the browser.
+function acctCaveatBadge() {
+  if (!accountFilterActive()) return "";
+  return `<div class="acctCaveat" title="This panel is precomputed by portfolio_analysis.py per fixed slice (Total / tax track / account) and cannot re-slice to your current account toggles. Its numbers reflect its OWN scope selector, not the pill row above.">⚠ Precomputed — <strong>not filtered</strong> by your account toggles</div>`;
 }
 
 // Reference rates near the top — the live risk-free (90-day Treasury, DGS3MO) and CPI YoY (headline
@@ -786,6 +847,44 @@ function inSelection(holding) {
   if (state.selectedSleeve !== "All") return holding.sleeve === state.selectedSleeve;
   return true;
 }
+
+// ── Account-source toggles (like the Forge Portfolio tab) ─────────────────────
+// The filter composes UPSTREAM of the sleeve selection: every client-side analysis panel
+// (cube/sleeve tree, metrics, pivot, holdings, planning, convexity, allocation) computes from
+// visibleHoldings(). Precomputed snapshot panels (Dial / Overlay / Risk — baked by
+// portfolio_analysis.py per fixed slice) CANNOT re-slice to an arbitrary account set in the
+// browser; they show a caveat badge instead when the filter is active. Snapshot performance
+// history likewise stays whole-book. hiddenAccounts is persisted (localStorage) — the active
+// filter is surfaced in the title, the pill row, and the badges, never silent.
+// Pure core (also the test seam — `function` declarations are reachable from the vm test
+// harness; top-level consts are not): the stateful wrappers below close over `state`.
+function advisorAccounts() {
+  return new Set(["Living Trust", "Partnership", "Fidelity_AQR_FLEX45_Portfolio",
+                  "Limit Liability Company"]);
+}
+function accountKey(holding) { return holding.brokerageAccount || "(No account)"; }
+function filterByAccounts(holdings, hidden) {
+  return hidden && hidden.size ? holdings.filter((h) => !hidden.has(accountKey(h))) : holdings;
+}
+function distinctAccountsOf(holdings) {
+  const mv = new Map();
+  for (const h of holdings) {
+    const k = accountKey(h);
+    mv.set(k, (mv.get(k) || 0) + (h.marketValue || 0));
+  }
+  return [...mv.entries()].sort((a, b) => b[1] - a[1]);       // [name, marketValue] by size
+}
+function accountFilterActiveFor(holdings, hidden) {
+  // active only when a hidden account actually exists in the book (a stale persisted name
+  // from an old import must not flag a filter that excludes nothing)
+  if (!hidden || !hidden.size) return false;
+  return holdings.some((h) => hidden.has(accountKey(h)));
+}
+const ADVISOR_ACCOUNTS = advisorAccounts();
+function visibleHoldings() { return filterByAccounts(state.holdings, state.hiddenAccounts); }
+function distinctAccounts() { return distinctAccountsOf(state.holdings); }
+function accountFilterActive() { return accountFilterActiveFor(state.holdings, state.hiddenAccounts); }
+function saveHiddenAccounts() { saveJson("hiddenAccounts", [...state.hiddenAccounts]); }
 function isAllScope() { return !state.selectedBucket && !state.selectedSubGroup && state.selectedSleeve === "All"; }
 function selectionLabel() { return state.selectedSubGroup || state.selectedBucket || (state.selectedSleeve === "All" ? "All" : state.selectedSleeve); }
 function revealHoldings() { el.holdings?.scrollIntoView({ behavior: "smooth", block: "start" }); }
@@ -918,10 +1017,14 @@ function navButton(label, onClick, meta, active) {
 }
 
 function renderMetrics(cube) {
-  const selectedHoldings = isAllScope() ? state.holdings : state.holdings.filter(inSelection);
+  const base = visibleHoldings();                            // account toggles scope the whole panel
+  const selectedHoldings = isAllScope() ? base : base.filter(inSelection);
   const selectedValue = selectedHoldings.reduce((sum, holding) => sum + holding.marketValue, 0);
-  const selectedCostBasis = selectedHoldings.reduce((sum, holding) => sum + (holding.costBasis || 0), 0);
-  const selectedGain = selectedValue - selectedCostBasis;
+  // ONE gain convention app-wide (P3-34, mirrors buildPortfolioCube): basis present iff
+  // costBasis != null; missing-basis holdings contribute NO gain (they were counted as
+  // 100% gain here — the dashboard and Planning disagreed by exactly cube.noBasisValue).
+  const _hasBasis = (h) => h.costBasis !== undefined && h.costBasis !== null;
+  const selectedGain = selectedHoldings.reduce((s, h) => s + (_hasBasis(h) ? h.marketValue - h.costBasis : 0), 0);
   const selectedAllocation = cube.totalValue ? selectedValue / cube.totalValue : 0;
   const selectedLabel = isAllScope() ? "Portfolio Value" : `${selectionLabel()} Value`;
 
@@ -932,11 +1035,10 @@ function renderMetrics(cube) {
   const beta = betaDen ? betaNum / betaDen : 0;
 
   // Top dashboard: the All-Portfolio summary — always pinned, unchanged on drill-down (as before).
-  const allCost = state.holdings.reduce((s, h) => s + (h.costBasis || 0), 0);
-  const allGain = cube.totalValue - allCost;
-  const allBetaNum = state.holdings.reduce((s, h) => s + (h.marketValue || 0) * (h.beta || 0), 0);
-  const allBetaDen = state.holdings.reduce((s, h) => s + (h.marketValue || 0), 0);
-  const allHasBeta = state.holdings.some((h) => h.beta != null);
+  const allGain = cube.unrealizedGain;                       // same hasBasis convention as Planning
+  const allBetaNum = base.reduce((s, h) => s + (h.marketValue || 0) * (h.beta || 0), 0);
+  const allBetaDen = base.reduce((s, h) => s + (h.marketValue || 0), 0);
+  const allHasBeta = base.some((h) => h.beta != null);
   el.metrics.replaceChildren(
     metric("Portfolio Value", money(cube.totalValue)),
     metric("Total Portfolio", money(cube.totalValue)),
@@ -1110,7 +1212,7 @@ function renderOverlay() {
     `<em>Treasuries ${signPct(v.treasuries)}/yr</em>` +
     `<strong class="${v.trend >= 0 ? "good" : "warn"}">Trend ${signPct(v.trend)}/yr</strong></div>`).join("");
   const win = `${(S.window[0] || "").slice(0, 4)}–${(S.window[1] || "").slice(0, 4)}`;
-  el.overlay.innerHTML = `
+  el.overlay.innerHTML = acctCaveatBadge() + `
     <div class="panelHeader">
       <div>
         <p class="eyebrow">Structural convexity &middot; volatility-managed construction</p>
@@ -1169,7 +1271,7 @@ function renderRisk() {
   const wbtns = ["3Y", "1Y"].filter((k) => sliceWindows[k]).map((k) =>
     `<button class="rkWin ${k === winKey ? "active" : ""}" data-win="${k}">${k}</button>`).join("");
   const controls = `<div class="rkControls"><label class="rkSliceWrap">View <select class="rkSlice">${scopeOpts}</select></label>${withinSel}<span class="rkWindows">Lookback ${wbtns}</span></div>`;
-  const header = `<div class="panelHeader"><div><p class="eyebrow">Where the risk actually is — capital vs risk, by asset class · <strong>standalone per slice</strong></p><h2>Risk Contribution</h2></div><span class="pill" title="${escapeAttr(S.method || "")}">${escapeHtml(sliceLabel)}</span></div>`;
+  const header = acctCaveatBadge() + `<div class="panelHeader"><div><p class="eyebrow">Where the risk actually is — capital vs risk, by asset class · <strong>standalone per slice</strong></p><h2>Risk Contribution</h2></div><span class="pill" title="${escapeAttr(S.method || "")}">${escapeHtml(sliceLabel)}</span></div>`;
   const wire = () => {
     const sel = el.risk.querySelector(".rkSlice");
     if (sel) sel.addEventListener("change", () => { state.riskSlice = sel.value; state.riskWithin = null; renderRisk(); });
@@ -1320,7 +1422,7 @@ function renderDial(cube) {
   const cashUsd = g.cash * total, floorYrs = exp ? cashUsd / exp : 0;
   const eqUsd = g.equity * total, trendUsd = (S.hedge.TREND || 0) * total;
   const hedgePill = `hedge fixed: ${Math.round((S.hedge.TREND || 0) * 100)}% trend · ${Math.round((S.hedge.TR || 0) * 100)}% Treas · ${Math.round((S.hedge.GLD || 0) * 100)}% gold`;
-  el.dial.innerHTML = `
+  el.dial.innerHTML = acctCaveatBadge() + `
     <div class="panelHeader">
       <div><p class="eyebrow">Two-bucket dial · set it together</p><h2>Preservation ↔ Growth Dial</h2></div>
       <span class="pill ovPill">${hedgePill}</span>
@@ -1344,7 +1446,9 @@ function renderDial(cube) {
     </div>
     <div class="planNote">Slide toward <b>Growth</b> (her 40-yr horizon) or <b>Conservative</b> (your floor) — the hedge stays on at every setting, so any point beats unhedged all-equity on both drawdown and risk-adjusted return. <b>The hedge blends three mechanisms, not one:</b> <b>trend</b> = convexity (the crash-payoff engine), <b>Treasuries</b> = duration / ballast (flight-to-quality — but <em>regime-dependent</em>: it failed in 2022's rate shock, where <b>trend</b> carried the hedge — see the 2022 row), <b>gold</b> = diversifier (low-correlation, <em>not</em> convex). So this is a multi-mechanism crash hedge, not a pure convexity sleeve. ${escapeHtml(S.note || "")}</div>`;
   const inp = el.dial.querySelector("input[data-dial]");
-  if (inp) inp.addEventListener("input", () => {
+  // "change" (commit on release), NOT "input": the re-render replaces el.dial.innerHTML,
+  // which destroys the <input> mid-drag — the gesture died after one 5-pt step.
+  if (inp) inp.addEventListener("change", () => {
     state.planning = { ...state.planning, dialEquityPct: Number(inp.value) / 100 };
     saveJson("planning", state.planning);
     renderDial(state._cube || cube);   // light re-render — no full rebuild
@@ -1406,10 +1510,11 @@ function renderDrillPath() {
 }
 
 function representativeHolding() {
-  const filtered = state.holdings
+  const base = visibleHoldings();
+  const filtered = base
     .filter((holding) => isAllScope() || inSelection(holding))
     .sort((a, b) => b.marketValue - a.marketValue);
-  return filtered[0] || state.holdings.slice().sort((a, b) => b.marketValue - a.marketValue)[0];
+  return filtered[0] || base.slice().sort((a, b) => b.marketValue - a.marketValue)[0];
 }
 
 function parentPath(sleeve) {
@@ -1641,7 +1746,7 @@ function renderPivot() {
   if (!el.pivot) return;
   const rowDim = pivotDim(state.pivotRow);
   const colDim = state.pivotCol === "none" ? null : pivotDim(state.pivotCol);
-  const hs = state.holdings;
+  const hs = visibleHoldings();
   const e = escapeHtml;
   if (!hs.length) { el.pivot.innerHTML = ""; return; }
   const grand = hs.reduce((s, h) => s + (h.marketValue || 0), 0) || 1;
@@ -1836,7 +1941,7 @@ function renderPivot() {
 
 function renderHoldings() {
   const query = state.query.trim().toLowerCase();
-  const holdings = state.holdings.filter((holding) => {
+  const holdings = visibleHoldings().filter((holding) => {
     const queryMatch =
       !query || holding.ticker.toLowerCase().includes(query) || holding.assetName.toLowerCase().includes(query);
     // A clicked pivot cell takes precedence over the sidebar sleeve selection.
@@ -1867,7 +1972,7 @@ function renderHoldings() {
   // ADAPTIVE Shares + Price columns: only shown when the imported book carries share counts (the
   // value-only consolidated book has none → hidden; a broker CSV with Qty shows them). Price is
   // DERIVED value÷shares so a merged row gets a correct weighted price even when lots differ.
-  const hasShares = state.holdings.some((h) => (h.shares || 0) > 0);
+  const hasShares = visibleHoldings().some((h) => (h.shares || 0) > 0);   // match the filtered table
   el.holdingsHead.innerHTML =
     `<th>Ticker</th><th>Asset</th>` + (isAll ? `<th>Sleeve</th>` : ``) +
     (hasShares ? `<th class="num">Shares</th><th class="num">Price</th>` : ``) +
@@ -1894,7 +1999,12 @@ function renderHoldings() {
         select.innerHTML = sleeveOpts.map((sleeve) => `<option value="${escapeAttr(sleeve)}">${escapeHtml(sleeve)}</option>`).join("");
         select.value = g.sleeve;
         select.addEventListener("change", () => {
-          for (const h of g.lots) {            // reassigning a merged row moves every underlying lot
+          // reassigning a merged row moves every underlying lot of the ASSET — matched across
+          // state.holdings, NOT g.lots: with an account filter active g.lots holds only the
+          // visible lots, and mutating just those would persist a split sleeve for the asset
+          const gKey = assignmentKey(g.ticker, g.assetName);
+          for (const h of state.holdings) {
+            if (assignmentKey(h.ticker, h.assetName) !== gKey) continue;
             if (h.importedSleeve && select.value === h.importedSleeve) {
               // back to the imported sleeve → CLEAR the override so the import wins again
               delete state.assignments[assignmentKey(h.ticker, h.assetName)];
@@ -2373,7 +2483,10 @@ function normalizeDate(value) {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  // LOCAL date — toISOString() is UTC and returns TOMORROW during CT evenings, mis-keying
+  // evening snapshots (snapshot-<date>) and the default valuation date
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function clamp(value, min, max) {

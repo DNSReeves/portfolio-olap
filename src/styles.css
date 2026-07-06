@@ -1286,3 +1286,16 @@ body.pivotFullOpen { overflow: hidden; }
 .manualSearch button:hover { background: #eef2f4; }
 mark.manualHit { background: #ffe9a8; color: inherit; border-radius: 2px; padding: 0 1px; }
 mark.manualHit.current { background: #ffb300; box-shadow: 0 0 0 2px #ff9800; }
+
+/* ── Account-source toggles (v2.4) ─────────────────────────────────────────── */
+.acctFilter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 10px; }
+.acctLabel { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6b72; margin-right: 2px; cursor: help; }
+.acctDivider { width: 1px; height: 18px; background: #cfd9dd; margin: 0 4px; }
+.acctPreset, .acctPill { border: 1px solid #cfd9dd; background: #ffffff; color: #2c3a41; border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; line-height: 1.4; }
+.acctPreset:hover, .acctPill:hover { background: #eef2f4; }
+.acctPreset.on { border-color: #0f766e; color: #0f766e; font-weight: 600; background: #ecfdf5; }
+.acctPill em { font-style: normal; color: #7c8a91; font-size: 11px; margin-left: 3px; }
+.acctPill.on { border-color: #0f766e; color: #114b46; background: #f0fdfa; }
+.acctPill.off { opacity: 0.45; text-decoration: line-through; }
+.acctPill.off em { text-decoration: none; }
+.acctCaveat { font-size: 12px; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 5px 10px; margin: 0 0 8px; cursor: help; }
