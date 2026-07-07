@@ -355,6 +355,31 @@ The **convex role** describes a sleeve's job in the portfolio's "crash shape". N
 
 Any drill-in scrolls the holdings table into view automatically. The title and table update to the selected scope.
 
+### Account scope: the pill row
+
+Above the dashboard, one pill per brokerage account (largest market value first, value shown on
+hover) plus three presets:
+
+- **All** — the full book (the default; equivalent to every pill on).
+- **Self-managed** — the accounts you run directly (Fidelity_Portfolio, Bond Account, TIAA-CREF,
+  DNSR-IRA, RMD Receiver).
+- **Advisor** — the advisor-managed entities (Living Trust · Partnership · Fidelity_AQR_FLEX45 · LLC).
+
+Click any pill to toggle that account in or out; the selection applies to **every
+client-computed panel** — sleeve sidebar, dashboard metrics, Planning, Convexity, Pivot,
+Allocation, Top Holdings, and the holdings table — and **persists across sessions**
+(browser-local). An active filter is never silent: the header shows *n of m accounts* and off
+pills render struck-through.
+
+Two things the pills cannot re-slice, by design:
+
+- The **Dial / Sortino Overlay / Risk Contribution** panels are *precomputed* per fixed slice by
+  `portfolio_analysis.py` — with a filter active they show an amber **"Precomputed — not
+  filtered"** badge; use the Risk panel's own **View** selector to scope those.
+- **Snapshot performance history** stays whole-book.
+
+Books with a single account hide the row entirely.
+
 ### Pivot / Matrix: cross-tab any two dimensions
 
 The **Pivot / Matrix** panel (below Convexity) re-slices the whole book by dimensions you choose, independent of the sidebar selection. Pick a **Rows** dimension and, optionally, a **Columns** dimension:
@@ -633,6 +658,7 @@ If future versions add cloud sync, brokerage integrations, market data APIs, or 
 - There is no target allocation or rebalancing workflow yet.
 - Manual assignments are browser-local and do not automatically move between devices.
 - Classification is rule-based, not a full security master or AI classifier.
+- The account-source pills re-slice client-computed panels only; the precomputed panels (Dial / Sortino Overlay / Risk Contribution) and snapshot history stay whole-book and show a badge instead (see *Account scope: the pill row*).
 - The Risk Contribution panel only measures holdings with a market-price series in the warehouse; non-marked holdings (CDs, annuities, private funds) are excluded, so a private-heavy slice covers only its marked portion (the panel's banner states the coverage).
 
 ## 6. Recommended Next Enhancements
