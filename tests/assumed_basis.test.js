@@ -72,3 +72,19 @@ ok("history export: shape, sort, basisAssumed carried", () => {
 });
 
 console.log("assumed_basis: all green");
+
+// ── H1 (v2.4.5): the CAGR/Down-Vol relabel ──
+ok("cagrDownVol: honest key preferred, legacy sortino fallback", () => {
+  assert.strictEqual(app.cagrDownVol({ cagr_downvol: 1.2, sortino: 9.9 }), 1.2);
+  assert.strictEqual(app.cagrDownVol({ sortino: 1.19 }), 1.19);        // legacy snapshot
+  assert.ok(Number.isNaN(app.cagrDownVol({})));
+  assert.ok(Number.isNaN(app.cagrDownVol(null)));
+});
+
+ok("UI captions say CAGR/Down-Vol, not bare Sortino values", () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "src", "app.js"), "utf8");
+  assert.ok(src.includes("Current CAGR/Down-Vol"));
+  assert.ok(src.includes("CAGR/Down-Vol (risk-adjusted)"));
+  assert.ok(src.includes("not textbook Sortino"));                     // the honest tooltip
+  assert.ok(!/Sortino \$\{/.test(src), "no caption renders a value under the bare Sortino label");
+});

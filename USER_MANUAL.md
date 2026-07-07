@@ -16,6 +16,16 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.4.5 — what's new
+
+- **"Sortino" honestly relabeled CAGR/Down-Vol** (finishing the P3-12 relabel across the OLAP
+  contract): the ratio these panels publish is CAGR ÷ (std dev of *negative months*, annualized) —
+  a Sortino-*style* ratio, not textbook Sortino (which uses downside deviation of all months vs a
+  minimum acceptable return). All metric captions in the Overlay and Dial panels now read
+  **CAGR/Down-Vol** with the definition on hover; the panel keeps its familiar "Sortino Overlay"
+  name with a "CAGR/Down-Vol basis" subtitle. Snapshots carry the honest `cagr_downvol` key
+  (the legacy `sortino` key remains one release for compatibility, then drops).
+
 ### Version 2.4.4 — what's new
 
 - **Assumed cost basis (operator convention):** a holding whose source export carries no basis

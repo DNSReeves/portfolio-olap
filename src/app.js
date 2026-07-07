@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.4.4";
+const APP_VERSION = "v2.4.5";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -1267,6 +1267,18 @@ function combineOverlayViews(views, names) {
   return { monthly, mv, coverage, weights, n: sel.length };
 }
 
+// H1 (IMPL_HARDENING, 2026-07-07): the ratio published as "Sortino" is CAGR ÷ (σ of
+// NEGATIVE months ×√12) — Sortino-STYLE, not textbook Sortino (downside deviation vs a
+// MAR). UI now captions it CAGR/Down-Vol; snapshots carry the honest `cagr_downvol`
+// key (legacy `sortino` read as fallback for one release).
+const CDV_TIP = "CAGR divided by downside volatility (std dev of NEGATIVE months, annualized). "
+  + "A Sortino-style ratio - higher is better - but not textbook Sortino, which uses downside "
+  + "deviation of ALL months versus a minimum acceptable return.";
+function cagrDownVol(o) {
+  const v = o && (o.cagr_downvol !== undefined && o.cagr_downvol !== null ? o.cagr_downvol : o.sortino);
+  return typeof v === "number" ? v : NaN;
+}
+
 function renderOverlay() {
   if (!el.overlay) return;
   const S = OVERLAY_SNAPSHOT;
@@ -1275,7 +1287,7 @@ function renderOverlay() {
   const cur = S.current;
   const deployRows = S.deploy.map((d) =>
     `<div class="ovRow"><span>Deploy $${d.usd_m.toFixed(1)}M (${percent(d.pct)}) → trend</span>` +
-    `<em>Sortino ${cur.sortino.toFixed(2)} → ${d.sortino.toFixed(2)}</em>` +
+    `<em>CAGR/DV ${cagrDownVol(cur).toFixed(2)} → ${cagrDownVol(d).toFixed(2)}</em>` +
     `<em>maxDD ${percent(d.mdd)}</em>` +
     `<strong class="${d.ret_2022 >= 0 ? "good" : "warn"}">2022 ${signPct(d.ret_2022)}</strong></div>`).join("");
   const regRows = Object.entries(S.regime).map(([k, v]) =>
@@ -1305,7 +1317,7 @@ function renderOverlay() {
         <div class="ovBlock"><p class="eyebrow">Your selection — ${combined.n} account(s), ${money(combined.mv)}${covNote}</p>
         <div class="planMetrics metrics">
           <div class="metric"><span>Selection CAGR</span><strong>${percent(m.cagr)}</strong></div>
-          <div class="metric"><span>Selection Sortino</span><strong>${Number.isFinite(m.sortino) ? m.sortino.toFixed(2) : "—"}</strong></div>
+          <div class="metric" title="${escapeAttr(CDV_TIP)}"><span>Selection CAGR/Down-Vol</span><strong>${Number.isFinite(m.sortino) ? m.sortino.toFixed(2) : "—"}</strong></div>
           <div class="metric"><span>Selection maxDD</span><strong>${percent(m.mdd)}</strong></div>
           <div class="metric"><span>Selection vol</span><strong>${percent(m.vol)}</strong></div>
         </div>
@@ -1324,15 +1336,15 @@ function renderOverlay() {
     <div class="panelHeader">
       <div>
         <p class="eyebrow">Structural convexity &middot; volatility-managed construction</p>
-        <h2>Sortino Overlay Backtest</h2>
+        <h2>Sortino Overlay Backtest <em class="cxSub" title="${escapeAttr(CDV_TIP)}">CAGR/Down-Vol basis</em></h2>
       </div>
       <span class="pill ovPill" title="${escapeAttr(S.note)}">as-of ${escapeHtml(S.data_as_of || "?")} &middot; ${escapeHtml(win)} monthly</span>
     </div>
     <div class="planMetrics metrics">
-      <div class="metric"><span>Current Sortino <em class="cxSub">whole book</em></span><strong>${cur.sortino.toFixed(2)}</strong></div>
+      <div class="metric" title="${escapeAttr(CDV_TIP)}"><span>Current CAGR/Down-Vol <em class="cxSub">whole book</em></span><strong>${cagrDownVol(cur).toFixed(2)}</strong></div>
       <div class="metric"><span>Current maxDD <em class="cxSub">whole book</em></span><strong>${percent(cur.mdd)}</strong></div>
       <div class="metric" title="The WHOLE liquid book (48% equity / 21% credit / 15% cash / 13% long-short / 3% Treasuries) backtested with the same proxies. This figure never follows the account toggles; the Your-selection row above does."><span>Current CAGR <em class="cxSub">whole book</em></span><strong>${percent(cur.cagr)}</strong></div>
-      <div class="metric good"><span>Full Convex 60/20/20 (tax-free target)</span><strong>Sortino ${S.full_convex.sortino.toFixed(2)} &middot; maxDD ${percent(S.full_convex.mdd)}</strong></div>
+      <div class="metric good" title="${escapeAttr(CDV_TIP)}"><span>Full Convex 60/20/20 (tax-free target)</span><strong>CAGR/DV ${cagrDownVol(S.full_convex).toFixed(2)} &middot; maxDD ${percent(S.full_convex.mdd)}</strong></div>
     </div>
     <div class="ovBlock"><p class="eyebrow">Idle cash &rarr; standalone trend (~$0 tax, cash-funded)</p>${deployRows}</div>
     <div class="ovBlock"><p class="eyebrow">Regime split &mdash; Treasuries vs trend</p>${regRows}</div>
@@ -1463,7 +1475,7 @@ function renderConvexity(cube) {
   const S = OVERLAY_SNAPSHOT;
   const deployRows = (S && S.deploy ? S.deploy : []).map((d) =>
     `<div class="cxRow"><span class="cxLabel">Deploy $${d.usd_m.toFixed(1)}M (${percent(d.pct)}) → trend</span>` +
-    `<em>Sortino ${S.current.sortino.toFixed(2)} → ${d.sortino.toFixed(2)}</em>` +
+    `<em>CAGR/DV ${cagrDownVol(S.current).toFixed(2)} → ${cagrDownVol(d).toFixed(2)}</em>` +
     `<strong class="${d.ret_2022 >= 0 ? "good" : "warn"}">2022 ${signPct(d.ret_2022)}</strong></div>`).join("");
 
   let crisisBlock = "";
@@ -1544,7 +1556,7 @@ function renderDial(cube) {
     <div class="planMetrics metrics">
       <div class="metric"><span>Equity (growth, hedged)</span><strong>${money(eqUsd)}</strong></div>
       <div class="metric ${floorYrs >= 5 ? "good" : "warn"}"><span>Cash floor (Bucket 1)</span><strong>${money(cashUsd)}<em class="cxSub">${floorYrs.toFixed(0)} yrs of spend</em></strong></div>
-      <div class="metric good"><span>Sortino (risk-adjusted)</span><strong>${g.sortino.toFixed(2)}<em class="cxSub">vs ${ae.sortino.toFixed(2)} all-equity</em></strong></div>
+      <div class="metric good" title="${escapeAttr(CDV_TIP)}"><span>CAGR/Down-Vol (risk-adjusted)</span><strong>${cagrDownVol(g).toFixed(2)}<em class="cxSub">vs ${cagrDownVol(ae).toFixed(2)} all-equity</em></strong></div>
       <div class="metric ${g.mdd > ae.mdd ? "good" : "warn"}"><span>Modeled max drawdown</span><strong>${percent(g.mdd)}<em class="cxSub">vs ${percent(ae.mdd)} all-equity</em></strong></div>
     </div>
     <div class="cxBlock">
