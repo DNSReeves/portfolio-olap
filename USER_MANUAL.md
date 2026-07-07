@@ -16,6 +16,21 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.4.4 — what's new
+
+- **Assumed cost basis (operator convention):** a holding whose source export carries no basis
+  (typically private funds / SMA lines) now shows **basis = current value → gain $0**, marked with
+  an amber <sup>*</sup> in the holdings table and a footnote under the dashboard metrics naming the
+  count and value affected. Previously those rows showed blank basis and were excluded from gain
+  math; totals are unchanged (excluded and $0 sum the same) — the difference is visibility. The
+  `basisAssumed` flag persists into saved snapshots, so later analyses can separate real gains
+  from assumptions. Real basis — including a legitimate $0 — is never touched.
+- **Snapshot history is analysis-ready:** every **Load Full Book** and CSV import already
+  auto-saves a snapshot per valuation date (same-date reload asks before replacing; sample loads
+  are excluded). New **Export history** button in the Snapshots dialog downloads the entire
+  accumulated history (snapshots + every position row, with account/sleeve/basis flags) as one
+  JSON file for offline analysis — python, the vault, wherever.
+
 ### Version 2.4.3 — what's new
 
 - **International equity split out of the US bucket** (accuracy fix): the per-account overlay

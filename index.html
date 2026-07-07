@@ -182,7 +182,11 @@
             <p class="eyebrow">Temporal analysis</p>
             <h2>Portfolio Snapshots</h2>
           </div>
-          <button id="snapshotsCloseButton">Close</button>
+          <div class="manualHeaderActions">
+            <button type="button" id="exportHistoryButton"
+              title="Download every saved snapshot + its position rows as one JSON file — every Load Full Book / CSV import is auto-saved by valuation date, so this is your book's history for offline analysis (python/vault)">Export history</button>
+            <button id="snapshotsCloseButton">Close</button>
+          </div>
         </header>
         <div class="workflowContent">
           <label class="dateControl">
@@ -202,7 +206,7 @@
           <div>
             <p class="eyebrow">Documentation</p>
             <h2>Guide</h2>
-            <small id="manualVersion">v2.4.3</small>
+            <small id="manualVersion">v2.4.4</small>
           </div>
           <div class="manualHeaderActions">
             <button type="button" id="sampleButton"

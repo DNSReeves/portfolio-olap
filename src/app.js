@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.4.3";
+const APP_VERSION = "v2.4.4";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -278,7 +278,7 @@ const DB_VERSION = 1;
 const DEFAULT_PORTFOLIO_ID = "default";
 const SPLIT_STORAGE_KEY = "workspaceSplitPercent";
 const state = {
-  holdings: loadJson("holdings", SAMPLE_HOLDINGS),
+  holdings: applyAssumedBasis(loadJson("holdings", SAMPLE_HOLDINGS)),
   assignments: loadJson("assignments", {}),
   rows: [],
   mapping: {},
@@ -345,6 +345,7 @@ const el = {
   importCloseButton: document.querySelector("#importCloseButton"),
   snapshotsDialog: document.querySelector("#snapshotsDialog"),
   snapshotsCloseButton: document.querySelector("#snapshotsCloseButton"),
+  exportHistoryButton: document.querySelector("#exportHistoryButton"),
   workspaceSplit: document.querySelector("#workspaceSplit"),
   splitter: document.querySelector("#splitter"),
   valuationDateInput: document.querySelector("#valuationDateInput"),
@@ -472,6 +473,7 @@ el.importPanelButton.addEventListener("click", () => el.importDialog.showModal()
 el.importCloseButton.addEventListener("click", () => el.importDialog.close());
 el.snapshotsButton.addEventListener("click", () => el.snapshotsDialog.showModal());
 el.snapshotsCloseButton.addEventListener("click", () => el.snapshotsDialog.close());
+el.exportHistoryButton?.addEventListener("click", exportSnapshotHistory);
 el.splitter.addEventListener("pointerdown", startSplitDrag);
 el.splitter.addEventListener("keydown", handleSplitterKey);
 
@@ -513,6 +515,21 @@ document.querySelector(".sectionNav")?.addEventListener("click", (ev) => {
 }
 
 initApp();
+
+// ── assumed cost basis (v2.4.4, operator ask) ────────────────────────────────
+// Brokers omit basis on some rows (privates/SMA lines). Operator rule: assume
+// basis = current value (gain $0) and FOOTNOTE it — never silently. The flag
+// rides into saved snapshots so later analyses know which rows are assumptions.
+// Idempotent; real basis (including a legitimate $0) is never touched.
+function applyAssumedBasis(holdings) {
+  for (const h of holdings || []) {
+    if ((h.costBasis === undefined || h.costBasis === null) && h.marketValue != null) {
+      h.costBasis = h.marketValue;
+      h.basisAssumed = true;
+    }
+  }
+  return holdings;
+}
 
 function holding(ticker, assetName, shares, price, sleeve, costBasis) {
   return {
@@ -634,6 +651,7 @@ async function applyImport(sourceName = "CSV import") {
   }
 
   const normalized = normalizeHoldings(state.rows, state.mapping, state.valuationDate);
+  applyAssumedBasis(normalized.holdings);
   state.holdings = normalized.holdings.length ? normalized.holdings : state.holdings;
   state.errors = normalized.errors;
   state.selectedSleeve = "All";
@@ -1043,6 +1061,13 @@ function renderMetrics(cube) {
     metric("Selection Gain", money(allGain), allGain >= 0 ? "good" : "warn"),
     ...(allHasBeta ? [metric("Beta vs S&P (est.)", (allBetaDen ? allBetaNum / allBetaDen : 0).toFixed(2))] : []),
   );
+  const assumed = base.filter((h) => h.basisAssumed);
+  if (assumed.length) {
+    const note = document.createElement("div");
+    note.className = "basisFootnote";
+    note.innerHTML = `<sup>*</sup> Cost basis unknown for ${assumed.length} holding${assumed.length === 1 ? "" : "s"} (${money(assumed.reduce((s2, h) => s2 + (h.marketValue || 0), 0))}) — <strong>assumed = current value</strong>, so their gain reads $0 here and in Planning. Marked <sup>*</sup> in the holdings table.`;
+    el.metrics.appendChild(note);
+  }
 
   // Scope strip: the drilled asset class's summary, shown just above the drill-down detail.
   // Hidden entirely at the All-Portfolio view (nothing drilled in) to avoid duplicating the top.
@@ -1660,7 +1685,7 @@ function renderSnapshots() {
   }
 
   if (!state.snapshots.length) {
-    el.snapshotTimeline.replaceChildren(span("No saved snapshots yet. Upload a CSV with a valuation date to begin temporal tracking."));
+    el.snapshotTimeline.replaceChildren(span("No saved snapshots yet. Every Load Full Book / CSV import auto-saves one per valuation date — load the book to begin temporal tracking."));
     return;
   }
 
@@ -1704,13 +1729,14 @@ function renderPerformanceSeries() {
 }
 
 // Gain/Loss cell: "$419,935  +76.1%", coloured green (gain) / red (loss). pct omitted when no basis.
-function glCell(marketValue, costBasis, hidePct = false) {
+function glCell(marketValue, costBasis, hidePct = false, assumed = false) {
   const gain = (marketValue || 0) - (costBasis || 0);
   const pct = costBasis ? gain / costBasis : 0;
   const cls = gain >= 0 ? "up" : "down";
   // % is suppressed for options — short premium inverts the cost-basis math, so the % is meaningless.
   const pctTxt = (costBasis && !hidePct) ? ` <em>${(gain >= 0 ? "+" : "") + (pct * 100).toFixed(1)}%</em>` : "";
-  return `<td class="num gl ${cls}">${money(gain)}${pctTxt}</td>`;
+  const mark = assumed ? `<sup class="basisNote" title="Cost basis unknown in the source export - assumed equal to current value (gain treated as $0). Operator convention v2.4.4.">*</sup>` : "";
+  return `<td class="num gl ${cls}">${money(gain)}${mark}${pctTxt}</td>`;
 }
 
 // ── PIVOT / MATRIX (Phase 1) ──────────────────────────────────────────────────
@@ -2044,7 +2070,8 @@ function renderHoldings() {
   for (const h of holdings) {
     const key = (h.ticker || h.assetName || "").toUpperCase() + "||" + h.sleeve;
     let g = groups.get(key);
-    if (!g) { g = { ticker: h.ticker, assetName: h.assetName, sleeve: h.sleeve, shares: 0, costBasis: 0, marketValue: 0, lots: [] }; groups.set(key, g); }
+    if (!g) { g = { ticker: h.ticker, assetName: h.assetName, sleeve: h.sleeve, shares: 0, costBasis: 0, marketValue: 0, lots: [], basisAssumed: false }; groups.set(key, g); }
+    g.basisAssumed = g.basisAssumed || !!h.basisAssumed;
     g.costBasis += h.costBasis || 0;
     g.marketValue += h.marketValue || 0;
     g.shares += h.shares || 0;
@@ -2069,9 +2096,9 @@ function renderHoldings() {
         `<td>${escapeHtml(g.assetName)}</td>` +
         (isAll ? `<td class="sleeveCell"></td>` : ``) +
         (hasShares ? `<td class="num">${number(g.shares)}</td><td class="num">${g.shares > 0 ? priceUsd(g.marketValue / g.shares) : "—"}</td>` : ``) +
-        `<td class="num">${g.costBasis ? money(g.costBasis) : "—"}</td>` +
+        `<td class="num">${g.costBasis ? money(g.costBasis) : "—"}${g.basisAssumed ? `<sup class="basisNote" title="Cost basis unknown in the source export - assumed equal to current value (gain treated as $0). Operator convention v2.4.4.">*</sup>` : ""}</td>` +
         `<td class="num strong">${money(g.marketValue)}</td>` +
-        glCell(g.marketValue, g.costBasis, g.sleeve === "Options");
+        glCell(g.marketValue, g.costBasis, g.sleeve === "Options", g.basisAssumed);
       if (isAll) {
         const select = document.createElement("select");
         // include the row's CURRENT sleeve even if it's not in the default list
@@ -2194,6 +2221,7 @@ function toPositionValuation(holding, snapshot, rowIndex) {
     price: holding.price,
     marketValue: holding.marketValue,
     costBasis: holding.costBasis,
+    basisAssumed: holding.basisAssumed || false,
     sleeveCode: holding.sleeve,
     sleeveName: holding.sleeve,
     sourceRow: holding.sourceRow,
@@ -2230,8 +2258,10 @@ async function loadSnapshot(snapshotId) {
     sleeve: valuation.sleeveName,
     assignmentSource: "imported",
     costBasis: valuation.costBasis,
+    basisAssumed: valuation.basisAssumed || false,
     sourceRow: valuation.sourceRow || {},
   }));
+  applyAssumedBasis(state.holdings);   // legacy snapshots may carry null basis
   state.activeSnapshotId = snapshotId;
   const snapshot = state.snapshots.find((item) => item.id === snapshotId);
   state.valuationDate = snapshot?.valuationDate || state.valuationDate;
@@ -2259,6 +2289,46 @@ async function ensureDefaultPortfolio() {
 // that date, and (b) does the delete+write in ONE transaction over both stores,
 // so an interruption can't leave a half-replaced (silently wrong) snapshot.
 // Returns true if written, false if the user cancelled.
+// ── history export (v2.4.4, operator ask: "save it when loaded so the data can be
+// used over time") — every real load already auto-saves a snapshot per valuation
+// date; this downloads the WHOLE history (snapshots + position rows) as one JSON
+// for offline analyses. Pure builder split out for tests.
+function buildHistoryExport(snapshots, valuations) {
+  const out = {
+    exported: new Date().toISOString(),
+    app_version: APP_VERSION,
+    note: "OLAP snapshot history - one snapshot per valuation date (auto-saved on every "
+      + "Load Full Book / CSV import; sample loads excluded). basisAssumed rows carry an "
+      + "operator-assumed basis (= market value at import).",
+    snapshots: [...snapshots].sort((a, b) => String(a.valuationDate).localeCompare(String(b.valuationDate))),
+    valuations: valuations.map((v) => ({
+      snapshotId: v.snapshotId, valuationDate: v.valuationDate,
+      account: v.brokerageAccount, ticker: v.ticker, assetName: v.assetName,
+      shares: v.shares, price: v.price, marketValue: v.marketValue,
+      costBasis: v.costBasis, basisAssumed: v.basisAssumed || false,
+      sleeve: v.sleeveName,
+    })),
+  };
+  return out;
+}
+
+async function exportSnapshotHistory() {
+  try {
+    const snapshots = await getAllFromStore("portfolio_snapshots");
+    const valuations = await getAllFromStore("position_valuations");
+    if (!snapshots.length) { window.alert("No saved snapshots yet — load the full book or import a CSV first."); return; }
+    const payload = buildHistoryExport(snapshots, valuations);
+    const blob = new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `olap_snapshot_history_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    window.alert(`Export failed: ${e.message || e}`);
+  }
+}
+
 async function saveSnapshot(snapshot, valuations) {
   const existingSnapshots = (await getAllFromStore("portfolio_snapshots")).filter(
     (item) => item.portfolioId === snapshot.portfolioId && item.valuationDate === snapshot.valuationDate,
