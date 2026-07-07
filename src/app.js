@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.4";
+const APP_VERSION = "v2.4.1";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -82,17 +82,10 @@ let DEFAULT_SLEEVES = [
   "Unclassified",
 ];
 
-const SAMPLE_HOLDINGS = [
-  holding("AAPL", "Apple Inc.", 80, 192.32, "Large Cap Tech", 11200),
-  holding("MSFT", "Microsoft Corp.", 44, 424.56, "Large Cap Tech", 14600),
-  holding("VUG", "Vanguard Growth ETF", 65, 366.8, "Large Cap Growth", 20100),
-  holding("VXUS", "Vanguard Total International Stock ETF", 220, 63.12, "International", 12650),
-  holding("EEM", "iShares MSCI Emerging Markets ETF", 180, 42.73, "Emerging Markets", 7200),
-  holding("GLD", "SPDR Gold Shares", 55, 214.18, "Precious Metals", 10100),
-  holding("DBMF", "iMGP DBi Managed Futures Strategy ETF", 280, 27.18, "Trend Following Managed Futures", 7350),
-];
-
-const LARGE_SAMPLE_HOLDINGS = buildLargeSampleHoldings();
+// v2.4.1: ONE sample (operator ask 2026-07-07) — the old small 7-row sample and the
+// "Large sample" were consolidated; the single "Sample Portfolio" button loads the
+// full-coverage demonstration book (virtually every asset category incl. Crypto).
+const SAMPLE_HOLDINGS = buildSampleHoldings();
 
 const COLUMN_ALIASES = {
   account: ["account", "account name", "brokerage account"],
@@ -346,7 +339,6 @@ const el = {
   rulesBanner: document.querySelector("#rulesBanner"),
   rulesReload: document.querySelector("#rulesReload"),
   sampleButton: document.querySelector("#sampleButton"),
-  largeSampleButton: document.querySelector("#largeSampleButton"),
   importPanelButton: document.querySelector("#importPanelButton"),
   snapshotsButton: document.querySelector("#snapshotsButton"),
   importDialog: document.querySelector("#importDialog"),
@@ -464,18 +456,6 @@ el.sampleButton.addEventListener("click", () => {
   render();
 });
 
-el.largeSampleButton.addEventListener("click", () => {
-  state.holdings = LARGE_SAMPLE_HOLDINGS;
-  state.rows = [];
-  state.mapping = {};
-  state.errors = [];
-  state.selectedSleeve = "All";
-  state.selectedBucket = null; state.selectedSubGroup = null;
-  saveJson("holdings", state.holdings);
-  if (el.manualDialog?.open) el.manualDialog.close();
-  render();
-});
-
 el.searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
   renderHoldings();
@@ -549,7 +529,7 @@ function holding(ticker, assetName, shares, price, sleeve, costBasis) {
   };
 }
 
-function buildLargeSampleHoldings() {
+function buildSampleHoldings() {
   const seeds = [
     ["AAPL", "Apple Inc.", "Large Cap Tech", 80, 192.32],
     ["MSFT", "Microsoft Corp.", "Large Cap Tech", 44, 424.56],
@@ -594,6 +574,23 @@ function buildLargeSampleHoldings() {
     ["SGOV", "iShares 0-3 Month Treasury Bond ETF", "Cash", 180, 100.45],
     ["ALT-REAL", "Private Real Assets Fund", "Real Assets", 1, 27000],
     ["ALT-PA", "Private Alternatives Fund", "Private Alternatives", 1, 19000],
+    // v2.4.1 full-coverage additions (operator ask): virtually every asset category.
+    ["IBIT", "iShares Bitcoin Trust ETF", "Crypto", 320, 38.42],
+    ["ETHA", "iShares Ethereum Trust ETF", "Crypto", 410, 19.15],
+    ["IEF", "iShares 7-10 Year Treasury Bond ETF", "Treasuries / Duration", 110, 94.6],
+    ["TLT", "iShares 20+ Year Treasury Bond ETF", "Treasuries / Duration", 95, 91.3],
+    ["BKLN", "Invesco Senior Loan ETF", "Bank Loans / Floating Rate", 350, 21.05],
+    ["JEPI", "JPMorgan Equity Premium Income ETF", "Options", 160, 57.8],
+    ["AOR", "iShares Core Growth Allocation ETF", "Multi-Asset", 140, 59.4],
+    ["XLE", "Energy Select Sector SPDR", "Equity Energy", 75, 92.1],
+    ["XLU", "Utilities Select Sector SPDR", "Utilities", 95, 71.6],
+    ["PAVE", "Global X U.S. Infrastructure Development ETF", "Infrastructure", 120, 41.2],
+    ["GUNR", "FlexShares Global Upstream Natural Resources ETF", "Natural Resources", 180, 43.9],
+    ["VBK", "Vanguard Small-Cap Growth ETF", "Small Growth", 40, 262.3],
+    ["EFV", "iShares MSCI EAFE Value ETF", "Foreign Large Value", 150, 59.7],
+    ["PRE-FUND", "Private Real Estate Fund III", "Private Real Estate", 1, 24000],
+    ["CD-2027", "Marcus 5.0% CD 06/2027", "CDs", 1, 15000],
+    ["ANNU-SV", "TIAA Traditional Stable Value", "Annuity / Stable Value", 1, 21000],
   ];
 
   return seeds.map(([ticker, assetName, sleeve, shares, price], index) => {

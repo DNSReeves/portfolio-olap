@@ -202,19 +202,19 @@
           <div>
             <p class="eyebrow">Documentation</p>
             <h2>Guide</h2>
-            <small id="manualVersion">v2.4</small>
+            <small id="manualVersion">v2.4.1</small>
           </div>
-          <button id="manualCloseButton">Close</button>
+          <div class="manualHeaderActions">
+            <button type="button" id="sampleButton"
+              title="Load a demonstration portfolio covering virtually every asset category — incl. Crypto, Treasuries, Options, Multi-Asset, privates, CDs and annuities (replaces the current holdings)">Sample Portfolio</button>
+            <button id="manualCloseButton">Close</button>
+          </div>
         </header>
         <div class="manualSearch">
           <input type="search" id="manualSearchInput" placeholder="Find in guide…" autocomplete="off" spellcheck="false" />
           <span id="manualSearchCount" class="manualSearchCount"></span>
           <button type="button" id="manualSearchPrev" title="Previous match (Shift+Enter)">↑</button>
           <button type="button" id="manualSearchNext" title="Next match (Enter)">↓</button>
-        </div>
-        <div class="manualSampleRow">
-          <button type="button" id="sampleButton">Sample portfolio</button>
-          <button type="button" id="largeSampleButton">Large sample</button>
         </div>
         <article id="manualContent" class="manualContent"></article>
       </div>

@@ -16,6 +16,17 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.4.1 — what's new
+
+- **One Sample Portfolio button** (was two): the Guide's *Sample portfolio / Large sample* pair
+  consolidated into a single **Sample Portfolio** button, repositioned into the Guide's
+  non-scrolling header next to **Close**. The sample is the full-coverage book — ~60 holdings
+  spanning virtually every asset category: equity styles/sizes, international + EM, sectors,
+  Treasuries, munis/corporates/junk/bank loans, private credit + direct lending, private equity
+  (buyout/growth/VC/secondaries), commodities + precious metals, managed futures/trend,
+  **Crypto (IBIT/ETHA)**, Options, Multi-Asset, real assets, private real estate, CDs,
+  annuity/stable value, and cash — across three mock accounts (so the account pills demo too).
+
 ### Version 2.4 — what's new
 
 - **Account-source toggles** — a pill row above the dashboard (mirroring the MarketForge Portfolio tab) with one on/off pill per brokerage account (largest first, market value shown) plus three presets: **All**, **Self-managed**, and **Advisor** (Living Trust · Partnership · Fidelity_AQR_FLEX45 · LLC). Toggling an account off removes it from **every client-computed panel** — the sleeve sidebar, dashboard metrics, Planning, Convexity, Pivot, Allocation, Top Holdings, and the holdings table — so you can analyze e.g. just the self-managed book in one click. The selection **persists** across sessions; an active filter is never silent (the header shows *n of m accounts*, off pills are struck through). **Caveat:** the **Dial / Sortino Overlay / Risk Contribution** panels are *precomputed* by `portfolio_analysis.py` per fixed slice and cannot re-slice to an arbitrary account set in the browser — they show an amber *"Precomputed — not filtered"* badge when the toggle filter is active (the Risk panel's own View selector remains the way to scope those). Snapshot performance history likewise stays whole-book. Books with a single account hide the row entirely.
@@ -237,9 +248,13 @@ node --check src/app.js
 
 ### Using Sample Data
 
-When the app first opens, it displays sample holdings. Use this data to explore the workflow before importing a broker file.
+Open the **Guide** and click **Sample Portfolio** (in the header, next to Close). It replaces the
+current holdings with a ~60-position demonstration book covering virtually every sleeve in the
+taxonomy — including Crypto, Options, Multi-Asset, Treasuries, bank loans, privates, CDs, and
+annuities — spread across three mock accounts so the account-source pills, drill-downs, pivots,
+and planning views all have something to show. Loading the sample overwrites the held book in
+browser storage; reload your real data with **Load Full Book** or a CSV import.
 
-Click `Sample` to reset the app back to the sample portfolio.
 
 ### Loading the Consolidated Book (primary workflow)
 
