@@ -1341,11 +1341,8 @@ th.sortable:hover { color: #0f766e; }
 .drillDonut .drillSlice { cursor: default; }
 .drillDonut .drillSlice[data-real] { cursor: pointer; transition: opacity 0.12s; }
 .drillDonut svg .drillSlice[data-real]:hover { opacity: 0.8; }
-.tkActs { display: inline-flex; gap: 5px; margin-left: 7px; vertical-align: middle; }
-.tkActs a { text-decoration: none; font-size: 10.5px; line-height: 1.3; opacity: 0.5; }
-.tkActs a:last-child { border: 1px solid #cfd9dd; border-radius: 7px; padding: 0 5px; color: #5b6b72; font-weight: 600; letter-spacing: 0.03em; }
-tr:hover .tkActs a { opacity: 1; }
-.tkActs a:hover { color: #0f766e; border-color: #0f766e; }
+.tickerLink { color: inherit; text-decoration: none; border-bottom: 1px dotted #9fb3ba; }
+.tickerLink:hover { color: #0f766e; border-bottom: 1px solid #0f766e; }
 
 /* v2.4.4: assumed-basis footnotes */
 .basisNote { color: #b7791f; font-weight: 700; cursor: help; margin-left: 2px; }

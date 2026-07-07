@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.5.0";
+const APP_VERSION = "v2.5.1";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -2290,12 +2290,11 @@ function renderHoldings() {
     ...rows.map((g) => {
       const tr = document.createElement("tr");
       tr.innerHTML =
-        `<td class="ticker">${escapeHtml(g.ticker || "-")}${g.lots.length > 1 ? `<small class="lots" title="${g.lots.length} lots merged">×${g.lots.length}</small>` : ``}` +
+        `<td class="ticker">` +
         (isChartableTicker(g.ticker)
-          ? `<span class="tkActs"><a href="${forgeTickerUrl("charts", g.ticker, location)}" target="_blank" rel="noopener" title="Price chart for ${g.ticker} in MarketForge (overlays + compare-vs-SPY live there) — opens in a new tab">📈</a>` +
-            `<a href="${forgeTickerUrl("etf", g.ticker, location)}" target="_blank" rel="noopener" title="MarketForge ETF deep-dive for ${g.ticker} (identity, costs, composition, factors, flows, news) — opens in a new tab">ETF</a></span>`
-          : ``) +
-        `</td>` +
+          ? `<a class="tickerLink" href="${forgeTickerUrl("etf", g.ticker, location)}" target="_blank" rel="noopener" title="Open the MarketForge ETF tab for ${g.ticker} — identity, costs, composition, factor regression, flows, news + its price chart (new tab)">${escapeHtml(g.ticker)}</a>`
+          : escapeHtml(g.ticker || "-")) +
+        `${g.lots.length > 1 ? `<small class="lots" title="${g.lots.length} lots merged">×${g.lots.length}</small>` : ``}</td>` +
         `<td>${escapeHtml(g.assetName)}</td>` +
         (isAll ? `<td class="sleeveCell"></td>` : ``) +
         (hasShares ? `<td class="num">${number(g.shares)}</td><td class="num">${g.shares > 0 ? priceUsd(g.marketValue / g.shares) : "—"}</td>` : ``) +
@@ -2430,15 +2429,15 @@ function renderDrillChart(rows, view = state.drillView) {   // view injectable s
         : mid ? `<strong>${escapeHtml(r.label)}</strong>` : "";
       const tip = `${r.label} — ${r.name || ""}\n${money(r.value)} · ${percent(r.value / total)} of view` +
         (gTxt ? ` · gain ${gTxt}` : "") + (r.sleeve ? `\n${r.sleeve}` : "") +
-        (isChartableTicker(r.ticker) ? "\nClick → MarketForge price chart" : "");
+        (isChartableTicker(r.ticker) ? "\nClick → MarketForge ETF tab" : "");
       const link = isChartableTicker(r.ticker) ? ` data-tk="${r.ticker}"` : "";
       return `<div class="tmTile${link ? " tmLink" : ""}"${link} style="left:${r.x.toFixed(1)}px;top:${r.y.toFixed(1)}px;width:${Math.max(r.w - 1, 0).toFixed(1)}px;height:${Math.max(r.h - 1, 0).toFixed(1)}px;background:${gainColor(r.other ? null : r.gainPct)}" title="${escapeAttr(tip)}">${inner}</div>`;
     }).join("");
     el.drillChart.innerHTML =
       `<div class="tmBoard" style="height:${H}px">${tiles}</div>` +
-      `<p class="drillChartNote">Tile size = market value (${money(total)} charted) · color = unrealized gain <span class="tmSw" style="background:${gainColor(-0.3)}"></span>−30% <span class="tmSw" style="background:${gainColor(0)}"></span>flat / no basis <span class="tmSw" style="background:${gainColor(0.3)}"></span>+30%${skippedShorts ? ` · ${skippedShorts} negative-value position${skippedShorts === 1 ? "" : "s"} not drawn` : ""} · click a tile to open its MarketForge chart</p>`;
+      `<p class="drillChartNote">Tile size = market value (${money(total)} charted) · color = unrealized gain <span class="tmSw" style="background:${gainColor(-0.3)}"></span>−30% <span class="tmSw" style="background:${gainColor(0)}"></span>flat / no basis <span class="tmSw" style="background:${gainColor(0.3)}"></span>+30%${skippedShorts ? ` · ${skippedShorts} negative-value position${skippedShorts === 1 ? "" : "s"} not drawn` : ""} · click a tile to open its MarketForge ETF tab</p>`;
     el.drillChart.querySelectorAll(".tmLink").forEach((t) => t.addEventListener("click", () => {
-      window.open(forgeTickerUrl("charts", t.dataset.tk, location), "_blank", "noopener");
+      window.open(forgeTickerUrl("etf", t.dataset.tk, location), "_blank", "noopener");
     }));
   } else {
     // donut — same SVG technique/classes as the Pivot ring (arc = share of the POSITIVE total)

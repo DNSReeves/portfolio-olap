@@ -16,6 +16,16 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.5.1 — what's new
+
+- **Ticker symbols are hyperlinks to the Forge ETF tab.** Every listed ticker in the holdings
+  table is now itself a link (dotted underline) that pops the corresponding **MarketForge ETF
+  deep-dive tab** in a new browser tab — identity, costs, composition, factor regression,
+  flows, news, *and* its price chart, all in one place. Treemap tiles click through to the
+  same ETF tab. This replaces the v2.5.0 hover pair (📈 chart / ETF) — the ETF tab embeds the
+  chart anyway, so one link now does both jobs; the Charts tab remains reachable from inside
+  Forge. Bond CUSIPs, options symbols, and placeholder rows stay plain text.
+
 ### Version 2.5 — what's new
 
 - **Accounts filter is now a dropdown with checkboxes** (was a pill row). One summary button
@@ -560,12 +570,12 @@ columns start biggest-first, text columns A-first, with value-then-ticker tiebre
 order is stable. If the sorted column disappears in another scope (Shares/Price on a value-only
 book, Sleeve inside a sleeve drill), the table falls back to the default value-descending order.
 
-**MarketForge links (v2.5):** rows whose symbol looks like a listed ticker show two quiet
-actions on hover next to the symbol — **📈** opens that ticker's MarketForge price chart
-(overlays and compare-vs-SPY live there) and **ETF** opens the MarketForge ETF deep-dive tab
-(identity, costs, composition, factor regression, flows, news). Both open in a new tab and pick
-the right host automatically (LAN `:8765`, or the padlocked `ts.net` origin's `:8443` front).
-Bond CUSIPs, options symbols, and placeholder rows get no links.
+**MarketForge links (v2.5.1):** any symbol that looks like a listed ticker is a hyperlink
+(dotted underline) — click it to pop the **MarketForge ETF deep-dive tab** for that ticker in
+a new browser tab: identity, costs, composition, factor regression, flows, news, and its price
+chart (with overlays and compare-vs-SPY) all live there. The link picks the right host
+automatically (LAN `:8765`, or the padlocked `ts.net` origin's `:8443` front). Bond CUSIPs,
+options symbols, and placeholder rows stay plain text.
 
 ### Chart views: Treemap and Donut (v2.5)
 
@@ -576,7 +586,7 @@ selection, the search filter, and the Accounts filter all apply:
 - **▦ Treemap** — one rectangle per merged holding, **sized by market value** and **colored by
   unrealized gain** (red at −30% or worse → slate for flat/no-basis → green at +30% or better).
   Hover any tile for the full detail (value, % of view, gain, sleeve); **click a tile** to open
-  its MarketForge price chart. Books with very many positions fold the tail into one grey
+  its MarketForge ETF tab. Books with very many positions fold the tail into one grey
   *Other* tile. Assumed-basis holdings read as flat (slate), matching their $0 gain convention.
 - **◔ Donut** — share-of-view ring. In the All-Portfolio and bucket views it breaks down **by
   sleeve** (click a slice or its legend row to drill into that sleeve); inside a single sleeve
