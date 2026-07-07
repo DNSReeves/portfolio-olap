@@ -224,10 +224,13 @@
       </div>
     </dialog>
     <script>
-      // Back to MarketForge — same host, port 8765 (/forge). Same-tab nav pairs with the
-      // Forge OLAP pill (also same-tab) so iPad Safari never has to juggle tabs.
-      document.getElementById('forgeBack').href =
-        location.protocol + '//' + location.hostname + ':8765/forge';
+      // Back to MarketForge — same-tab nav pairs with the Forge OLAP pill so iPad Safari
+      // never juggles tabs. Host-aware (2026-07-07): on the padlocked ts.net origin the
+      // dashboard's TLS front is :8443 (tailscale serve); raw :8765 speaks plain HTTP and
+      // would TLS-error. LAN keeps the original :8765 path.
+      document.getElementById('forgeBack').href = location.hostname.endsWith('.ts.net')
+        ? 'https://' + location.hostname + ':8443/forge'
+        : location.protocol + '//' + location.hostname + ':8765/forge';
     </script>
     <script type="module" src="./src/app.js?v=20260706a"></script>
   </body>
