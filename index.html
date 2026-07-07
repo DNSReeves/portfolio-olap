@@ -131,6 +131,7 @@
                   <p class="eyebrow">Drill-down</p>
                   <h2 id="holdingsTitle">All Holdings</h2>
                 </div>
+                <div id="drillToggle" class="drillToggle"></div>
                 <label class="search">
                   <span>Search</span>
                   <input id="searchInput" placeholder="Ticker or name" />
@@ -138,6 +139,8 @@
               </div>
 
               <div id="scopeSummary" class="metrics scopeSummary"></div>
+
+              <div id="drillChart" class="drillChart" style="display:none"></div>
 
               <div class="tableWrap">
                 <table>
@@ -232,6 +235,6 @@
         ? 'https://' + location.hostname + ':8443/forge'
         : location.protocol + '//' + location.hostname + ':8765/forge';
     </script>
-    <script type="module" src="./src/app.js?v=20260706a"></script>
+    <script type="module" src="./src/app.js?v=20260707a"></script>
   </body>
 </html>

@@ -1293,18 +1293,59 @@ body.pivotFullOpen { overflow: hidden; }
 mark.manualHit { background: #ffe9a8; color: inherit; border-radius: 2px; padding: 0 1px; }
 mark.manualHit.current { background: #ffb300; box-shadow: 0 0 0 2px #ff9800; }
 
-/* ── Account-source toggles (v2.4) ─────────────────────────────────────────── */
-.acctFilter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 10px; }
+/* ── Account-source filter (v2.4 pills → v2.5 dropdown checkboxes) ─────────── */
+.acctFilter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 10px; }
 .acctLabel { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6b72; margin-right: 2px; cursor: help; }
-.acctDivider { width: 1px; height: 18px; background: #cfd9dd; margin: 0 4px; }
-.acctPreset, .acctPill { border: 1px solid #cfd9dd; background: #ffffff; color: #2c3a41; border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; line-height: 1.4; }
-.acctPreset:hover, .acctPill:hover { background: #eef2f4; }
+.acctPreset { border: 1px solid #cfd9dd; background: #ffffff; color: #2c3a41; border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; line-height: 1.4; }
+.acctPreset:hover { background: #eef2f4; }
 .acctPreset.on { border-color: #0f766e; color: #0f766e; font-weight: 600; background: #ecfdf5; }
-.acctPill em { font-style: normal; color: #7c8a91; font-size: 11px; margin-left: 3px; }
-.acctPill.on { border-color: #0f766e; color: #114b46; background: #f0fdfa; }
-.acctPill.off { opacity: 0.45; text-decoration: line-through; }
-.acctPill.off em { text-decoration: none; }
+.acctMenuWrap { position: relative; }
+.acctMenuBtn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cfd9dd; background: #ffffff; color: #1c2a31; border-radius: 9px; padding: 5px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; line-height: 1.4; font-family: inherit; }
+.acctMenuBtn:hover { background: #eef2f4; }
+.acctMenuBtn em { font-style: normal; font-weight: 500; color: #5b6b72; font-variant-numeric: tabular-nums; }
+.acctMenuBtn.filtered { border-color: #d97706; color: #92400e; background: #fffbeb; }
+.acctMenuBtn.filtered em { color: #b45309; }
+.acctCaret { font-size: 10px; color: #7c8a91; }
+.acctMenu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; min-width: 340px; max-width: 440px; background: #ffffff; border: 1px solid #cfd9dd; border-radius: 12px; box-shadow: 0 10px 30px rgba(28, 42, 49, 0.16); padding: 10px; }
+.acctMenuPresets { display: flex; gap: 6px; padding-bottom: 9px; margin-bottom: 8px; border-bottom: 1px solid #eef2f4; }
+.acctMenuList { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+.acctRow { display: flex; align-items: center; gap: 9px; padding: 5px 7px; border-radius: 7px; cursor: pointer; font-size: 12.5px; color: #1c2a31; }
+.acctRow:hover { background: #eef2f4; }
+.acctRow input { accent-color: #0f766e; margin: 0; flex: 0 0 auto; cursor: pointer; }
+.acctRow .acctName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acctRow em { font-style: normal; color: #5b6b72; font-size: 11.5px; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.acctRow:has(input:not(:checked)) .acctName { opacity: 0.5; text-decoration: line-through; }
+.acctTag { margin-left: 6px; padding: 0 6px; border: 1px solid #cfd9dd; color: #5b6b72; border-radius: 8px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; vertical-align: middle; }
+.acctFilterHint { font-size: 12px; color: #92400e; }
 .acctCaveat { font-size: 12px; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 5px 10px; margin: 0 0 8px; cursor: help; }
+
+/* ── Drill-down views: sortable headers · treemap · donut (v2.5) ───────────── */
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { color: #0f766e; }
+.sortArrow { font-size: 9px; margin-left: 4px; color: #0f766e; }
+.drillToggle { display: inline-flex; border: 1px solid #cfd9dd; border-radius: 9px; overflow: hidden; }
+.drillViewBtn { border: none; background: #ffffff; color: #5b6b72; padding: 5px 12px; font-size: 12px; cursor: pointer; font-family: inherit; line-height: 1.4; }
+.drillViewBtn + .drillViewBtn { border-left: 1px solid #eef2f4; }
+.drillViewBtn:hover { background: #eef2f4; }
+.drillViewBtn.on { background: #ecfdf5; color: #0f766e; font-weight: 600; }
+.drillChart { margin-top: 4px; }
+.drillChartNote { font-size: 11.5px; color: #5b6b72; margin: 8px 2px 0; }
+.tmBoard { position: relative; width: 100%; overflow: hidden; border-radius: 10px; background: #eef2f4; }
+.tmTile { position: absolute; box-sizing: border-box; border-radius: 3px; color: #ffffff; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 4px 6px; line-height: 1.25; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
+.tmTile strong { font-size: 12px; letter-spacing: 0.01em; }
+.tmTile span { font-size: 11px; opacity: 0.92; font-variant-numeric: tabular-nums; }
+.tmTile em { font-style: normal; font-size: 10.5px; opacity: 0.88; font-variant-numeric: tabular-nums; }
+.tmTile.tmLink { cursor: pointer; }
+.tmTile.tmLink:hover { filter: brightness(1.14); }
+.tmSw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin: 0 3px 0 8px; }
+.drillDonut .drillSlice { cursor: default; }
+.drillDonut .drillSlice[data-real] { cursor: pointer; transition: opacity 0.12s; }
+.drillDonut svg .drillSlice[data-real]:hover { opacity: 0.8; }
+.tkActs { display: inline-flex; gap: 5px; margin-left: 7px; vertical-align: middle; }
+.tkActs a { text-decoration: none; font-size: 10.5px; line-height: 1.3; opacity: 0.5; }
+.tkActs a:last-child { border: 1px solid #cfd9dd; border-radius: 7px; padding: 0 5px; color: #5b6b72; font-weight: 600; letter-spacing: 0.03em; }
+tr:hover .tkActs a { opacity: 1; }
+.tkActs a:hover { color: #0f766e; border-color: #0f766e; }
 
 /* v2.4.4: assumed-basis footnotes */
 .basisNote { color: #b7791f; font-weight: 700; cursor: help; margin-left: 2px; }

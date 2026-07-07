@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.4.5";
+const APP_VERSION = "v2.5.0";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -301,6 +301,10 @@ const state = {
   splitPercent: loadJson(SPLIT_STORAGE_KEY, 45),
   planning: loadJson("planning", { expenses: 360000, reserveTarget: 1500000, taxLT: 0.238, taxST: 0.408 }),
   hiddenAccounts: new Set(loadJson("hiddenAccounts", [])),   // account-source toggles (persisted; empty = all on)
+  acctMenuOpen: false,                                        // transient: the Accounts dropdown panel (v2.5)
+  holdingsSort: { key: "value", dir: -1 },                    // drill-down table sort; value-desc = the legacy order (v2.5)
+  drillView: loadJson("drillView", "table"),                  // drill-down renderer: "table" | "treemap" | "donut" (v2.5)
+  pendingCollapseAll: false,                                  // set on book load → renderSleeves collapses every bucket once (v2.5)
 };
 
 const el = {
@@ -323,6 +327,9 @@ const el = {
   holdingsHead: document.querySelector("#holdingsHead"),
   holdingsFoot: document.querySelector("#holdingsFoot"),
   holdingsBody: document.querySelector("#holdingsBody"),
+  drillToggle: document.querySelector("#drillToggle"),
+  drillChart: document.querySelector("#drillChart"),
+  holdingsTableWrap: document.querySelector("#holdings .tableWrap"),
   viewLabel: document.querySelector("#viewLabel"),
   viewTitle: document.querySelector("#viewTitle"),
   holdingsTitle: document.querySelector("#holdingsTitle"),
@@ -656,6 +663,7 @@ async function applyImport(sourceName = "CSV import") {
   state.errors = normalized.errors;
   state.selectedSleeve = "All";
   state.selectedBucket = null; state.selectedSubGroup = null;
+  state.pendingCollapseAll = true;   // fresh book → start from the compact bucket overview (v2.5)
   saveJson("holdings", state.holdings);
   if (normalized.holdings.length && state.db) {
     const snapshot = {
@@ -744,14 +752,17 @@ function renderTitle() {
   el.holdingsTitle.textContent = all ? "All Holdings" : `${selectionLabel()} Holdings`;
 }
 
-// The account-source pill row: presets (All / Self-managed / Advisor) + one toggle pill per
-// account (largest first, with its market value). Hidden entirely for single-account books.
+// The account-source control (v2.5: dropdown checkbox panel, replacing the pill row): one
+// summary button ("All accounts (9) · $17.1M ▾") opens a panel with the All / Self-managed /
+// Advisor presets plus a checkbox per account (largest first, with its market value). The
+// button turns amber + a "filtered" hint appears when any account is excluded — the active
+// filter is never silent. Hidden entirely for single-account books.
 function renderAccountFilter() {
   if (!el.acctFilter) return;
   const accounts = distinctAccounts();
-  // keep the row visible whenever a filter is ACTIVE — a persisted hidden account plus a
+  // keep the control visible whenever a filter is ACTIVE — a persisted hidden account plus a
   // single-account import would otherwise blank every panel with no recovery UI
-  if (accounts.length < 2 && !accountFilterActive()) { el.acctFilter.innerHTML = ""; el.acctFilter.style.display = "none"; return; }
+  if (accounts.length < 2 && !accountFilterActive()) { el.acctFilter.innerHTML = ""; el.acctFilter.style.display = "none"; state.acctMenuOpen = false; return; }
   el.acctFilter.style.display = "";
   const names = accounts.map(([k]) => k);
   const advisor = names.filter((n) => ADVISOR_ACCOUNTS.has(n));
@@ -761,26 +772,49 @@ function renderAccountFilter() {
     && advisor.length > 0 && advisor.every((n) => state.hiddenAccounts.has(n));
   const isAdv = advisor.length && advisor.every((n) => !state.hiddenAccounts.has(n))
     && self.length > 0 && self.every((n) => state.hiddenAccounts.has(n));
+  const on = names.filter((n) => !state.hiddenAccounts.has(n));
+  const onMv = accounts.filter(([k]) => !state.hiddenAccounts.has(k)).reduce((t, [, mv]) => t + mv, 0);
+  const filtered = on.length < names.length;
+  const summary = isAll ? `All accounts (${names.length})`
+    : isSelf ? `Self-managed (${on.length})`
+    : isAdv ? `Advisor (${on.length})`
+    : `${on.length} of ${names.length} accounts`;
   const presets = [
     ["all", "All", isAll], ["self", "Self-managed", isSelf], ["advisor", "Advisor", isAdv],
-  ].map(([key, lbl, on]) =>
-    `<button class="acctPreset ${on ? "on" : ""}" data-preset="${key}">${lbl}</button>`).join("");
-  const pills = accounts.map(([name, mv]) => {
-    const on = !state.hiddenAccounts.has(name);
-    return `<button class="acctPill ${on ? "on" : "off"}" data-acct="${escapeAttr(name)}"
-      title="${on ? "Click to exclude" : "Click to include"} — $${(mv / 1e6).toFixed(2)}M">
-      ${escapeHtml(name)} <em>$${(mv / 1e6).toFixed(1)}M</em></button>`;
+  ].map(([key, lbl, sel]) =>
+    `<button type="button" class="acctPreset ${sel ? "on" : ""}" data-preset="${key}">${lbl}</button>`).join("");
+  const boxes = accounts.map(([name, mv]) => {
+    const checked = !state.hiddenAccounts.has(name);
+    const adv = ADVISOR_ACCOUNTS.has(name);
+    return `<label class="acctRow"><input type="checkbox" data-acct="${escapeAttr(name)}"${checked ? " checked" : ""}/>` +
+      `<span class="acctName">${escapeHtml(name)}${adv ? `<small class="acctTag">advisor</small>` : ""}</span>` +
+      `<em>$${(mv / 1e6).toFixed(2)}M</em></label>`;
   }).join("");
   el.acctFilter.innerHTML =
-    `<span class="acctLabel" title="Account sources included in every client-computed panel below. Dial / Overlay / Risk are precomputed snapshots and carry a caveat badge when this filter is active.">Accounts</span>${presets}<span class="acctDivider"></span>${pills}`;
-  el.acctFilter.querySelectorAll(".acctPill").forEach((b) => b.addEventListener("click", () => {
-    const name = b.getAttribute("data-acct");
-    if (state.hiddenAccounts.has(name)) state.hiddenAccounts.delete(name);
+    `<span class="acctLabel" title="Account sources included in every client-computed panel below. Dial / Overlay / Risk are precomputed snapshots and carry a caveat badge when this filter is active.">Accounts</span>` +
+    `<div class="acctMenuWrap"><button type="button" id="acctMenuBtn" class="acctMenuBtn ${filtered ? "filtered" : ""}" aria-haspopup="true" aria-expanded="${state.acctMenuOpen}">` +
+    `${summary} · <em>$${(onMv / 1e6).toFixed(1)}M</em><span class="acctCaret">${state.acctMenuOpen ? "▴" : "▾"}</span></button>` +
+    (state.acctMenuOpen
+      ? `<div class="acctMenu" id="acctMenu" role="menu"><div class="acctMenuPresets">${presets}</div><div class="acctMenuList">${boxes}</div></div>`
+      : "") +
+    `</div>` +
+    (filtered ? `<span class="acctFilterHint">filtered — panels reflect ${on.length} of ${names.length} accounts</span>` : "");
+  el.acctFilter.querySelector("#acctMenuBtn").addEventListener("click", (ev) => {
+    ev.stopPropagation();                                     // keep the document-level outside-click closer out of it
+    state.acctMenuOpen = !state.acctMenuOpen;
+    renderAccountFilter();                                    // open/close is display-only — skip the full render
+  });
+  const menu = el.acctFilter.querySelector("#acctMenu");
+  if (!menu) return;
+  menu.addEventListener("click", (ev) => ev.stopPropagation());
+  menu.querySelectorAll("input[data-acct]").forEach((cb) => cb.addEventListener("change", () => {
+    const name = cb.getAttribute("data-acct");
+    if (cb.checked) state.hiddenAccounts.delete(name);
     else state.hiddenAccounts.add(name);
     saveHiddenAccounts();
-    render();
+    render();                                                 // panel stays open (acctMenuOpen survives) → live-updating totals
   }));
-  el.acctFilter.querySelectorAll(".acctPreset").forEach((b) => b.addEventListener("click", () => {
+  menu.querySelectorAll(".acctPreset").forEach((b) => b.addEventListener("click", () => {
     const key = b.getAttribute("data-preset");
     state.hiddenAccounts = new Set(
       key === "all" ? [] : key === "self" ? advisor : self);
@@ -789,11 +823,22 @@ function renderAccountFilter() {
   }));
 }
 
+// close the Accounts dropdown on outside click / Escape (module scope — bound once at boot)
+document.addEventListener("click", (ev) => {
+  if (!state.acctMenuOpen) return;
+  if (el.acctFilter && el.acctFilter.contains(ev.target)) return;
+  state.acctMenuOpen = false;
+  renderAccountFilter();
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && state.acctMenuOpen) { state.acctMenuOpen = false; renderAccountFilter(); }
+});
+
 // Caveat badge for the PRECOMPUTED panels (Dial / Overlay / Risk): their numbers come from
 // portfolio_analysis.py slices and cannot honor an arbitrary account toggle set in the browser.
 function acctCaveatBadge() {
   if (!accountFilterActive()) return "";
-  return `<div class="acctCaveat" title="This panel is precomputed by portfolio_analysis.py per fixed slice (Total / tax track / account) and cannot re-slice to your current account toggles. Its numbers reflect its OWN scope selector, not the pill row above.">⚠ Precomputed — <strong>not filtered</strong> by your account toggles</div>`;
+  return `<div class="acctCaveat" title="This panel is precomputed by portfolio_analysis.py per fixed slice (Total / tax track / account) and cannot re-slice to your current account toggles. Its numbers reflect its OWN scope selector, not the Accounts filter above.">⚠ Precomputed — <strong>not filtered</strong> by your account toggles</div>`;
 }
 
 // Reference rates near the top — the live risk-free (90-day Treasury, DGS3MO) and CPI YoY (headline
@@ -951,6 +996,13 @@ function renderSleeves(cube) {
   }
   const order = state.sidebarView === "role" ? _CONVEX_ROLE_ORDER : ROLLUP_BUCKETS.map((b) => b.name);
   const ordered = [...order, ...[...groups.keys()].filter((k) => !order.includes(k))];   // any straggler last
+  if (state.pendingCollapseAll) {
+    // a book was just loaded (Load Full Book / CSV import) — collapse every top-level bucket so
+    // the sidebar opens as a compact overview; the per-bucket toggles re-expand as usual (v2.5)
+    state.pendingCollapseAll = false;
+    for (const name of ordered) if (groups.has(name)) state.collapsedBuckets.add(name);
+    saveJson("collapsedBuckets", [...state.collapsedBuckets]);
+  }
   for (const name of ordered) {
     const g = groups.get(name);
     if (!g) continue;                                       // hide empty groups
@@ -2060,6 +2112,119 @@ function renderPivot() {
   });
 }
 
+// ── v2.5 drill-down seams (pure, vm-testable) ────────────────────────────────────────────────
+
+// Sort the MERGED holding groups by a column key. String keys default ascending, numeric keys
+// descending (first click shows the biggest / the A's first); ties broken by value desc then
+// ticker so the order is deterministic. Assumed-basis rows sort as gain $0 — matching what the
+// Gain/Loss cell displays (operator convention v2.4.4).
+function sortHoldingsGroups(rows, key, dir) {
+  const str = { ticker: (g) => g.ticker || "", asset: (g) => g.assetName || "", sleeve: (g) => g.sleeve || "" };
+  const num = {
+    shares: (g) => g.shares || 0,
+    price: (g) => (g.shares > 0 ? g.marketValue / g.shares : 0),
+    cost: (g) => g.costBasis || 0,
+    value: (g) => g.marketValue || 0,
+    gain: (g) => (g.basisAssumed || !g.costBasis ? 0 : (g.marketValue || 0) - g.costBasis),
+  };
+  const d = dir >= 0 ? 1 : -1;
+  const tie = (a, b) => (b.marketValue || 0) - (a.marketValue || 0) || String(a.ticker || "").localeCompare(String(b.ticker || ""));
+  const out = [...rows];
+  if (str[key]) out.sort((a, b) => d * str[key](a).localeCompare(str[key](b), undefined, { sensitivity: "base" }) || tie(a, b));
+  else { const f = num[key] || num.value; out.sort((a, b) => d * (f(a) - f(b)) || tie(a, b)); }
+  return out;
+}
+
+// Squarified treemap (Bruls/Huizing/van Wijk): pack items (needs .value > 0) into w×h keeping
+// tiles near-square. Returns [{...item, x, y, w, h}]; total tile area = w×h, each tile's area
+// proportional to its value. Items with value ≤ 0 are dropped (a treemap cannot show shorts).
+function treemapLayout(items, w, h) {
+  const vals = items.filter((it) => (it.value || 0) > 0);
+  const total = vals.reduce((t, it) => t + it.value, 0);
+  if (!total || w <= 0 || h <= 0) return [];
+  const sorted = [...vals].sort((a, b) => b.value - a.value);
+  const scale = (w * h) / total;
+  const out = [];
+  let x = 0, y = 0, rw = w, rh = h;
+  let row = [], rowArea = 0;
+  // worst aspect ratio of a candidate row laid along a side of length L
+  const worst = (areas, s, L) => {
+    const t2 = (s * s) / (L * L);                             // thickness²
+    let mx = 0, mn = Infinity;
+    for (const a of areas) { if (a > mx) mx = a; if (a < mn) mn = a; }
+    return Math.max(t2 / mn, mx / t2);
+  };
+  const flush = () => {
+    const horiz = rw >= rh;                                   // lay the row along the SHORTER side
+    const side = horiz ? rh : rw;
+    const thick = rowArea / side;
+    let off = 0;
+    for (const r of row) {
+      const len = (r.value * scale) / thick;
+      out.push(horiz ? { ...r, x, y: y + off, w: thick, h: len }
+                     : { ...r, x: x + off, y, w: len, h: thick });
+      off += len;
+    }
+    if (horiz) { x += thick; rw -= thick; } else { y += thick; rh -= thick; }
+    row = []; rowArea = 0;
+  };
+  for (const it of sorted) {
+    const a = it.value * scale;
+    const side = Math.min(rw, rh);
+    const cur = row.map((r) => r.value * scale);
+    if (row.length && worst([...cur, a], rowArea + a, side) > worst(cur, rowArea, side)) flush();
+    row.push(it); rowArea += a;
+  }
+  if (row.length) flush();
+  return out;
+}
+
+// Donut breakdown of the current drill-down rows: by SLEEVE when the view spans several sleeves
+// (All / bucket scope), otherwise by holding. Long tails fold into "Other (n)" so the ring stays
+// readable. Negative-MV rows (short legs) are excluded — arcs can't be negative.
+function donutBreakdown(rows, max = 14) {
+  const bySleeve = new Set(rows.map((g) => g.sleeve)).size > 1;
+  const agg = new Map();
+  for (const g of rows) {
+    if (!((g.marketValue || 0) > 0)) continue;
+    const key = bySleeve ? (g.sleeve || "Unclassified") : (g.ticker || g.assetName || "?");
+    agg.set(key, (agg.get(key) || 0) + g.marketValue);
+  }
+  const sorted = [...agg.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+  if (sorted.length <= max) return { dim: bySleeve ? "Sleeve" : "Holding", slices: sorted };
+  const head = sorted.slice(0, max - 1);
+  const rest = sorted.slice(max - 1).reduce((t, s) => t + s.value, 0);
+  return { dim: bySleeve ? "Sleeve" : "Holding", slices: [...head, { label: `Other (${sorted.length - head.length})`, value: rest, other: true }] };
+}
+
+// Diverging gain color for treemap tiles: red (loss) → slate (flat / unknown) → green (gain),
+// saturating at ±30% so one moonshot doesn't wash out the scale. null = no usable basis.
+function gainColor(pct) {
+  if (pct == null || !isFinite(pct)) return "rgb(91,100,114)";
+  const t = Math.max(-1, Math.min(1, pct / 0.30));
+  const from = [91, 100, 114];                                // slate
+  const to = t >= 0 ? [22, 128, 61] : [190, 42, 42];          // green / red
+  const u = Math.abs(t);
+  const mix = (i) => Math.round(from[i] + (to[i] - from[i]) * u);
+  return `rgb(${mix(0)},${mix(1)},${mix(2)})`;
+}
+
+// Host-aware MarketForge deep-link (pairs with the Forge-side `#charts=T` / `#etf=T` parser):
+// on the padlocked ts.net origin the dashboard's TLS front is :8443 (tailscale serve); on the
+// LAN it's plain :8765. Same rule as the "Back to MarketForge" pill in index.html.
+function forgeTickerUrl(kind, ticker, loc) {
+  const base = loc.hostname.endsWith(".ts.net")
+    ? `https://${loc.hostname}:8443/forge`
+    : `${loc.protocol}//${loc.hostname}:8765/forge`;
+  return `${base}#${kind}=${encodeURIComponent(ticker)}`;
+}
+
+// Plausible exchange symbol → worth a Forge link. 1-5 letters covers ETFs/stocks/funds; bond
+// CUSIPs (9 alnum), option symbols and "-" placeholders fall out naturally.
+function isChartableTicker(ticker) {
+  return /^[A-Z]{1,5}$/.test(ticker || "");
+}
+
 function renderHoldings() {
   const query = state.query.trim().toLowerCase();
   const holdings = visibleHoldings().filter((holding) => {
@@ -2089,22 +2254,44 @@ function renderHoldings() {
     g.shares += h.shares || 0;
     g.lots.push(h);
   }
-  const rows = [...groups.values()].sort((a, b) => b.marketValue - a.marketValue);
-
   // ADAPTIVE Shares + Price columns: only shown when the imported book carries share counts (the
   // value-only consolidated book has none → hidden; a broker CSV with Qty shows them). Price is
   // DERIVED value÷shares so a merged row gets a correct weighted price even when lots differ.
   const hasShares = visibleHoldings().some((h) => (h.shares || 0) > 0);   // match the filtered table
+
+  // Column sort (v2.5): click a header to sort, click again to flip. If the active sort key's
+  // column isn't rendered in this view (Shares/Price hidden, Sleeve outside All), fall back to
+  // the legacy value-desc order rather than sorting by an invisible column.
+  let sortKey = state.holdingsSort.key, sortDir = state.holdingsSort.dir;
+  if ((!hasShares && (sortKey === "shares" || sortKey === "price")) || (!isAll && sortKey === "sleeve")) {
+    sortKey = "value"; sortDir = -1;
+  }
+  const rows = sortHoldingsGroups([...groups.values()], sortKey, sortDir);
+
+  const arrow = (k) => (sortKey === k ? `<span class="sortArrow">${sortDir > 0 ? "▲" : "▼"}</span>` : "");
+  const th = (k, lbl, num) =>
+    `<th class="sortable${num ? " num" : ""}" data-sortkey="${k}" title="Sort by ${lbl} (click again to reverse)">${lbl}${arrow(k)}</th>`;
   el.holdingsHead.innerHTML =
-    `<th>Ticker</th><th>Asset</th>` + (isAll ? `<th>Sleeve</th>` : ``) +
-    (hasShares ? `<th class="num">Shares</th><th class="num">Price</th>` : ``) +
-    `<th class="num">Cost</th><th class="num">Value</th><th class="num">Gain / Loss</th>`;
+    th("ticker", "Ticker") + th("asset", "Asset") + (isAll ? th("sleeve", "Sleeve") : ``) +
+    (hasShares ? th("shares", "Shares", 1) + th("price", "Price", 1) : ``) +
+    th("cost", "Cost", 1) + th("value", "Value", 1) + th("gain", "Gain / Loss", 1);
+  el.holdingsHead.querySelectorAll("th.sortable").forEach((cell) => cell.addEventListener("click", () => {
+    const key = cell.dataset.sortkey;
+    if (state.holdingsSort.key === key) state.holdingsSort.dir = -state.holdingsSort.dir;
+    else state.holdingsSort = { key, dir: (key === "ticker" || key === "asset" || key === "sleeve") ? 1 : -1 };
+    renderHoldings();
+  }));
 
   el.holdingsBody.replaceChildren(
     ...rows.map((g) => {
       const tr = document.createElement("tr");
       tr.innerHTML =
-        `<td class="ticker">${escapeHtml(g.ticker || "-")}${g.lots.length > 1 ? `<small class="lots" title="${g.lots.length} lots merged">×${g.lots.length}</small>` : ``}</td>` +
+        `<td class="ticker">${escapeHtml(g.ticker || "-")}${g.lots.length > 1 ? `<small class="lots" title="${g.lots.length} lots merged">×${g.lots.length}</small>` : ``}` +
+        (isChartableTicker(g.ticker)
+          ? `<span class="tkActs"><a href="${forgeTickerUrl("charts", g.ticker, location)}" target="_blank" rel="noopener" title="Price chart for ${g.ticker} in MarketForge (overlays + compare-vs-SPY live there) — opens in a new tab">📈</a>` +
+            `<a href="${forgeTickerUrl("etf", g.ticker, location)}" target="_blank" rel="noopener" title="MarketForge ETF deep-dive for ${g.ticker} (identity, costs, composition, factors, flows, news) — opens in a new tab">ETF</a></span>`
+          : ``) +
+        `</td>` +
         `<td>${escapeHtml(g.assetName)}</td>` +
         (isAll ? `<td class="sleeveCell"></td>` : ``) +
         (hasShares ? `<td class="num">${number(g.shares)}</td><td class="num">${g.shares > 0 ? priceUsd(g.marketValue / g.shares) : "—"}</td>` : ``) +
@@ -2170,6 +2357,104 @@ function renderHoldings() {
       `<td class="num">${money(tCost)}</td><td class="num strong">${money(tVal)}</td>` +
       `<td class="num gl ${tGain >= 0 ? "up" : "down"}">${money(tGain)}${(tCost && !optScope) ? ` <em>${(tGain >= 0 ? "+" : "") + (tPct * 100).toFixed(1)}%</em>` : ""}</td></tr>`
     : "";
+
+  renderDrillToggle();
+  renderDrillChart(rows);
+}
+
+// The drill-down view switch (v2.5): ☰ Table | ▦ Treemap | ◔ Donut, persisted per device.
+function renderDrillToggle() {
+  if (!el.drillToggle) return;
+  const opts = [
+    ["table", "☰ Table", "Classic sortable table"],
+    ["treemap", "▦ Treemap", "Rectangles sized by market value, colored by unrealized gain (red loss → green gain)"],
+    ["donut", "◔ Donut", "Share-of-view ring — by sleeve in the All / bucket views, by holding inside a sleeve"],
+  ];
+  el.drillToggle.innerHTML = opts.map(([k, lbl, tip]) =>
+    `<button type="button" class="drillViewBtn ${state.drillView === k ? "on" : ""}" data-view="${k}" title="${tip}">${lbl}</button>`).join("");
+  el.drillToggle.querySelectorAll(".drillViewBtn").forEach((b) => b.addEventListener("click", () => {
+    state.drillView = b.dataset.view;
+    saveJson("drillView", state.drillView);
+    renderHoldings();
+  }));
+}
+
+// Chart renderers for the drill-down panel (v2.5). Both consume the SAME merged/filtered rows
+// the table shows — search, account toggles and the sleeve/bucket selection all apply. Zero
+// dependencies: the treemap is absolutely-positioned divs over squarified geometry; the donut
+// reuses the Pivot panel's SVG ring classes.
+function renderDrillChart(rows) {
+  const showTable = state.drillView === "table";
+  if (el.holdingsTableWrap) el.holdingsTableWrap.style.display = showTable ? "" : "none";
+  if (!el.drillChart) return;
+  el.drillChart.style.display = showTable ? "none" : "";
+  if (showTable) { el.drillChart.innerHTML = ""; return; }
+
+  const items = rows.filter((g) => (g.marketValue || 0) > 0).map((g) => ({
+    label: g.ticker || g.assetName || "?", name: g.assetName, sleeve: g.sleeve, ticker: g.ticker,
+    value: g.marketValue,
+    gainPct: (g.basisAssumed || !g.costBasis) ? null : (g.marketValue - g.costBasis) / g.costBasis,
+    assumed: !!g.basisAssumed,
+  }));
+  const total = items.reduce((t, i) => t + i.value, 0);
+  const skippedShorts = rows.length - items.length;
+  if (!items.length || !total) {
+    el.drillChart.innerHTML = `<p class="drillChartNote">Nothing to chart in this selection${skippedShorts ? " (only negative-value positions here — see the table view)" : ""}.</p>`;
+    return;
+  }
+
+  if (state.drillView === "treemap") {
+    // top-N tiles + an "Other" catch-all — 5px slivers carry no information, they just flicker
+    const MAX_TILES = 60;
+    let plot = items;
+    if (items.length > MAX_TILES) {
+      const head = [...items].sort((a, b) => b.value - a.value).slice(0, MAX_TILES - 1);
+      const rest = items.filter((i) => !head.includes(i));
+      plot = [...head, {
+        label: `Other (${rest.length})`, name: `${rest.length} smaller positions`, sleeve: "", ticker: "",
+        value: rest.reduce((t, i) => t + i.value, 0), gainPct: null, assumed: false, other: true,
+      }];
+    }
+    const W = Math.max(el.drillChart.clientWidth || 900, 320), H = 440;
+    const tiles = treemapLayout(plot, W, H).map((r) => {
+      const big = r.w > 72 && r.h > 40, mid = r.w > 44 && r.h > 18;
+      const gTxt = r.gainPct == null ? (r.assumed ? "basis assumed → flat" : r.other ? "" : "no basis") :
+        `${r.gainPct >= 0 ? "+" : ""}${(r.gainPct * 100).toFixed(1)}%`;
+      const inner = big
+        ? `<strong>${escapeHtml(r.label)}</strong><span>${money(r.value)}</span><em>${gTxt}</em>`
+        : mid ? `<strong>${escapeHtml(r.label)}</strong>` : "";
+      const tip = `${r.label} — ${r.name || ""}\n${money(r.value)} · ${percent(r.value / total)} of view` +
+        (gTxt ? ` · gain ${gTxt}` : "") + (r.sleeve ? `\n${r.sleeve}` : "") +
+        (isChartableTicker(r.ticker) ? "\nClick → MarketForge price chart" : "");
+      const link = isChartableTicker(r.ticker) ? ` data-tk="${r.ticker}"` : "";
+      return `<div class="tmTile${link ? " tmLink" : ""}"${link} style="left:${r.x.toFixed(1)}px;top:${r.y.toFixed(1)}px;width:${Math.max(r.w - 1, 0).toFixed(1)}px;height:${Math.max(r.h - 1, 0).toFixed(1)}px;background:${gainColor(r.other ? null : r.gainPct)}" title="${escapeAttr(tip)}">${inner}</div>`;
+    }).join("");
+    el.drillChart.innerHTML =
+      `<div class="tmBoard" style="height:${H}px">${tiles}</div>` +
+      `<p class="drillChartNote">Tile size = market value (${money(total)} charted) · color = unrealized gain <span class="tmSw" style="background:${gainColor(-0.3)}"></span>−30% <span class="tmSw" style="background:${gainColor(0)}"></span>flat / no basis <span class="tmSw" style="background:${gainColor(0.3)}"></span>+30%${skippedShorts ? ` · ${skippedShorts} negative-value position${skippedShorts === 1 ? "" : "s"} not drawn` : ""} · click a tile to open its MarketForge chart</p>`;
+    el.drillChart.querySelectorAll(".tmLink").forEach((t) => t.addEventListener("click", () => {
+      window.open(forgeTickerUrl("charts", t.dataset.tk, location), "_blank", "noopener");
+    }));
+  } else {
+    // donut — same SVG technique/classes as the Pivot ring (arc = share of the POSITIVE total)
+    const { dim, slices } = donutBreakdown(items.map((i) => ({ sleeve: i.sleeve, ticker: i.ticker, assetName: i.name, marketValue: i.value })));
+    const R = 62, WID = 30, CIRC = 2 * Math.PI * R, CX = 80, CY = 80;
+    let off = 0, rings = "", legend = "";
+    slices.forEach((s, i) => {
+      const frac = s.value / total, len = frac * CIRC, col = PALETTE[i % PALETTE.length];
+      rings += `<circle class="drillSlice" data-cat="${escapeAttr(s.label)}"${s.other ? "" : ` data-real="1"`} cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${col}" stroke-width="${WID}" stroke-dasharray="${len.toFixed(2)} ${(CIRC - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"><title>${escapeHtml(s.label)} — ${percent(frac)} (${money(s.value)})</title></circle>`;
+      legend += `<button type="button" class="drillSlice pivotLegItem" data-cat="${escapeAttr(s.label)}"${s.other ? "" : ` data-real="1"`}><span class="pivotLegSw" style="background:${col}"></span><span class="pivotLegLbl">${escapeHtml(s.label)}</span><strong>${percent(frac)}</strong><em>${money(s.value)}</em></button>`;
+      off += len;
+    });
+    el.drillChart.innerHTML =
+      `<div class="pivotChart drillDonut"><svg class="pivotDonut" viewBox="0 0 160 160" role="img" aria-label="${escapeAttr(dim)} breakdown"><g transform="rotate(-90 ${CX} ${CY})">${rings}</g><text x="${CX}" y="${CY - 2}" class="pivotDonutLbl">${escapeHtml(dim)}</text><text x="${CX}" y="${CY + 16}" class="pivotDonutTot">${money(total)}</text></svg><div class="pivotLegend">${legend}</div></div>` +
+      `<p class="drillChartNote">Share of the current view's positive market value (${money(total)})${skippedShorts ? ` · ${skippedShorts} negative-value position${skippedShorts === 1 ? "" : "s"} excluded` : ""}${dim === "Sleeve" ? " · click a slice to drill into that sleeve" : ""}</p>`;
+    if (dim === "Sleeve") {
+      el.drillChart.querySelectorAll(".drillSlice[data-real]").forEach((sl) => sl.addEventListener("click", () => {
+        selectScope({ sleeve: sl.getAttribute("data-cat") });
+      }));
+    }
+  }
 }
 
 function buildPortfolioCube(holdings) {

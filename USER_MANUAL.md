@@ -16,6 +16,36 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.5 — what's new
+
+- **Accounts filter is now a dropdown with checkboxes** (was a pill row). One summary button
+  above the dashboard — e.g. *All accounts (9) · $17.1M ▾* — opens a panel with the **All /
+  Self-managed / Advisor** presets and a checkbox per account (largest first, market value
+  shown, advisor-managed tagged). The panel stays open while you toggle so the dashboards
+  update live; click outside or press **Esc** to close. Everything else is unchanged: the
+  selection persists, applies to every client-computed panel, and an active filter is never
+  silent — the button turns amber, a *filtered* hint appears, and the header still shows
+  *n of m accounts*. The precomputed-panels caveat badge behaves as before.
+- **Sidebar auto-collapses on load** — **Load Full Book** and a CSV import now collapse every
+  bucket in the sleeve sidebar so a fresh book opens at the compact asset-class overview;
+  expand with the chevrons as usual (your subsequent expand/collapse choices still persist).
+- **Sortable drill-down columns** — click any header in the holdings table (Ticker, Asset,
+  Sleeve, Shares, Price, Cost, Value, Gain/Loss) to sort; click again to reverse. Numeric
+  columns start biggest-first, text columns A-first. Works in every scope — All, bucket,
+  sub-group, or sleeve. Assumed-basis rows sort as gain $0, matching what they display.
+- **Chart views for the drill-down** — a **☰ Table | ▦ Treemap | ◔ Donut** switch in the
+  Drill-down header. **Treemap**: one rectangle per holding, sized by market value and colored
+  by unrealized gain (red −30% → slate flat → green +30%); hover for detail, click a tile to
+  open its MarketForge price chart. **Donut**: share-of-view ring — by sleeve in the All /
+  bucket views (click a slice to drill into that sleeve), by holding inside a single sleeve.
+  Both charts honor the account filter, search box, and current selection; short/negative
+  positions can't be drawn and are counted in the caption instead. The choice persists.
+- **MarketForge links on every listed ticker** — hover a holdings row and two quiet actions
+  appear next to the symbol: **📈** opens the MarketForge price chart (overlays +
+  compare-vs-SPY live there) and **ETF** opens the full ETF deep-dive tab (identity, costs,
+  composition, factor regression, flows, news) — each in a new tab, on the right host
+  automatically (LAN `:8765` or the padlocked `ts.net` `:8443`).
+
 ### Version 2.4.5 — what's new
 
 - **"Sortino" honestly relabeled CAGR/Down-Vol** (finishing the P3-12 relabel across the OLAP
@@ -305,7 +335,7 @@ node --check src/app.js
 Open the **Guide** and click **Sample Portfolio** (in the header, next to Close). It replaces the
 current holdings with a ~60-position demonstration book covering virtually every sleeve in the
 taxonomy — including Crypto, Options, Multi-Asset, Treasuries, bank loans, privates, CDs, and
-annuities — spread across three mock accounts so the account-source pills, drill-downs, pivots,
+annuities — spread across three mock accounts so the Accounts filter, drill-downs, pivots,
 and planning views all have something to show. Loading the sample overwrites the held book in
 browser storage; reload your real data with **Load Full Book** or a CSV import.
 
@@ -420,34 +450,40 @@ The **convex role** describes a sleeve's job in the portfolio's "crash shape". N
 - Click a **sleeve** under a header to drill into just that sleeve.
 - Some buckets nest one level deeper — e.g. **Fixed Income → Bonds → {Treasuries, Corporate, Municipal, High-Yield, Bank Loans, Core/Multisector}**, with **CDs** and **Annuity / Stable Value** as direct siblings of the **Bonds** sub-group. The sub-group is itself collapsible and drillable (clicking **Bonds** shows the whole bond family).
 - Click an **allocation row** or a **top holding** to jump to its sleeve.
-- The chevron (▸ / ▾) collapses or expands a group; the state is remembered.
+- The chevron (▸ / ▾) collapses or expands a group; the state is remembered. Loading a fresh
+  book (**Load Full Book** or a CSV import) collapses every bucket first (v2.5), so you start
+  from the compact asset-class overview and expand what you need.
 
 Any drill-in scrolls the holdings table into view automatically. The title and table update to the selected scope.
 
-### Account scope: the pill row
+### Account scope: the Accounts dropdown
 
-Above the dashboard, one pill per brokerage account (largest market value first, value shown on
-hover) plus three presets:
+Above the dashboard sits one summary button — e.g. **All accounts (9) · $17.1M ▾** — showing
+which account sources feed every client-computed panel. Click it to open the panel (v2.5;
+this replaced the v2.4 pill row):
 
-- **All** — the full book (the default; equivalent to every pill on).
-- **Self-managed** — the accounts you run directly (Fidelity_Portfolio, Bond Account, TIAA-CREF,
-  DNSR-IRA, RMD Receiver).
-- **Advisor** — the advisor-managed entities (Living Trust · Partnership · Fidelity_AQR_FLEX45 · LLC).
+- Three presets at the top: **All** (the full book — the default), **Self-managed**
+  (Fidelity_Portfolio, Bond Account, TIAA-CREF, DNSR-IRA, RMD Receiver), and **Advisor**
+  (Living Trust · Partnership · Fidelity_AQR_FLEX45 · LLC).
+- Below them, a **checkbox per account**, largest market value first with the value alongside;
+  advisor-managed accounts carry a small *advisor* tag.
 
-Click any pill to toggle that account in or out; the selection applies to **every
-client-computed panel** — sleeve sidebar, dashboard metrics, Planning, Convexity, Pivot,
-Allocation, Top Holdings, and the holdings table — and **persists across sessions**
-(browser-local). An active filter is never silent: the header shows *n of m accounts* and off
-pills render struck-through.
+The panel stays open while you toggle, so the dashboards re-slice live; click anywhere outside
+(or press **Esc**) to close. The selection applies to **every client-computed panel** — sleeve
+sidebar, dashboard metrics, Planning, Convexity, Pivot, Allocation, Top Holdings, and the
+holdings table — and **persists across sessions** (browser-local). An active filter is never
+silent: the button turns amber and reads *n of m accounts*, a *filtered* hint sits beside it,
+unchecked accounts render struck-through in the panel, and the workspace header shows
+*n of m accounts*.
 
-Two things the pills cannot re-slice, by design:
+Two things the filter cannot re-slice, by design:
 
 - The **Dial / Sortino Overlay / Risk Contribution** panels are *precomputed* per fixed slice by
   `portfolio_analysis.py` — with a filter active they show an amber **"Precomputed — not
   filtered"** badge; use the Risk panel's own **View** selector to scope those.
 - **Snapshot performance history** stays whole-book.
 
-Books with a single account hide the row entirely.
+Books with a single account hide the control entirely.
 
 ### Pivot / Matrix: cross-tab any two dimensions
 
@@ -518,6 +554,36 @@ The columns adapt to the loaded data:
 - **Gain / Loss** — unrealized `$ (+%)`, green for gains, red for losses. The `%` is suppressed for **Options** (short premium makes a cost-basis percentage meaningless).
 
 Multiple lots of the same ticker (e.g. the same ETF held across accounts) are **merged** into one summed row. A bold **totals row** sums the current view — count, cost, value, and gain.
+
+**Sorting (v2.5):** click any column header to sort the table; click again to reverse. Numeric
+columns start biggest-first, text columns A-first, with value-then-ticker tiebreaks so the
+order is stable. If the sorted column disappears in another scope (Shares/Price on a value-only
+book, Sleeve inside a sleeve drill), the table falls back to the default value-descending order.
+
+**MarketForge links (v2.5):** rows whose symbol looks like a listed ticker show two quiet
+actions on hover next to the symbol — **📈** opens that ticker's MarketForge price chart
+(overlays and compare-vs-SPY live there) and **ETF** opens the MarketForge ETF deep-dive tab
+(identity, costs, composition, factor regression, flows, news). Both open in a new tab and pick
+the right host automatically (LAN `:8765`, or the padlocked `ts.net` origin's `:8443` front).
+Bond CUSIPs, options symbols, and placeholder rows get no links.
+
+### Chart views: Treemap and Donut (v2.5)
+
+The Drill-down header carries a **☰ Table | ▦ Treemap | ◔ Donut** switch (the choice persists
+per device). Both charts draw exactly what the table would show — the current sleeve/bucket
+selection, the search filter, and the Accounts filter all apply:
+
+- **▦ Treemap** — one rectangle per merged holding, **sized by market value** and **colored by
+  unrealized gain** (red at −30% or worse → slate for flat/no-basis → green at +30% or better).
+  Hover any tile for the full detail (value, % of view, gain, sleeve); **click a tile** to open
+  its MarketForge price chart. Books with very many positions fold the tail into one grey
+  *Other* tile. Assumed-basis holdings read as flat (slate), matching their $0 gain convention.
+- **◔ Donut** — share-of-view ring. In the All-Portfolio and bucket views it breaks down **by
+  sleeve** (click a slice or its legend row to drill into that sleeve); inside a single sleeve
+  it breaks down **by holding**. Long tails fold into *Other*.
+
+Short/negative positions cannot be drawn in either chart; the caption counts them instead —
+switch back to ☰ Table to see them.
 
 ### Progressive Drill-Down Path
 
@@ -727,7 +793,7 @@ If future versions add cloud sync, brokerage integrations, market data APIs, or 
 - There is no target allocation or rebalancing workflow yet.
 - Manual assignments are browser-local and do not automatically move between devices.
 - Classification is rule-based, not a full security master or AI classifier.
-- The account-source pills re-slice client-computed panels only; the precomputed panels (Dial / Sortino Overlay / Risk Contribution) and snapshot history stay whole-book and show a badge instead (see *Account scope: the pill row*).
+- The Accounts filter re-slices client-computed panels only; the precomputed panels (Dial / Sortino Overlay / Risk Contribution) and snapshot history stay whole-book and show a badge instead (see *Account scope: the Accounts dropdown*).
 - The Risk Contribution panel only measures holdings with a market-price series in the warehouse; non-marked holdings (CDs, annuities, private funds) are excluded, so a private-heavy slice covers only its marked portion (the panel's banner states the coverage).
 
 ## 6. Recommended Next Enhancements
