@@ -16,6 +16,19 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.4.2 — what's new
+
+- **The Sortino Overlay follows your account selection.** `portfolio_analysis.py` now exports a
+  per-account proxy view (the account's holdings mapped onto the overlay's six proxy buckets,
+  run through the same 2011→2026 monthly panel, with the monthly series shipped). With account
+  pills active, the panel shows a **"Your selection"** metrics row — CAGR / Sortino / maxDD / vol
+  for exactly the accounts you have on, MV-weighted — instead of the blanket "not filtered" badge.
+  Honesty rules: an account under 50% proxy-mappable (e.g. a privates-heavy entity) gets no view
+  and the badge names it; a selection whose proxy coverage is under 90% shows the excluded share;
+  the whole-book rows below (Current / deploy / regime) still answer book-level questions and say so.
+  Example: RMD Receiver alone reads ~+11.5% CAGR / −25.6% maxDD (equity-heavy), where the old
+  headline showed the whole-book ~+8.0%.
+
 ### Version 2.4.1 — what's new
 
 - **One Sample Portfolio button** (was two): the Guide's *Sample portfolio / Large sample* pair

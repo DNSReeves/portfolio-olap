@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.4.1";
+const APP_VERSION = "v2.4.2";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -1193,6 +1193,50 @@ function signPct(value) {
 // Read-only render of the precomputed Sortino-overlay backtest (overlay_snapshot.json).
 // Hidden entirely if the snapshot is absent. Provenance (as-of, window, the consolidated-
 // book caveat) is shown inline so it's never mistaken for a live, import-driven number.
+// ── per-account overlay views (v2.4.2, 2026-07-07) ──────────────────────────
+// The snapshot ships each account's monthly proxy-return series (same panel as the
+// whole-book overlay). These pure seams let the panel FOLLOW the account toggles:
+// combine the selected accounts MV-weighted, recompute metrics exactly as
+// portfolio_analysis.met() does (pandas ddof=1; sortino = CAGR / neg-month std ×√12).
+function overlayMetricsFromMonthly(returns) {
+  const r = (returns || []).filter((x) => Number.isFinite(x));
+  if (r.length < 12) return null;
+  let wealth = 1, peak = 1, mdd = 0;
+  for (const x of r) {
+    wealth *= 1 + x;
+    if (wealth > peak) peak = wealth;
+    const dd = wealth / peak - 1;
+    if (dd < mdd) mdd = dd;
+  }
+  const cagr = Math.pow(wealth, 12 / r.length) - 1;
+  const std = (a) => {
+    if (a.length < 2) return NaN;
+    const m = a.reduce((s2, x) => s2 + x, 0) / a.length;
+    return Math.sqrt(a.reduce((s2, x) => s2 + (x - m) * (x - m), 0) / (a.length - 1));
+  };
+  const vol = std(r) * Math.sqrt(12);
+  const dv = std(r.filter((x) => x < 0)) * Math.sqrt(12);
+  return { cagr, vol, mdd, sortino: dv > 0 ? cagr / dv : NaN };
+}
+
+function combineOverlayViews(views, names) {
+  // MV-weighted monthly combination; EVERY selected account must have a view
+  // (an account below the 50% proxy-coverage floor has none → caller keeps the badge).
+  if (!views || !names || !names.length) return null;
+  const sel = names.map((n) => views[n]);
+  if (sel.some((v) => !v || !Array.isArray(v.monthly) || !v.monthly.length)) return null;
+  const len = Math.min(...sel.map((v) => v.monthly.length));
+  const mv = sel.reduce((s2, v) => s2 + (v.mv || 0), 0);
+  if (!(mv > 0)) return null;
+  const monthly = new Array(len).fill(0);
+  for (const v of sel) {
+    const w = v.mv / mv;
+    for (let i = 0; i < len; i++) monthly[i] += w * v.monthly[i];
+  }
+  const coverage = sel.reduce((s2, v) => s2 + (v.coverage || 0) * v.mv, 0) / mv;
+  return { monthly, mv, coverage, n: sel.length };
+}
+
 function renderOverlay() {
   if (!el.overlay) return;
   const S = OVERLAY_SNAPSHOT;
@@ -1209,7 +1253,34 @@ function renderOverlay() {
     `<em>Treasuries ${signPct(v.treasuries)}/yr</em>` +
     `<strong class="${v.trend >= 0 ? "good" : "warn"}">Trend ${signPct(v.trend)}/yr</strong></div>`).join("");
   const win = `${(S.window[0] || "").slice(0, 4)}–${(S.window[1] || "").slice(0, 4)}`;
-  el.overlay.innerHTML = acctCaveatBadge() + `
+  // v2.4.2: with account toggles active, combine the selected accounts' proxy series and
+  // show a SELECTION row — the badge then only covers the strategy blocks below, which
+  // stay whole-book by design (deploy/regime answer book-level questions).
+  let selBlock = "", badge = acctCaveatBadge();
+  if (accountFilterActive() && S.views) {
+    const selNames = distinctAccounts().map(([n]) => n).filter((n) => !state.hiddenAccounts.has(n));
+    const combined = combineOverlayViews(S.views, selNames);
+    const m = combined ? overlayMetricsFromMonthly(combined.monthly) : null;
+    if (m) {
+      badge = "";
+      const covNote = combined.coverage < 0.9
+        ? ` · <span class="warn">proxy covers ${percent(combined.coverage)} of the selection (privates/options excluded)</span>` : "";
+      selBlock = `
+        <div class="ovBlock"><p class="eyebrow">Your selection — ${combined.n} account(s), ${money(combined.mv)} · same proxy backtest${covNote}</p>
+        <div class="planMetrics metrics">
+          <div class="metric"><span>Selection CAGR</span><strong>${percent(m.cagr)}</strong></div>
+          <div class="metric"><span>Selection Sortino</span><strong>${Number.isFinite(m.sortino) ? m.sortino.toFixed(2) : "—"}</strong></div>
+          <div class="metric"><span>Selection maxDD</span><strong>${percent(m.mdd)}</strong></div>
+          <div class="metric"><span>Selection vol</span><strong>${percent(m.vol)}</strong></div>
+        </div>
+        <div class="planNote">MV-weighted blend of each selected account's sleeve-proxy series over ${escapeHtml(win)} (monthly). The whole-book rows below (Current / deploy / regime) do NOT re-slice — they answer book-level questions.</div></div>`;
+    } else {
+      const missing = distinctAccounts().map(([n]) => n)
+        .filter((n) => !state.hiddenAccounts.has(n) && !(S.views && S.views[n]));
+      if (missing.length) badge = `<div class="acctCaveat">⚠ Precomputed — <strong>not filtered</strong>: no proxy view for ${escapeHtml(missing.join(", "))} (under 50% of it maps to the overlay's proxy buckets)</div>`;
+    }
+  }
+  el.overlay.innerHTML = badge + selBlock + `
     <div class="panelHeader">
       <div>
         <p class="eyebrow">Structural convexity &middot; volatility-managed construction</p>
