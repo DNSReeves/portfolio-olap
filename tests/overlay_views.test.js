@@ -52,15 +52,17 @@ ok("metrics mirror pandas ddof=1 on a mixed series", () => {
   assert.ok(m.mdd < 0);
 });
 
-ok("combine: MV-weighted, coverage MV-weighted", () => {
+ok("combine: MV-weighted returns, coverage AND bucket weights", () => {
   const views = {
-    A: { mv: 300, coverage: 1.0, monthly: [0.01, 0.02, 0.03] },
-    B: { mv: 100, coverage: 0.8, monthly: [-0.01, 0.0, 0.01] },
+    A: { mv: 300, coverage: 1.0, monthly: [0.01, 0.02, 0.03], weights: { EQUITY: 0.8, INTL: 0.2 } },
+    B: { mv: 100, coverage: 0.8, monthly: [-0.01, 0.0, 0.01], weights: { INTL: 1.0 } },
   };
   const c = app.combineOverlayViews(views, ["A", "B"]);
   approx(c.monthly[0], 0.75 * 0.01 + 0.25 * -0.01);
   approx(c.monthly[2], 0.75 * 0.03 + 0.25 * 0.01);
   approx(c.coverage, 0.75 * 1.0 + 0.25 * 0.8);
+  approx(c.weights.EQUITY, 0.75 * 0.8);                 // 60% US
+  approx(c.weights.INTL, 0.75 * 0.2 + 0.25 * 1.0);      // 40% intl
   assert.strictEqual(c.n, 2);
 });
 

@@ -16,6 +16,22 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.4.3 — what's new
+
+- **International equity split out of the US bucket** (accuracy fix): the per-account overlay
+  views now map Foreign/International/Emerging sleeves to their own **Int'l equity** bucket,
+  proxied by VXUS, instead of riding the US blend — over 2011→2026 international earned roughly
+  half the US rate, so half-international accounts were overstated (RMD Receiver: 11.5% → **9.3%**).
+- **Clear descriptions**: the selection row now states plainly what it is (the accounts' *current*
+  mix backtested with index proxies — an allocation read, **not** realized returns) and shows the
+  selection's **proxy composition** ("52% US equity · 43% int'l equity · …") with the exact index
+  proxy on hover; the whole-book Current metrics are labeled *whole book* with a tooltip.
+
+  The proxy table: **US equity** 40% SPY / 30% IWD / 30% IWN · **Int'l equity** VXUS ·
+  **Treasuries** 50% IEF / 50% TLT · **credit** 50% HYG / 50% BKLN (munis/core ride this) ·
+  **cash** BIL · **trend** AQMIX + DBMF (WTMF pre-2019) · **long/short** synthetic
+  45% US equity / 30% trend / 25% cash.
+
 ### Version 2.4.2 — what's new
 
 - **The Sortino Overlay follows your account selection.** `portfolio_analysis.py` now exports a

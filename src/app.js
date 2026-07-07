@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.4.2";
+const APP_VERSION = "v2.4.3";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -1234,7 +1234,12 @@ function combineOverlayViews(views, names) {
     for (let i = 0; i < len; i++) monthly[i] += w * v.monthly[i];
   }
   const coverage = sel.reduce((s2, v) => s2 + (v.coverage || 0) * v.mv, 0) / mv;
-  return { monthly, mv, coverage, n: sel.length };
+  const weights = {};
+  for (const v of sel) {
+    const w = v.mv / mv;
+    for (const [k, x] of Object.entries(v.weights || {})) weights[k] = (weights[k] || 0) + w * x;
+  }
+  return { monthly, mv, coverage, weights, n: sel.length };
 }
 
 function renderOverlay() {
@@ -1265,15 +1270,25 @@ function renderOverlay() {
       badge = "";
       const covNote = combined.coverage < 0.9
         ? ` · <span class="warn">proxy covers ${percent(combined.coverage)} of the selection (privates/options excluded)</span>` : "";
+      const labels = S.bucket_labels || {};
+      const proxies = S.proxies || {};
+      const compo = Object.entries(combined.weights || {})
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, w]) => `<span title="${escapeAttr(proxies[k] || k)}" style="border-bottom:1px dashed currentColor;cursor:help">${Math.round(w * 100)}% ${escapeHtml(labels[k] || k.toLowerCase())}</span>`)
+        .join(" · ");
       selBlock = `
-        <div class="ovBlock"><p class="eyebrow">Your selection — ${combined.n} account(s), ${money(combined.mv)} · same proxy backtest${covNote}</p>
+        <div class="ovBlock"><p class="eyebrow">Your selection — ${combined.n} account(s), ${money(combined.mv)}${covNote}</p>
         <div class="planMetrics metrics">
           <div class="metric"><span>Selection CAGR</span><strong>${percent(m.cagr)}</strong></div>
           <div class="metric"><span>Selection Sortino</span><strong>${Number.isFinite(m.sortino) ? m.sortino.toFixed(2) : "—"}</strong></div>
           <div class="metric"><span>Selection maxDD</span><strong>${percent(m.mdd)}</strong></div>
           <div class="metric"><span>Selection vol</span><strong>${percent(m.vol)}</strong></div>
         </div>
-        <div class="planNote">MV-weighted blend of each selected account's sleeve-proxy series over ${escapeHtml(win)} (monthly). The whole-book rows below (Current / deploy / regime) do NOT re-slice — they answer book-level questions.</div></div>`;
+        <div class="planNote"><b>What this is:</b> the selected accounts&rsquo; <em>current</em> mix, held
+        constant and backtested with index proxies over ${escapeHtml(win)} (monthly) — a read on how
+        this <em>allocation</em> behaves, <b>not</b> the accounts&rsquo; realized returns (contributions,
+        withdrawals and past holdings changes are not in it).
+        <b>Proxied as:</b> ${compo} <span style="color:var(--muted)">(hover any part for the exact index proxy)</span>.</div></div>`;
     } else {
       const missing = distinctAccounts().map(([n]) => n)
         .filter((n) => !state.hiddenAccounts.has(n) && !(S.views && S.views[n]));
@@ -1289,9 +1304,9 @@ function renderOverlay() {
       <span class="pill ovPill" title="${escapeAttr(S.note)}">as-of ${escapeHtml(S.data_as_of || "?")} &middot; ${escapeHtml(win)} monthly</span>
     </div>
     <div class="planMetrics metrics">
-      <div class="metric"><span>Current Sortino</span><strong>${cur.sortino.toFixed(2)}</strong></div>
-      <div class="metric"><span>Current maxDD</span><strong>${percent(cur.mdd)}</strong></div>
-      <div class="metric"><span>Current CAGR</span><strong>${percent(cur.cagr)}</strong></div>
+      <div class="metric"><span>Current Sortino <em class="cxSub">whole book</em></span><strong>${cur.sortino.toFixed(2)}</strong></div>
+      <div class="metric"><span>Current maxDD <em class="cxSub">whole book</em></span><strong>${percent(cur.mdd)}</strong></div>
+      <div class="metric" title="The WHOLE liquid book (48% equity / 21% credit / 15% cash / 13% long-short / 3% Treasuries) backtested with the same proxies. This figure never follows the account toggles; the Your-selection row above does."><span>Current CAGR <em class="cxSub">whole book</em></span><strong>${percent(cur.cagr)}</strong></div>
       <div class="metric good"><span>Full Convex 60/20/20 (tax-free target)</span><strong>Sortino ${S.full_convex.sortino.toFixed(2)} &middot; maxDD ${percent(S.full_convex.mdd)}</strong></div>
     </div>
     <div class="ovBlock"><p class="eyebrow">Idle cash &rarr; standalone trend (~$0 tax, cash-funded)</p>${deployRows}</div>
