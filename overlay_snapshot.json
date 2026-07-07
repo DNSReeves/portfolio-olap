@@ -8,36 +8,36 @@
   "trend_proxy": "AQMIX + DBMF/WTMF",
   "note": "Precomputed by portfolio_analysis.py from the dnsr-agent price warehouse (EODHD + etf_data.db). Reflects the consolidated liquid book (CUR_LIQUID weights), not a single OLAP import. Suggest-only; monthly data understates absolute maxDD.",
   "current": {
-    "sortino": 1.194902590265641,
-    "mdd": -0.16476861585267222,
-    "cagr": 0.07986371556845051,
-    "vol": 0.09249398432096284,
-    "cagr_downvol": 1.194902590265641
+    "sortino": 1.1953764293059927,
+    "mdd": -0.13571123467652801,
+    "cagr": 0.06629878286796598,
+    "vol": 0.07508708306498196,
+    "cagr_downvol": 1.1953764293059927
   },
   "deploy": [
     {
       "usd_m": 0.5,
-      "pct": 0.03399048266485384,
-      "sortino": 1.2210794162138754,
-      "cagr_downvol": 1.2210794162138754,
-      "mdd": -0.16430258547225163,
-      "ret_2022": -0.07390277406098766
+      "pct": 0.034818941504178275,
+      "sortino": 1.2229925162134412,
+      "cagr_downvol": 1.2229925162134412,
+      "mdd": -0.13523323767487871,
+      "ret_2022": -0.05940357402970453
     },
     {
       "usd_m": 0.8,
-      "pct": 0.054384772263766146,
-      "sortino": 1.2402438430017155,
-      "cagr_downvol": 1.2402438430017155,
-      "mdd": -0.1640235213767003,
-      "ret_2022": -0.06890557155913701
+      "pct": 0.05571030640668524,
+      "sortino": 1.2419513120214847,
+      "cagr_downvol": 1.2419513120214847,
+      "mdd": -0.1349470227480153,
+      "ret_2022": -0.054248131813147915
     },
     {
       "usd_m": 1.2,
-      "pct": 0.0815771583956492,
-      "sortino": 1.2645550103693357,
-      "cagr_downvol": 1.2645550103693357,
-      "mdd": -0.16365208217898264,
-      "ret_2022": -0.06221831858068816
+      "pct": 0.08356545961002786,
+      "sortino": 1.2682220411083844,
+      "cagr_downvol": 1.2682220411083844,
+      "mdd": -0.13456608309001117,
+      "ret_2022": -0.04734893173511778
     }
   ],
   "full_convex": {
