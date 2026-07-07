@@ -272,6 +272,11 @@ let SLEEVE_PARENTS = {
   "Unclassified": "Other / Unclassified",
 };
 
+// Categorical chart palette, shared by the Pivot charts and the v2.5 drill-down donut.
+// (Was local to renderPivot — the drill-down donut referencing it from there threw a
+// ReferenceError and blanked the panel, 2026-07-07 operator report.)
+const PALETTE = ["#1f77b4", "#2ca02c", "#d62728", "#9467bd", "#ff7f0e", "#17becf", "#8c564b", "#e377c2", "#bcbd22", "#5b8c5a", "#c49c2e", "#7f7f7f"];
+
 const STORAGE_PREFIX = "portfolio-olap:";
 const DB_NAME = "portfolio-olap-v2";
 const DB_VERSION = 1;
@@ -1990,7 +1995,6 @@ function renderPivot() {
 
   {
     // Chart under the table — chartType picks it (bars: stacked for 2-D / single for 1-D; else donut).
-    const PALETTE = ["#1f77b4", "#2ca02c", "#d62728", "#9467bd", "#ff7f0e", "#17becf", "#8c564b", "#e377c2", "#bcbd22", "#5b8c5a", "#c49c2e", "#7f7f7f"];
     if (chartType === "bars" && colDim && cell) {
       // 2-D → stacked bars: one horizontal bar per row, segmented by column; segment width = the
       // cell's % of the whole book (so a bar's length = the row's % of total and the segments show
@@ -2383,8 +2387,8 @@ function renderDrillToggle() {
 // the table shows — search, account toggles and the sleeve/bucket selection all apply. Zero
 // dependencies: the treemap is absolutely-positioned divs over squarified geometry; the donut
 // reuses the Pivot panel's SVG ring classes.
-function renderDrillChart(rows) {
-  const showTable = state.drillView === "table";
+function renderDrillChart(rows, view = state.drillView) {   // view injectable so the vm harness can drive both chart branches
+  const showTable = view === "table";
   if (el.holdingsTableWrap) el.holdingsTableWrap.style.display = showTable ? "" : "none";
   if (!el.drillChart) return;
   el.drillChart.style.display = showTable ? "none" : "";
@@ -2403,7 +2407,7 @@ function renderDrillChart(rows) {
     return;
   }
 
-  if (state.drillView === "treemap") {
+  if (view === "treemap") {
     // top-N tiles + an "Other" catch-all — 5px slivers carry no information, they just flicker
     const MAX_TILES = 60;
     let plot = items;
@@ -2415,7 +2419,8 @@ function renderDrillChart(rows) {
         value: rest.reduce((t, i) => t + i.value, 0), gainPct: null, assumed: false, other: true,
       }];
     }
-    const W = Math.max(el.drillChart.clientWidth || 900, 320), H = 440;
+    const cw = el.drillChart.clientWidth;
+    const W = Math.max(typeof cw === "number" && cw > 0 ? cw : 900, 320), H = 440;
     const tiles = treemapLayout(plot, W, H).map((r) => {
       const big = r.w > 72 && r.h > 40, mid = r.w > 44 && r.h > 18;
       const gTxt = r.gainPct == null ? (r.assumed ? "basis assumed → flat" : r.other ? "" : "no basis") :

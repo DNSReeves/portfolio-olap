@@ -118,6 +118,30 @@ const G = (ticker, marketValue, costBasis, extra = {}) => ({
   check("gainColor midpoint is between", mid !== app.gainColor(0) && mid !== app.gainColor(0.30));
 }
 
+/* ── renderDrillChart smoke: both chart branches must EXECUTE without throwing ──
+   Regression for the blank-donut bug (2026-07-07): the donut branch referenced PALETTE,
+   which was local to renderPivot — a ReferenceError after the table was hidden left the
+   drill-down panel empty. The proxy DOM absorbs the output; what's tested is that every
+   expression in each branch resolves. */
+{
+  const rows = [
+    G("SPY", 500, 400, { sleeve: "Large Blend" }),
+    G("VXUS", 300, 350, { sleeve: "International" }),
+    G("ANNU", 100, null, { assumed: true, sleeve: "Annuity / Stable Value" }),
+    G("SHRT", -50, 0, { sleeve: "Options" }),
+  ];
+  for (const view of ["donut", "treemap", "table"]) {
+    let threw = null;
+    try { app.renderDrillChart(rows, view); } catch (e) { threw = e; }
+    check(`renderDrillChart(${view}) executes without throwing`, threw === null || (() => { console.error(`      ↳ ${threw}`); return false; })());
+  }
+  // >MAX_TILES treemap path (Other folding) and the single-sleeve donut path too
+  const many = Array.from({ length: 70 }, (_, i) => G(`T${String(i).padStart(2, "0")}`, 1000 - i, 900, { sleeve: "Large Blend" }));
+  let threw = null;
+  try { app.renderDrillChart(many, "treemap"); app.renderDrillChart(many, "donut"); } catch (e) { threw = e; }
+  check("renderDrillChart handles 70-row books (Other folding, by-holding donut)", threw === null);
+}
+
 /* ── forgeTickerUrl + isChartableTicker ── */
 {
   const ts = { hostname: "davids-mac-mini.tail5074b4.ts.net", protocol: "https:" };
