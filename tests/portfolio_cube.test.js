@@ -55,5 +55,17 @@ ok(approx(cube.totalCostBasis, 6000), "totalCostBasis excludes the missing-basis
 // counting C's full 50000 as gain — the fix must NOT do that.
 ok(cube.unrealizedGain < 20000, "missing-basis MV is NOT fabricated as gain (old bug gave ~66591)");
 
+// 2026-07-08: assumed-basis rows (v2.4.4, basis = MV) are UNKNOWN basis for the caveats —
+// applyAssumedBasis runs on every path into state.holdings, so without this noBasisValue was
+// permanently 0 on a live book and totalCostBasis silently included the assumed (= MV) values.
+// Gains are unchanged: an assumed row's mv − cost is 0 by construction.
+const assumedCube = app.buildPortfolioCube([
+  { ticker: "A", assetName: "A", sleeve: "Large Blend", marketValue: 10000, costBasis: 6000 },
+  { ticker: "X", assetName: "X", sleeve: "Cash", marketValue: 5000, costBasis: 5000, basisAssumed: true },
+]);
+ok(approx(assumedCube.unrealizedGain, 4000), "assumed row contributes $0 gain");
+ok(approx(assumedCube.noBasisValue, 5000), "assumed row counts as unknown basis (noBasisValue)");
+ok(approx(assumedCube.totalCostBasis, 6000), "totalCostBasis excludes assumed (= MV) basis");
+
 if (failures) { console.error(`\n${failures} portfolio-cube assertion(s) FAILED`); process.exit(1); }
 console.log("\nall portfolio-cube assertions passed");

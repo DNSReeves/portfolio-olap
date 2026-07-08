@@ -16,6 +16,28 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.6.2 — what's new
+
+- **Honest "known cost basis" everywhere.** Assumed-basis rows (v2.4.4 convention: basis
+  unknown in the export → assumed = current value, gain $0) now count as **unknown** basis
+  for the Planning caveat, the cube's `noBasisValue`, and the report's **"Cost basis (known)"**
+  headline. Previously the assumed value silently inflated "known" cost, and the
+  unknown-basis disclosures could never fire on a live book (every row gets an assumed basis
+  on load). Gain math is unchanged — an assumed row's gain is $0 either way.
+- **Top dashboard de-duplicated.** The "Total Portfolio" card (identical to Portfolio Value)
+  and the constant "Portfolio Allocation 100%" card are gone; the whole-book gain card is
+  now labeled **Unrealized Gain** (it was "Selection Gain" but never followed the selection —
+  the scope strip below the dashboard is the selection view).
+- **Pivot stacked/1-D bars say what they can't draw.** Negative cells and net-negative rows
+  (short legs) can't render as bar segments; the chart header now counts what was omitted
+  and points to the matrix table instead of silently disagreeing with it.
+- **Internal:** the 2-D pivot cross-tab is computed once (was duplicated per render); dead
+  Windows/React bootstrap artifacts removed (`.bat` scripts, vite/react/tsconfig,
+  `react-smoke.tsx`, `esbuild-test.exe`) — the app is now honestly zero-dependency and
+  `npm run dev` matches this manual (python static server on :4173); documented the
+  deliberate LAN/tailnet trust boundary (no auth on :8787, pinned-recipient email endpoint)
+  under *Runtime Model*.
+
 ### Version 2.6.1 — what's new
 
 - **✉️ Email the report.** The report page has an **"Email me this report"** button next
@@ -191,6 +213,8 @@ Data is stored in browser `localStorage` under the `portfolio-olap:` prefix:
 - `portfolio-olap:assignments`: User-created sleeve overrides.
 
 Because data is local to the browser, no portfolio data is uploaded to an external service.
+
+**Trust boundary (deliberate).** The static server (`olap_server.py`, port `8787`) carries **no authentication**: anyone who can reach it on the LAN or the tailnet can view the served book (`consolidated_holdings.csv` and the precomputed snapshots). The boundary is the network, not the app — LAN + Tailscale devices are trusted. Likewise, the PDF report's ✉️ email button POSTs to the agent's `/api/olap/email_report` without a bearer token; that endpoint pins the recipient server-side (dnsr4007@gmail.com), so the exposure is limited to a trusted-network peer sending you unwanted mail. If the network posture ever changes (port-forward, new tailnet shares), revisit both.
 
 ### App Structure
 

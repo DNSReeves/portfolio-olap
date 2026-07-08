@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.6.1";
+const APP_VERSION = "v2.6.2";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -1108,16 +1108,17 @@ function renderMetrics(cube) {
   const hasBeta = selectedHoldings.some((h) => h.beta != null);
   const beta = betaDen ? betaNum / betaDen : 0;
 
-  // Top dashboard: the All-Portfolio summary — always pinned, unchanged on drill-down (as before).
+  // Top dashboard: the All-Portfolio summary — always pinned, unchanged on drill-down.
+  // (The legacy "Total Portfolio" duplicate + the constant "Portfolio Allocation 100%"
+  // card dropped, and the whole-book gain honestly labeled — it was "Selection Gain"
+  // even though it never followed the selection; the scope strip below does.)
   const allGain = cube.unrealizedGain;                       // same hasBasis convention as Planning
   const allBetaNum = base.reduce((s, h) => s + (h.marketValue || 0) * (h.beta || 0), 0);
   const allBetaDen = base.reduce((s, h) => s + (h.marketValue || 0), 0);
   const allHasBeta = base.some((h) => h.beta != null);
   el.metrics.replaceChildren(
     metric("Portfolio Value", money(cube.totalValue)),
-    metric("Total Portfolio", money(cube.totalValue)),
-    metric("Portfolio Allocation", percent(1)),
-    metric("Selection Gain", money(allGain), allGain >= 0 ? "good" : "warn"),
+    metric("Unrealized Gain", money(allGain), allGain >= 0 ? "good" : "warn"),
     ...(allHasBeta ? [metric("Beta vs S&P (est.)", (allBetaDen ? allBetaNum / allBetaDen : 0).toFixed(2))] : []),
   );
   const assumed = base.filter((h) => h.basisAssumed);
@@ -1225,10 +1226,10 @@ function renderPlanning(cube) {
         `<div class="planTaxRow"><span>${escapeHtml(s.name)}</span><em>${money(s.gain)} gain</em><strong>${money(s.tax)}</strong></div>`).join("")
     : `<div class="planNote">${hasCostBasis ? "No embedded gains." : "Import cost basis to compute embedded tax."}</div>`;
 
-  // P3-34 caveat: holdings with NO cost basis are excluded from the gain + embedded-tax numbers
-  // above (rather than silently counted as 100% gain). Surface how much of the book that is.
+  // P3-34 caveat: holdings whose basis is unknown in the source export (missing OR operator-assumed
+  // = current value) contribute $0 gain and nothing to embedded tax. Surface how much of the book that is.
   const noBasisNote = cube.noBasisValue > 0
-    ? `<div class="planNote">⚠ ${money(cube.noBasisValue)} (${((cube.noBasisValue / cube.totalValue) * 100).toFixed(1)}% of book) has no cost basis — excluded from gain &amp; embedded tax.</div>`
+    ? `<div class="planNote">⚠ ${money(cube.noBasisValue)} (${((cube.noBasisValue / cube.totalValue) * 100).toFixed(1)}% of book) has unknown cost basis (incl. assumed-basis rows<sup>*</sup>) — gain counted as $0, excluded from embedded tax.</div>`
     : "";
 
   const fmtInt = (n) => Number(n).toLocaleString("en-US");
@@ -1968,15 +1969,8 @@ function renderPivot() {
     }
     html += `<tr class="pivotTotal"><td>Total</td><td class="num">${money(grand)}</td><td class="num">100%</td></tr></tbody></table>`;
   } else {
-    const { cats: colCats, totals: colTot } = _pivotCatsByValue(colDim, hs);
-    const cell = {};
-    for (const h of hs) {
-      const v = h.marketValue || 0;
-      const rd = _distOf(rowDim, h), cd = _distOf(colDim, h);
-      for (const r in rd) for (const c in cd) {
-        cell[r + "" + c] = (cell[r + "" + c] || 0) + v * rd[r] * cd[c];
-      }
-    }
+    // colCats / colTot / cell were computed once above (shared with the stacked-bars chart) —
+    // this branch used to shadow-recompute all three with identical results (2026-07-08 dedup).
     html += `<div class="pivotScroll"><table class="pivotTable matrix"><thead><tr><th>${e(rowDim.label)} \\ ${e(colDim.label)}</th>`;
     for (const c of colCats) html += `<th class="num">${e(c)}</th>`;
     html += `<th class="num total">Total</th></tr></thead><tbody>`;
@@ -2005,29 +1999,35 @@ function renderPivot() {
       const colColor = {}; colCats.forEach((c, i) => { colColor[c] = PALETTE[i % PALETTE.length]; });
       const legend = colCats.map((c) => `<span class="pivotBarKey"><span class="pivotLegSw" style="background:${colColor[c]}"></span>${e(c)}</span>`).join("");
       let bars = "";
+      // shorts can't be drawn as bar segments; count what's skipped so the chart says so
+      // instead of silently disagreeing with the matrix table (2026-07-08)
+      let negCells = 0, negRows = 0;
       for (const r of rowCats) {
         const rt = rowOnly[r] || 0;
-        if (rt <= 0 || !grand) continue;
+        if (rt <= 0 || !grand) { if (rt < -0.005) negRows += 1; continue; }
         let segs = "";
         for (const c of colCats) {
           const v = cell[r + "" + c] || 0;
-          if (v <= 0) continue;
+          if (v <= 0) { if (v < -0.005) negCells += 1; continue; }
           segs += `<span class="pivotBarSeg pivotCell" data-row="${e(r)}" data-col="${e(c)}" style="width:${((v / grand) * 100).toFixed(3)}%;background:${colColor[c]}" title="${e(r)} × ${e(c)} — ${money(v)} (${percent(v / grand)})"></span>`;
         }
         bars += `<div class="pivotBarRow"><span class="pivotBarLbl" title="${e(r)}">${e(r)}</span><div class="pivotBarTrack">${segs}</div><span class="pivotBarTot"><strong>${percent(rt / grand)}</strong> <em>${money(rt)}</em></span></div>`;
       }
-      if (bars) html += `<div class="pivotChart pivotBarsChart"><p class="pivotBarsHd">${e(rowDim.label)} × ${e(colDim.label)} — share of book (bar length = the row's % of total)</p><div class="pivotBarLegend">${legend}</div>${bars}</div>`;
+      const omitted = negCells + negRows
+        ? ` · <em>${[negCells ? `${negCells} negative cell${negCells === 1 ? "" : "s"}` : "", negRows ? `${negRows} net-negative row${negRows === 1 ? "" : "s"}` : ""].filter(Boolean).join(" + ")} not drawn (shorts — see the matrix table)</em>` : "";
+      if (bars) html += `<div class="pivotChart pivotBarsChart"><p class="pivotBarsHd">${e(rowDim.label)} × ${e(colDim.label)} — share of book (bar length = the row's % of total)${omitted}</p><div class="pivotBarLegend">${legend}</div>${bars}</div>`;
     } else if (chartType === "bars") {
       // 1-D bars → one horizontal bar per row, length = the row's % of the book. Click → filter (row).
       let bars = "";
+      let negRows1 = 0;
       rowCats.forEach((r, i) => {
         const rt = rowOnly[r] || 0;
-        if (rt <= 0 || !grand) return;
+        if (rt <= 0 || !grand) { if (rt < -0.005) negRows1 += 1; return; }
         const col = PALETTE[i % PALETTE.length];
         const seg = `<span class="pivotBarSeg pivotSlice" data-cat="${e(r)}" style="width:${((rt / grand) * 100).toFixed(3)}%;background:${col}" title="${e(r)} — ${money(rt)} (${percent(rt / grand)})"></span>`;
         bars += `<div class="pivotBarRow"><span class="pivotBarLbl" title="${e(r)}">${e(r)}</span><div class="pivotBarTrack">${seg}</div><span class="pivotBarTot"><strong>${percent(rt / grand)}</strong> <em>${money(rt)}</em></span></div>`;
       });
-      if (bars) html += `<div class="pivotChart pivotBarsChart"><p class="pivotBarsHd">${e(rowDim.label)} — share of book</p>${bars}</div>`;
+      if (bars) html += `<div class="pivotChart pivotBarsChart"><p class="pivotBarsHd">${e(rowDim.label)} — share of book${negRows1 ? ` · <em>${negRows1} net-negative categor${negRows1 === 1 ? "y" : "ies"} not drawn (shorts — see the table)</em>` : ""}</p>${bars}</div>`;
     } else {
       // donut → % breakdown by the Rows dimension (row totals; ignores any column split). Slices carry "pivotSlice".
       const R = 62, W = 30, CIRC = 2 * Math.PI * R, CX = 80, CY = 80;
@@ -2135,11 +2135,15 @@ function buildReportHtml(holdings, opts = {}) {
   const version = opts.appVersion || "";
   const now = opts.generatedAt || new Date();
   const hasBasis = (h) => h.costBasis !== undefined && h.costBasis !== null;
+  // "known" = present in the source export; an assumed basis (v2.4.4, = MV) is display-only and
+  // must not inflate the headline "Cost basis (known)" (2026-07-08 — it previously did, and the
+  // no-basis disclosure could never fire on a live book because applyAssumedBasis fills every row).
+  const hasKnownBasis = (h) => hasBasis(h) && !h.basisAssumed;
   const gainOf = (h) => (hasBasis(h) ? h.marketValue - h.costBasis : 0);
   const total = holdings.reduce((t, h) => t + h.marketValue, 0);
-  const totalCost = holdings.reduce((t, h) => t + (hasBasis(h) ? h.costBasis : 0), 0);
+  const totalCost = holdings.reduce((t, h) => t + (hasKnownBasis(h) ? h.costBasis : 0), 0);
   const totalGain = holdings.reduce((t, h) => t + gainOf(h), 0);
-  const noBasisValue = holdings.filter((h) => !hasBasis(h)).reduce((t, h) => t + h.marketValue, 0);
+  const noBasisValue = holdings.filter((h) => !hasKnownBasis(h)).reduce((t, h) => t + h.marketValue, 0);
   const assumedCount = holdings.filter((h) => h.basisAssumed).length;
   const pctBook = (v) => (total ? percent(v / total) : "—");
   const gl = (g, cost) => {
@@ -2223,7 +2227,7 @@ function buildReportHtml(holdings, opts = {}) {
         `<td>${reportEsc(h.sleeve)}</td>` +
         (anyShares ? `<td class="num">${h.shares ? number(h.shares) : "—"}</td>` : "") +
         `<td class="num">${cost}</td><td class="num">${money(h.marketValue)}</td>` +
-        gl(gainOf(h), hasBasis(h) && !h.basisAssumed ? h.costBasis : 0) + `</tr>`;
+        gl(gainOf(h), hasKnownBasis(h) ? h.costBasis : 0) + `</tr>`;
     }).join("");
     detail += `<h3>${reportEsc(name)}${ADVISOR_ACCOUNTS.has(name) ? ` <em class="tag">advisor</em>` : ""}` +
       ` <span class="muted">· ${g.rows.length} position${g.rows.length === 1 ? "" : "s"} · ${money(g.value)} (${pctBook(g.value)})</span></h3>` +
@@ -2693,10 +2697,15 @@ function buildPortfolioCube(holdings) {
   // are summed over present-basis holdings only, so the headline 'Unrealized gain' and the per-sleeve
   // embedded-tax breakdown reconcile — they used `costBasis || 0` (missing → full MV as gain) vs a
   // truthiness test (missing → 0), and differed by the full value of every basis-less row.
+  // 2026-07-08: basisAssumed rows (v2.4.4 — assumed = MV, gain $0) count as UNKNOWN basis for
+  // totalCostBasis + noBasisValue. applyAssumedBasis() runs on every path into state.holdings, so
+  // without this no row ever lacked a basis and the P3-34 caveats could never fire; gains are
+  // unchanged (an assumed row's mv − cost is 0 by construction).
   const hasBasis = (h) => h.costBasis !== undefined && h.costBasis !== null;
+  const hasKnownBasis = (h) => hasBasis(h) && !h.basisAssumed;
   const gainOf = (h) => (hasBasis(h) ? h.marketValue - h.costBasis : 0);
-  const totalCostBasis = holdings.reduce((sum, h) => sum + (hasBasis(h) ? h.costBasis : 0), 0);
-  const noBasisValue = holdings.filter((h) => !hasBasis(h)).reduce((sum, h) => sum + h.marketValue, 0);
+  const totalCostBasis = holdings.reduce((sum, h) => sum + (hasKnownBasis(h) ? h.costBasis : 0), 0);
+  const noBasisValue = holdings.filter((h) => !hasKnownBasis(h)).reduce((sum, h) => sum + h.marketValue, 0);
   const unrealizedGain = holdings.reduce((sum, h) => sum + gainOf(h), 0);
   const sleeveMap = new Map();
 

@@ -67,7 +67,13 @@ check("convex-role section present", html.includes("Convex-Role View"));
 check("per-lot detail present with tickers", html.includes("IBIT") && html.includes("Holdings Detail"));
 check("assumed-basis footnote wired",
   html.includes("<sup>*</sup>") && html.includes("assumed basis"));
-check("no-basis disclosure present", html.includes("Basis unknown on $25,000"));
+// 2026-07-08: "unknown basis" = missing OR operator-assumed (assumed = MV is display-only) —
+// NOBAS $25,000 + ANNU $50,000 assumed. Previously assumed rows counted as KNOWN basis, so the
+// disclosure never fired on a live book (applyAssumedBasis fills every row) and the headline
+// "Cost basis (known)" was overstated by exactly the assumed value.
+check("no-basis disclosure covers missing + assumed rows", html.includes("Basis unknown on $75,000"));
+check("Cost basis (known) excludes assumed rows",   // 400000+210000+40000+900, NOT +50000 ANNU
+  html.includes("$650,900") && !html.includes("$700,900"));
 check("hostile names escaped",
   // v2.6.1: the report page carries its OWN legit <script> (the email handler), so assert
   // the hostile HOLDING data is escaped rather than "no script tag anywhere"
