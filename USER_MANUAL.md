@@ -16,6 +16,21 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.6 — what's new
+
+- **📄 Full-book PDF report.** A **Report** button in the header builds a complete,
+  print-ready report of the ENTIRE book (any on-screen account filter is deliberately
+  ignored — the header says so): summary metrics · by-account table · the full
+  asset-class rollup (every bucket and sleeve with value, % of book, gain) · the
+  convex-role view · and a **per-lot holdings detail section for every account**
+  (ticker, asset, sleeve, shares when present, cost, value, gain — assumed-basis
+  positions footnoted, account subtotals). It opens in a new tab with the browser's
+  print dialog ready — choose **Save as PDF** (works the same on the iPad over
+  Tailscale: share sheet → Print → Save to Files). The report is generated entirely
+  locally; staleness is flagged when the book is >14 days old. Precomputed panels
+  (Dial / Sortino Overlay / Risk) are excluded by design — they're
+  portfolio_analysis.py snapshots, not client-computed truth.
+
 ### Version 2.5.1 — what's new
 
 - **Ticker symbols are hyperlinks to the Forge ETF tab.** Every listed ticker in the holdings

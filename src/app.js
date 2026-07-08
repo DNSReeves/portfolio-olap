@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.5.1";
+const APP_VERSION = "v2.6.0";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -365,6 +365,7 @@ const el = {
   snapshotTimeline: document.querySelector("#snapshotTimeline"),
   performanceSeries: document.querySelector("#performanceSeries"),
   manualButton: document.querySelector("#manualButton"),
+  reportButton: document.querySelector("#reportButton"),
   manualDialog: document.querySelector("#manualDialog"),
   manualCloseButton: document.querySelector("#manualCloseButton"),
   manualContent: document.querySelector("#manualContent"),
@@ -490,6 +491,7 @@ el.splitter.addEventListener("pointerdown", startSplitDrag);
 el.splitter.addEventListener("keydown", handleSplitterKey);
 
 el.manualButton.addEventListener("click", openManual);
+el.reportButton.addEventListener("click", openPdfReport);
 el.manualCloseButton.addEventListener("click", () => el.manualDialog.close());
 if (el.manualSearchInput) {
   el.manualSearchInput.addEventListener("input", runManualSearch);
@@ -2114,6 +2116,199 @@ function renderPivot() {
       if (el.holdings) el.holdings.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
+}
+
+// ── v2.6 PDF report (pure builder + print-to-PDF opener) ─────────────────────────────────────
+// Operator request 2026-07-08: "a full PDF report from the OLAP … most detail in the full book."
+// Zero-dependency by design (the house convention): buildReportHtml() assembles a complete,
+// self-contained print-styled HTML document from the FULL book (ignores the account filter —
+// stated in the header), and openPdfReport() opens it in a new tab and invokes the browser's
+// print dialog → "Save as PDF". Works identically on the desktop and the iPad over Tailscale.
+
+function reportEsc(v) {
+  return String(v == null ? "" : v).replace(/[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function buildReportHtml(holdings, opts = {}) {
+  const asOf = opts.valuationDate || "";
+  const version = opts.appVersion || "";
+  const now = opts.generatedAt || new Date();
+  const hasBasis = (h) => h.costBasis !== undefined && h.costBasis !== null;
+  const gainOf = (h) => (hasBasis(h) ? h.marketValue - h.costBasis : 0);
+  const total = holdings.reduce((t, h) => t + h.marketValue, 0);
+  const totalCost = holdings.reduce((t, h) => t + (hasBasis(h) ? h.costBasis : 0), 0);
+  const totalGain = holdings.reduce((t, h) => t + gainOf(h), 0);
+  const noBasisValue = holdings.filter((h) => !hasBasis(h)).reduce((t, h) => t + h.marketValue, 0);
+  const assumedCount = holdings.filter((h) => h.basisAssumed).length;
+  const pctBook = (v) => (total ? percent(v / total) : "—");
+  const gl = (g, cost) => {
+    const cls = g >= 0 ? "up" : "down";
+    const pct = cost ? ` (${g >= 0 ? "+" : ""}${((g / cost) * 100).toFixed(1)}%)` : "";
+    return `<td class="num ${cls}">${money(g)}${pct}</td>`;
+  };
+
+  // staleness (mirrors the book_query convention: >14d = re-export nudge)
+  let staleNote = "";
+  if (asOf) {
+    const age = Math.floor((now - new Date(asOf + "T12:00:00")) / 86400000);
+    if (age > 14) staleNote = `<span class="stale">⚠ book is ${age} days old — re-export from the brokers for current figures</span>`;
+    else if (age >= 0) staleNote = `<span class="muted">(${age} day${age === 1 ? "" : "s"} old)</span>`;
+  }
+
+  // ── by account ──
+  const acctMap = new Map();
+  for (const h of holdings) {
+    const a = h.brokerageAccount || "(No account)";
+    if (!acctMap.has(a)) acctMap.set(a, { value: 0, cost: 0, gain: 0, rows: [] });
+    const g = acctMap.get(a);
+    g.value += h.marketValue; g.cost += hasBasis(h) ? h.costBasis : 0; g.gain += gainOf(h);
+    g.rows.push(h);
+  }
+  const accounts = [...acctMap.entries()].sort((a, b) => b[1].value - a[1].value);
+  const acctRows = accounts.map(([name, g]) =>
+    `<tr><td>${reportEsc(name)}${ADVISOR_ACCOUNTS.has(name) ? ` <em class="tag">advisor</em>` : ""}</td>` +
+    `<td class="num">${money(g.value)}</td><td class="num">${pctBook(g.value)}</td>` +
+    `<td class="num">${money(g.cost)}</td>${gl(g.gain, g.cost)}</tr>`).join("");
+
+  // ── asset-class rollup: bucket → sleeves ──
+  const sleeveAgg = new Map();
+  for (const h of holdings) {
+    const s = h.sleeve || "Unclassified";
+    if (!sleeveAgg.has(s)) sleeveAgg.set(s, { value: 0, cost: 0, gain: 0, count: 0 });
+    const g = sleeveAgg.get(s);
+    g.value += h.marketValue; g.cost += hasBasis(h) ? h.costBasis : 0;
+    g.gain += gainOf(h); g.count += 1;
+  }
+  const bucketAgg = new Map();
+  for (const [s, g] of sleeveAgg) {
+    const b = bucketOfSleeve(s);
+    if (!bucketAgg.has(b)) bucketAgg.set(b, { value: 0, gain: 0, sleeves: [] });
+    const bg = bucketAgg.get(b);
+    bg.value += g.value; bg.gain += g.gain; bg.sleeves.push([s, g]);
+  }
+  const bucketOrder = [...ROLLUP_BUCKETS.map((b) => b.name),
+                       ...[...bucketAgg.keys()].filter((k) => !ROLLUP_BUCKETS.some((b) => b.name === k))];
+  let classRows = "";
+  for (const b of bucketOrder) {
+    const bg = bucketAgg.get(b);
+    if (!bg) continue;
+    classRows += `<tr class="bucket"><td>${reportEsc(b)}</td><td class="num">${money(bg.value)}</td>` +
+      `<td class="num">${pctBook(bg.value)}</td><td class="num ${bg.gain >= 0 ? "up" : "down"}">${money(bg.gain)}</td></tr>`;
+    for (const [s, g] of bg.sleeves.sort((x, y) => y[1].value - x[1].value)) {
+      classRows += `<tr><td class="indent">${reportEsc(s)} <span class="muted">(${g.count})</span></td>` +
+        `<td class="num">${money(g.value)}</td><td class="num">${pctBook(g.value)}</td>` +
+        `<td class="num ${g.gain >= 0 ? "up" : "down"}">${money(g.gain)}</td></tr>`;
+    }
+  }
+
+  // ── convex-role rollup ──
+  const roleAgg = new Map();
+  for (const [s, g] of sleeveAgg) {
+    const r = convexRoleForSleeve(s) || "Other";
+    roleAgg.set(r, (roleAgg.get(r) || 0) + g.value);
+  }
+  const roleRows = [..._CONVEX_ROLE_ORDER, ...[...roleAgg.keys()].filter((r) => !_CONVEX_ROLE_ORDER.includes(r))]
+    .filter((r) => roleAgg.has(r))
+    .map((r) => `<tr><td>${reportEsc(r)}</td><td class="num">${money(roleAgg.get(r))}</td>` +
+                `<td class="num">${pctBook(roleAgg.get(r))}</td></tr>`).join("");
+
+  // ── holdings detail, per account, per-lot (the "most detail" section) ──
+  const anyShares = holdings.some((h) => (h.shares || 0) > 0);
+  let detail = "";
+  for (const [name, g] of accounts) {
+    const rows = [...g.rows].sort((a, b) => b.marketValue - a.marketValue).map((h) => {
+      const cost = hasBasis(h) ? money(h.costBasis) + (h.basisAssumed ? "<sup>*</sup>" : "") : "—";
+      return `<tr><td>${reportEsc(h.ticker || "-")}</td><td>${reportEsc(h.assetName)}</td>` +
+        `<td>${reportEsc(h.sleeve)}</td>` +
+        (anyShares ? `<td class="num">${h.shares ? number(h.shares) : "—"}</td>` : "") +
+        `<td class="num">${cost}</td><td class="num">${money(h.marketValue)}</td>` +
+        gl(gainOf(h), hasBasis(h) && !h.basisAssumed ? h.costBasis : 0) + `</tr>`;
+    }).join("");
+    detail += `<h3>${reportEsc(name)}${ADVISOR_ACCOUNTS.has(name) ? ` <em class="tag">advisor</em>` : ""}` +
+      ` <span class="muted">· ${g.rows.length} position${g.rows.length === 1 ? "" : "s"} · ${money(g.value)} (${pctBook(g.value)})</span></h3>` +
+      `<table><thead><tr><th>Ticker</th><th>Asset</th><th>Sleeve</th>` +
+      (anyShares ? `<th class="num">Shares</th>` : "") +
+      `<th class="num">Cost</th><th class="num">Value</th><th class="num">Gain / Loss</th></tr></thead>` +
+      `<tbody>${rows}</tbody>` +
+      `<tfoot><tr><td colspan="${anyShares ? 4 : 3}">Account total</td><td class="num">${money(g.cost)}</td>` +
+      `<td class="num">${money(g.value)}</td>${gl(g.gain, g.cost)}</tr></tfoot></table>`;
+  }
+
+  const generated = `${now.toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" })} ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Portfolio Report — ${reportEsc(asOf || generated)}</title>
+<style>
+  @page { margin: 14mm 12mm; }
+  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #1c2a31; font-size: 11.5px; margin: 24px; }
+  h1 { font-size: 21px; margin: 0 0 2px; } h2 { font-size: 15px; margin: 22px 0 8px; border-bottom: 2px solid #0f766e; padding-bottom: 3px; }
+  h3 { font-size: 13px; margin: 16px 0 6px; page-break-after: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 10px; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #5b6b72; border-bottom: 1.5px solid #cfd9dd; padding: 4px 6px; }
+  td { padding: 3.5px 6px; border-bottom: 1px solid #eef2f4; vertical-align: top; }
+  tr { page-break-inside: avoid; } thead { display: table-header-group; }
+  tfoot td { border-top: 1.5px solid #cfd9dd; font-weight: 600; }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .up { color: #15803d; } .down { color: #b91c1c; }
+  .bucket td { font-weight: 700; background: #f4f7f8; }
+  .indent { padding-left: 22px; }
+  .muted { color: #7c8a91; font-weight: 400; font-size: 10.5px; }
+  .tag { font-style: normal; font-size: 9px; border: 1px solid #cfd9dd; border-radius: 8px; padding: 0 5px; color: #5b6b72; vertical-align: middle; }
+  .stale { color: #92400e; font-weight: 600; }
+  .metrics { display: flex; gap: 26px; flex-wrap: wrap; margin: 12px 0 4px; }
+  .metric b { display: block; font-size: 16px; } .metric span { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #5b6b72; }
+  .foot { margin-top: 26px; font-size: 10px; color: #7c8a91; border-top: 1px solid #cfd9dd; padding-top: 8px; }
+  .pagebreak { page-break-before: always; }
+  @media print { body { margin: 0; } .noprint { display: none; } }
+</style></head><body>
+<h1>Investment Portfolio — Full Book Report</h1>
+<div class="muted">Book as-of <b>${reportEsc(asOf || "unknown")}</b> ${staleNote} · generated ${reportEsc(generated)} · Portfolio OLAP ${reportEsc(version)} · full book, all accounts (any on-screen account filter is ignored)</div>
+<button class="noprint" onclick="window.print()" style="margin:10px 0;padding:6px 14px;">🖨 Print / Save as PDF</button>
+
+<div class="metrics">
+  <div class="metric"><b>${money(total)}</b><span>Total value</span></div>
+  <div class="metric"><b>${money(totalCost)}</b><span>Cost basis (known)</span></div>
+  <div class="metric"><b class="${totalGain >= 0 ? "up" : "down"}">${money(totalGain)}</b><span>Unrealized gain</span></div>
+  <div class="metric"><b>${holdings.length}</b><span>Positions</span></div>
+  <div class="metric"><b>${accounts.length}</b><span>Accounts</span></div>
+</div>
+${noBasisValue ? `<div class="muted">Basis unknown on ${money(noBasisValue)} of value (gain treated as $0 — the P3-34 convention)${assumedCount ? `; ${assumedCount} position${assumedCount === 1 ? "" : "s"} carry assumed basis<sup>*</sup>` : ""}.</div>` : ""}
+
+<h2>By Account</h2>
+<table><thead><tr><th>Account</th><th class="num">Value</th><th class="num">% of book</th><th class="num">Cost</th><th class="num">Gain / Loss</th></tr></thead>
+<tbody>${acctRows}</tbody></table>
+
+<h2>Asset-Class Rollup</h2>
+<table><thead><tr><th>Bucket / Sleeve</th><th class="num">Value</th><th class="num">% of book</th><th class="num">Gain / Loss</th></tr></thead>
+<tbody>${classRows}</tbody></table>
+
+<h2>Convex-Role View</h2>
+<table><thead><tr><th>Role</th><th class="num">Value</th><th class="num">% of book</th></tr></thead>
+<tbody>${roleRows}</tbody></table>
+
+<h2 class="pagebreak">Holdings Detail — by Account (per lot)</h2>
+${detail}
+
+<div class="foot">
+<sup>*</sup> assumed basis: cost unknown in the source export — set equal to current value, gain treated as $0 (operator convention v2.4.4).
+Sleeve assignments include any manual overrides. The Dial / Sortino Overlay / Risk panels are precomputed
+by portfolio_analysis.py and are not part of this client-computed report — see the OLAP dashboard.
+Generated locally by Portfolio OLAP ${reportEsc(version)}; no data left the machine.
+</div>
+</body></html>`;
+}
+
+function openPdfReport() {
+  const html = buildReportHtml(state.holdings, {
+    valuationDate: state.valuationDate, appVersion: APP_VERSION,
+  });
+  const w = window.open("", "_blank");
+  if (!w) { window.alert("Pop-up blocked — allow pop-ups for this site to generate the report."); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // give the new document a beat to lay out, then invoke print → "Save as PDF";
+  // the tab stays open (with its own 🖨 button) for re-print or review
+  setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* user can use the in-page button */ } }, 400);
 }
 
 // ── v2.5 drill-down seams (pure, vm-testable) ────────────────────────────────────────────────

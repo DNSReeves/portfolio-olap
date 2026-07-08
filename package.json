@@ -3,7 +3,7 @@
     "dev": "vite --host 127.0.0.1",
     "dev:static": "python -m http.server 4173 --bind 127.0.0.1",
     "build": "node --check src/app.js",
-    "test": "node --check src/app.js && node tests/column_mapping.test.js && node tests/classification.test.js && node tests/taxonomy.test.js && node tests/sleeve_precedence.test.js && node tests/portfolio_cube.test.js && node tests/account_filter.test.js && node tests/overlay_views.test.js && node tests/assumed_basis.test.js && node tests/drill_views.test.js",
+    "test": "node --check src/app.js && node tests/column_mapping.test.js && node tests/classification.test.js && node tests/taxonomy.test.js && node tests/sleeve_precedence.test.js && node tests/portfolio_cube.test.js && node tests/account_filter.test.js && node tests/overlay_views.test.js && node tests/assumed_basis.test.js && node tests/drill_views.test.js && node tests/pdf_report.test.js",
     "build:react": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1"
   },
