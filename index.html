@@ -35,6 +35,7 @@
           <div>
             <p class="eyebrow" id="viewLabel">Portfolio overview</p>
             <h1 id="viewTitle">Investment Portfolio</h1>
+            <p class="asOfBadge" id="asOfBadge" title="Valuation date carried by the loaded holdings (from the broker exports' own as-of) — NOT the date you loaded them"></p>
             <p class="marketRef" id="marketRef" title="Reference rates from the ETF DB (FRED) — 90-day Treasury (DGS3MO) and CPI year-over-year"></p>
           </div>
           <div class="actions">
@@ -236,6 +237,6 @@
         ? 'https://' + location.hostname + ':8443/forge'
         : location.protocol + '//' + location.hostname + ':8765/forge';
     </script>
-    <script type="module" src="./src/app.js?v=20260708c"></script>
+    <script type="module" src="./src/app.js?v=20260708d"></script>
   </body>
 </html>

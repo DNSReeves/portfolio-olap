@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.6.2";
+const APP_VERSION = "v2.6.3";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -316,6 +316,7 @@ const el = {
   sleeveNav: document.querySelector("#sleeveNav"),
   appVersion: document.querySelector("#appVersion"),
   manualVersion: document.querySelector("#manualVersion"),
+  asOfBadge: document.querySelector("#asOfBadge"),
   metrics: document.querySelector("#dashboard"),
   acctFilter: document.querySelector("#acctFilter"),
   scopeSummary: document.querySelector("#scopeSummary"),
@@ -746,7 +747,43 @@ function handleSplitterKey(event) {
   applyWorkspaceSplit();
 }
 
+// ── "Current as of" badge (v2.6.3, operator ask) ─────────────────────────────
+// The header now states the BOOK's date — the valuation date carried by the loaded
+// holdings themselves (broker-export as-of), never state.valuationDate (initApp
+// resets that input to today, which would claim an old book is current). Pure
+// seams (function declarations) for the vm test harness.
+function bookAsOf(holdings) {
+  const dates = [...new Set((holdings || []).map((h) => h.valuationDate).filter(Boolean))].sort();
+  if (!dates.length) return null;
+  return { date: dates[dates.length - 1], minDate: dates[0], mixed: dates.length > 1 };
+}
+
+function formatMDY(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : String(iso || "");
+}
+
+function asOfAgeDays(iso, todayIso = today()) {
+  // noon-anchored so DST/timezone can't shift the day count (same trick as the report)
+  const a = new Date(iso + "T12:00:00"), b = new Date(todayIso + "T12:00:00");
+  return Math.round((b - a) / 86400000);
+}
+
+function renderAsOfBadge() {
+  if (!el.asOfBadge) return;
+  const info = bookAsOf(visibleHoldings());
+  if (!info) { el.asOfBadge.textContent = ""; el.asOfBadge.classList.remove("stale"); return; }
+  const age = asOfAgeDays(info.date);
+  let txt = `Current as of: ${formatMDY(info.date)}`;
+  if (info.mixed) txt += ` (oldest lot ${formatMDY(info.minDate)})`;
+  if (age > 14) txt += ` · ⚠ ${age} days old — re-export from the brokers`;
+  else if (age > 0) txt += ` (${age} day${age === 1 ? "" : "s"} old)`;
+  el.asOfBadge.textContent = txt;
+  el.asOfBadge.classList.toggle("stale", age > 14);
+}
+
 function renderTitle() {
+  renderAsOfBadge();
   const all = isAllScope();
   let label = all ? "Portfolio overview" : (state.selectedBucket ? "Bucket drill-down" : "Sleeve drill-down");
   if (accountFilterActive()) {

@@ -1,18 +1,18 @@
 {
-  "generated": "2026-07-07",
+  "generated": "2026-07-08",
   "window": [
     "2011-06-30",
     "2026-05-31"
   ],
-  "current_equity": 0.3457784246696922,
+  "current_equity": 0.3489139627437248,
   "expenses_per_yr": 360000,
   "hedge": {
     "TREND": 0.1,
     "TR": 0.08,
     "GLD": 0.04
   },
-  "tbill_3m": 0.0382,
-  "tbill_3m_date": "2026-07-02",
+  "tbill_3m": 0.0387,
+  "tbill_3m_date": "2026-07-06",
   "cpi_yoy": 0.0427,
   "cpi_core_yoy": 0.0296,
   "cpi_date": "2026-05-01",

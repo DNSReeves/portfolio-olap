@@ -16,6 +16,15 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.6.3 — what's new
+
+- **"Current as of: MM/DD/YYYY" header badge.** The dashboard header now always states
+  the loaded book's date — taken from the holdings' own valuation dates (the broker
+  exports' as-of), never the date you happened to load them. Mild age shows in gray
+  ("(3 days old)"); past 14 days it turns amber with a re-export nudge — the same
+  staleness convention as the PDF report and `book_query`. Mixed-date books (rare)
+  show the newest date plus the oldest lot's.
+
 ### Version 2.6.2 — what's new
 
 - **Honest "known cost basis" everywhere.** Assumed-basis rows (v2.4.4 convention: basis
