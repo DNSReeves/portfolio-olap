@@ -38,7 +38,7 @@ start "Portfolio OLAP Local Server" cmd /k "cd /d ""%~dp0"" && npm run dev"
 
 echo.
 echo App URL:
-echo http://127.0.0.1:4173/
+echo http://127.0.0.1:5176/
 echo.
 echo Design document:
 echo %CD%\OLAP Portfolio Dashboard v2.0 SPA React.txt
@@ -47,3 +47,4 @@ echo If the browser does not open automatically, paste the app URL into your bro
 start "" "http://127.0.0.1:4173/"
 
 pause
+codex resume 019e47fe-7bf7-7fb3-87c4-1ba008c3f833

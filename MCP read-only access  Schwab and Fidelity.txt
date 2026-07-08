@@ -1,0 +1,57 @@
+If you want strictly **read-only access** to your Schwab and Fidelity portfolios, you are in a highly secure position. Read-only limitations are inherently easier to defend because you can rely on architectures where the protocol layer physically lacks the code required to initiate transactions.
+
+To achieve this with the highest level of data privacy and security, three approaches stand out, ranging from open-source local setups to managed consumer integrations.
+
+---
+
+## Approach 1: Self-Hosted, Open-Source (Most Secure & Private)
+
+If you prefer complete control over your data without sending it to a third-party startup's cloud, the most secure method is running a local, open-source financial MCP server on your own machine.
+
+* **The Tool:** **OpenFinance** (www-openfinance-sh available on GitHub).
+* **How it Works:** You deploy the MCP server locally as a subprocess of your AI client (such as Claude Desktop or a local Python agent loop). It connects your accounts via an institutional aggregator API key (like Plaid or Mastercard Finicity) that you control.
+* **Why it's highly secure:**
+* **Auditability:** You can read every line of code in the repository to ensure there are no hidden execution or transfer modules.
+* **Data Isolation:** Your raw credentials and token streams never hit a middleman server; the connection is direct from your machine to the data aggregator to the brokerage.
+* **Architectural Read-Only:** The API endpoints implemented by the open-source server only fetch balances, holdings, and transactions. Even if an AI agent hallucinates a trade command, the local server will reject it with a "method not found" error.
+
+
+
+---
+
+## Approach 2: Aggregator-Based Managed Platforms (Easiest & Cleanest Data)
+
+If you do not want to manage API keys, local configurations, or custom code pipelines, you can use a managed financial data platform that abstracts the infrastructure but enforces a read-only architecture.
+
+* **The Tool:** **Truthifi Connect** (truthifi-connect.ai).
+* **How it Works:** They act as a specialized financial MCP proxy. You link your Schwab and Fidelity accounts via secure OAuth windows managed by institutional aggregators (Plaid, Yodlee, and Morningstar ByAllAccounts).
+* **Why it's highly secure:**
+* **Credential Isolation:** Your actual brokerage passwords are completely hidden; they are entered directly into the institution's own login page, which hands back a secure token.
+* **Enforced Constraints:** Read-only access is a structural constraint of the platform, not a policy choice. The platform literally cannot move money or place trades.
+* **Granular Gating:** It features an access dashboard allowing you to set per-agent permissions and instantly revoke token access at any time.
+* **Data Normalization:** Raw data from different brokerages is often messy (e.g., classifying a dividend reinvestment as a manual "buy"). Truthifi uses semantic decoders to clean up transaction history before exposing it to the AI, minimizing hallucination risks.
+
+
+
+---
+
+## Approach 3: Native LLM Integrations (Safest Consumer Path)
+
+Major AI ecosystems have begun building read-only financial data pipelines directly into their platforms via official partnerships, removing the need for third-party MCP extensions entirely.
+
+* **The Tools:** **Perplexity (Plaid Integration)** or **ChatGPT Pro (Plaid/Finance Tools)**.
+* **How it Works:** Within the application's account settings under "Connected Apps," you authenticate directly with your financial institutions via a secure Plaid modal. The financial data is tied straight to your LLM profile.
+* **Why it's highly secure:**
+* **Infrastructure:** It relies on enterprise-grade security contracts between massive tech firms and Plaid.
+* **Sandboxed Environment:** During data-linked conversations, standard memory logging is automatically paused or sandboxed, ensuring your portfolio history isn't leaked into generic model training pools or unrelated chat histories.
+* **Guaranteed Read-Only:** These integrations are strictly designed for consumer financial tracking, budgeting, and asset allocation queries; the system maintains zero capability to alter account states.
+
+
+
+---
+
+### Summary Checklist for a Secure Setup
+
+1. **Never use scraping tools that require your raw password.** Only use approaches utilizing **OAuth/Token-based authentication** (where a separate secure window opens for you to log into Schwab or Fidelity directly).
+2. **Review your Schwab/Fidelity security centers.** Once linked, verify that the third-party connection shows up under your brokerage's "Linked Apps" or "Security Access" settings, allowing you to cut the cord from the bank's side if needed.
+3. **Use a dedicated API account wrapper if choosing the developer route.** If you do opt to use Schwab's official developer portal to build your own read-only loop, make sure the App Type is explicitly configured for Read-Only scopes during creation.
