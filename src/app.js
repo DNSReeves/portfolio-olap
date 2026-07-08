@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.6.0";
+const APP_VERSION = "v2.6.1";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -2262,7 +2262,34 @@ function buildReportHtml(holdings, opts = {}) {
 </style></head><body>
 <h1>Investment Portfolio — Full Book Report</h1>
 <div class="muted">Book as-of <b>${reportEsc(asOf || "unknown")}</b> ${staleNote} · generated ${reportEsc(generated)} · Portfolio OLAP ${reportEsc(version)} · full book, all accounts (any on-screen account filter is ignored)</div>
-<button class="noprint" onclick="window.print()" style="margin:10px 0;padding:6px 14px;">🖨 Print / Save as PDF</button>
+<div class="noprint" style="margin:10px 0;">
+<button onclick="window.print()" style="padding:6px 14px;">🖨 Print / Save as PDF</button>
+<button id="emailBtn" onclick="emailReport(this)" style="padding:6px 14px;margin-left:8px;">✉️ Email me this report</button>
+<span id="emailNote" class="muted" style="margin-left:8px;"></span>
+</div>
+<script>
+var AGENT_BASE = ${JSON.stringify(opts.agentBase || "")};
+async function emailReport(btn) {
+  if (!AGENT_BASE) { document.getElementById("emailNote").textContent = "agent address unknown"; return; }
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    // serialize a pristine copy: the on-screen buttons/notes stripped
+    var clone = document.documentElement.cloneNode(true);
+    clone.querySelectorAll(".noprint, script").forEach(function (n) { n.remove(); });
+    var res = await fetch(AGENT_BASE + "/api/olap/email_report", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject: document.title.replace("Portfolio Report", "Portfolio OLAP Full-Book Report"),
+                             html: "<!DOCTYPE html>" + clone.outerHTML }),
+    });
+    var out = await res.json();
+    if (res.ok && out.ok) { btn.textContent = "✉️ Sent ✓"; document.getElementById("emailNote").textContent = "delivered to dnsr4007@gmail.com (as an HTML attachment)"; }
+    else { btn.textContent = "✉️ Email me this report"; btn.disabled = false; document.getElementById("emailNote").textContent = out.error || ("send failed (" + res.status + ")"); }
+  } catch (e) {
+    btn.textContent = "✉️ Email me this report"; btn.disabled = false;
+    document.getElementById("emailNote").textContent = "agent unreachable: " + e.message;
+  }
+}
+</scr` + `ipt>
 
 <div class="metrics">
   <div class="metric"><b>${money(total)}</b><span>Total value</span></div>
@@ -2298,8 +2325,11 @@ Generated locally by Portfolio OLAP ${reportEsc(version)}; no data left the mach
 }
 
 function openPdfReport() {
+  const agentBase = location.hostname.endsWith(".ts.net")
+    ? `https://${location.hostname}:8443`
+    : `${location.protocol}//${location.hostname}:8765`;
   const html = buildReportHtml(state.holdings, {
-    valuationDate: state.valuationDate, appVersion: APP_VERSION,
+    valuationDate: state.valuationDate, appVersion: APP_VERSION, agentBase,
   });
   const w = window.open("", "_blank");
   if (!w) { window.alert("Pop-up blocked — allow pop-ups for this site to generate the report."); return; }

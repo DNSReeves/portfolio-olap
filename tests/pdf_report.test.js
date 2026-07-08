@@ -69,7 +69,9 @@ check("assumed-basis footnote wired",
   html.includes("<sup>*</sup>") && html.includes("assumed basis"));
 check("no-basis disclosure present", html.includes("Basis unknown on $25,000"));
 check("hostile names escaped",
-  !html.includes("<script>") && html.includes("&lt;script&gt;") && html.includes("Evil &quot;Fund&quot;"));
+  // v2.6.1: the report page carries its OWN legit <script> (the email handler), so assert
+  // the hostile HOLDING data is escaped rather than "no script tag anywhere"
+  !html.includes("<td><script>") && html.includes("&lt;script&gt;") && html.includes("Evil &quot;Fund&quot;"));
 check("gains colored by sign", html.includes('class="num down">-$10,000') || html.includes("down"));
 
 // fresh book → no stale warning
@@ -79,4 +81,16 @@ const fresh = app.buildReportHtml(BOOK, {
 });
 check("fresh book has no stale warning", !fresh.includes("re-export from the brokers"));
 
+// ── v2.6.1: the email option ──
+const htmlWithAgent = app.buildReportHtml(BOOK, {
+  valuationDate: "2026-07-07", appVersion: "vTEST",
+  generatedAt: new Date("2026-07-08T12:00:00"), agentBase: "https://mini.ts.net:8443",
+});
+check("email button present with the agent base inlined",
+  htmlWithAgent.includes("emailReport") && htmlWithAgent.includes("https://mini.ts.net:8443")
+  && htmlWithAgent.includes("/api/olap/email_report"));
+check("no agentBase → button renders but base is empty string",
+  html.includes('AGENT_BASE = ""'));
+
 process.exit(failures ? 1 : 0);
+

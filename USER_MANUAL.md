@@ -16,6 +16,15 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.6.1 — what's new
+
+- **✉️ Email the report.** The report page has an **"Email me this report"** button next
+  to Print: one click sends the full report to dnsr4007@gmail.com as an **HTML attachment**
+  (open it in any browser; print → Save as PDF from there). Delivery rides the agent
+  (host-aware — works on LAN and over Tailscale); each emailed report is also archived on
+  the Mini under `workspace/reports/` (90-day retention). Rate-limited to 5/hour; the
+  recipient is fixed to the operator — the page cannot send anywhere else.
+
 ### Version 2.6 — what's new
 
 - **📄 Full-book PDF report.** A **Report** button in the header builds a complete,
