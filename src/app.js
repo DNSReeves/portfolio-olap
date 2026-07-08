@@ -1382,7 +1382,7 @@ function renderOverlay() {
         constant and backtested with index proxies over ${escapeHtml(win)} (monthly) — a read on how
         this <em>allocation</em> behaves, <b>not</b> the accounts&rsquo; realized returns (contributions,
         withdrawals and past holdings changes are not in it).
-        <b>Proxied as:</b> ${compo} <span style="color:var(--muted)">(hover any part for the exact index proxy)</span>.</div></div>`;
+        <b>Proxied as:</b> ${compo} <span style="color:#5b6b72">(hover any part for the exact index proxy)</span>.</div></div>`;
     } else {
       const missing = distinctAccounts().map(([n]) => n)
         .filter((n) => !state.hiddenAccounts.has(n) && !(S.views && S.views[n]));
