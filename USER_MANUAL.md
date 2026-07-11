@@ -16,6 +16,32 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.6.4 — what's new
+
+An external code review (2026-07-10 overnight sweep) drove a report-honesty release:
+
+- **The PDF/email report now states the BOOK's date, not today's.** `openPdfReport`
+  passed the load-time valuation date (reset to "today" on every page load), so a
+  three-week-old book produced a report headed "0 days old" — and the ✉️ emailed copy
+  carried the same false freshness. The report now derives its as-of from the holdings'
+  own valuation dates (`bookAsOf`), the same source as the v2.6.3 header badge, so the
+  >14-day re-export warning can actually fire in reports.
+- **Short lots no longer show a sign-flipped gain %.** A short position's negative cost
+  basis flipped the ratio (a live short-call loss rendered as "104.3%"). The report
+  suppresses the percentage on non-positive cost, matching the in-app table's
+  convention for Options.
+- **The pivot donut discloses omitted shorts.** The donut (the pivot's default chart)
+  silently dropped net-negative categories while the table showed them — it now
+  captions "N net-negative categories not drawn (shorts — see the table)", the same
+  wording as every other chart.
+- **By-Account cost cells mark assumed basis.** Account rows whose cost includes
+  assumed-basis lots carry the `*` marker (summing that column otherwise exceeded the
+  headline "Cost basis (known)" with no explanation).
+- Smaller: date normalization no longer UTC-shifts long-form dates; a truncated
+  `classification_rules.json` now degrades to Unclassified + the red banner instead of
+  erroring mid-import; the dead React-era `node_modules` was removed (the app is
+  genuinely zero-dependency).
+
 ### Version 2.6.3 — what's new
 
 - **"Current as of: MM/DD/YYYY" header badge.** The dashboard header now always states
