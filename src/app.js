@@ -113,9 +113,15 @@ let CLASSIFICATION_RULES = null;
 async function loadClassificationRules() {
   try {
     const res = await fetch("./classification_rules.json", { cache: "no-store" });
-    if (res.ok) CLASSIFICATION_RULES = await res.json();
-    else CLASSIFICATION_RULES = null;
+    CLASSIFICATION_RULES = res.ok ? await res.json() : null;
   } catch (error) {
+    CLASSIFICATION_RULES = null;
+  }
+  // full-shape gate: a partially-valid file (truncated regeneration write) used to pass
+  // the taxonomy check but TypeError mid-import inside autoClassify (R.tickerRules[t]),
+  // defeating the designed degrade-to-Unclassified + red-banner path (2026-07-10 review F7)
+  const R = CLASSIFICATION_RULES;
+  if (R && !(R.tickerRules && Array.isArray(R.nameRules) && Array.isArray(R.fallbackRules) && R.codeToName)) {
     CLASSIFICATION_RULES = null;
   }
   applyTaxonomyMaps();   // override the literal taxonomy fallbacks (or leave them + show the banner)
@@ -2069,6 +2075,10 @@ function renderPivot() {
       // donut → % breakdown by the Rows dimension (row totals; ignores any column split). Slices carry "pivotSlice".
       const R = 62, W = 30, CIRC = 2 * Math.PI * R, CX = 80, CY = 80;
       const slices = rowCats.map((c) => ({ c, v: rowOnly[c] || 0 })).filter((s) => s.v > 0);
+      // net-negative categories can't be drawn as arcs — SAY SO like every other
+      // chart branch does, instead of silently disagreeing with the table
+      // (the 07-08 short-leg notes missed this branch — 2026-07-10 review F3)
+      const negRowsD = rowCats.filter((c) => (rowOnly[c] || 0) < -0.005).length;
       // donut fractions use the POSITIVE total, not the net grand — with a
       // net-negative category excluded from the slices but included in grand,
       // the arcs summed past 100% and overlapped (2026-07 review).
@@ -2081,7 +2091,8 @@ function renderPivot() {
           legend += `<button type="button" class="pivotSlice pivotLegItem" data-cat="${e(s.c)}"><span class="pivotLegSw" style="background:${col}"></span><span class="pivotLegLbl">${e(s.c)}</span><strong>${percent(frac)}</strong><em>${money(s.v)}</em></button>`;
           off += len;
         });
-        html += `<div class="pivotChart"><svg class="pivotDonut" viewBox="0 0 160 160" role="img" aria-label="${e(rowDim.label)} breakdown"><g transform="rotate(-90 ${CX} ${CY})">${rings}</g><text x="${CX}" y="${CY - 2}" class="pivotDonutLbl">${e(rowDim.label)}</text><text x="${CX}" y="${CY + 16}" class="pivotDonutTot">${money(grand)}</text></svg><div class="pivotLegend">${legend}</div></div>`;
+        const omittedD = negRowsD ? `<p class="pivotBarsHd"><em>${negRowsD} net-negative categor${negRowsD === 1 ? "y" : "ies"} not drawn (shorts — see the table)</em></p>` : "";
+        html += `<div class="pivotChart">${omittedD}<svg class="pivotDonut" viewBox="0 0 160 160" role="img" aria-label="${e(rowDim.label)} breakdown"><g transform="rotate(-90 ${CX} ${CY})">${rings}</g><text x="${CX}" y="${CY - 2}" class="pivotDonutLbl">${e(rowDim.label)}</text><text x="${CX}" y="${CY + 16}" class="pivotDonutTot">${money(grand)}</text></svg><div class="pivotLegend">${legend}</div></div>`;
       }
     }
   }
@@ -2185,7 +2196,10 @@ function buildReportHtml(holdings, opts = {}) {
   const pctBook = (v) => (total ? percent(v / total) : "—");
   const gl = (g, cost) => {
     const cls = g >= 0 ? "up" : "down";
-    const pct = cost ? ` (${g >= 0 ? "+" : ""}${((g / cost) * 100).toFixed(1)}%)` : "";
+    // pct only for POSITIVE cost: a short lot's negative basis flips the ratio's
+    // sign (a loss rendered "104.3%" on the live short SPY 725C — 2026-07-10
+    // review F2). Mirrors the in-app glCell, which suppresses % for Options.
+    const pct = cost > 0 ? ` (${g >= 0 ? "+" : ""}${((g / cost) * 100).toFixed(1)}%)` : "";
     return `<td class="num ${cls}">${money(g)}${pct}</td>`;
   };
 
@@ -2201,16 +2215,19 @@ function buildReportHtml(holdings, opts = {}) {
   const acctMap = new Map();
   for (const h of holdings) {
     const a = h.brokerageAccount || "(No account)";
-    if (!acctMap.has(a)) acctMap.set(a, { value: 0, cost: 0, gain: 0, rows: [] });
+    if (!acctMap.has(a)) acctMap.set(a, { value: 0, cost: 0, gain: 0, assumed: false, rows: [] });
     const g = acctMap.get(a);
     g.value += h.marketValue; g.cost += hasBasis(h) ? h.costBasis : 0; g.gain += gainOf(h);
+    if (h.basisAssumed) g.assumed = true;   // account cost includes assumed lots → mark it (review F4)
     g.rows.push(h);
   }
   const accounts = [...acctMap.entries()].sort((a, b) => b[1].value - a[1].value);
   const acctRows = accounts.map(([name, g]) =>
     `<tr><td>${reportEsc(name)}${ADVISOR_ACCOUNTS.has(name) ? ` <em class="tag">advisor</em>` : ""}</td>` +
     `<td class="num">${money(g.value)}</td><td class="num">${pctBook(g.value)}</td>` +
-    `<td class="num">${money(g.cost)}</td>${gl(g.gain, g.cost)}</tr>`).join("");
+    // assumed-inclusive account cost gets the same * as per-lot rows — summing this
+    // column otherwise exceeds the headline "Cost basis (known)" unexplained (review F4)
+    `<td class="num">${money(g.cost)}${g.assumed ? "<sup>*</sup>" : ""}</td>${gl(g.gain, g.cost)}</tr>`).join("");
 
   // ── asset-class rollup: bucket → sleeves ──
   const sleeveAgg = new Map();
@@ -2370,7 +2387,11 @@ function openPdfReport() {
     ? `https://${location.hostname}:8443`
     : `${location.protocol}//${location.hostname}:8765`;
   const html = buildReportHtml(state.holdings, {
-    valuationDate: state.valuationDate, appVersion: APP_VERSION, agentBase,
+    // the BOOK's own as-of date, same source as the v2.6.3 header badge — never
+    // state.valuationDate alone (initApp resets that to today on every load, which
+    // made the report + email claim an old book was current; 2026-07-10 review F1)
+    valuationDate: bookAsOf(state.holdings)?.date || state.valuationDate,
+    appVersion: APP_VERSION, agentBase,
   });
   const w = window.open("", "_blank");
   if (!w) { window.alert("Pop-up blocked — allow pop-ups for this site to generate the report."); return; }
@@ -3202,7 +3223,10 @@ function normalizeDate(value) {
   }
   const parsed = new Date(trimmed);
   if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10);
+    // format from LOCAL parts, not toISOString() (UTC) — a "July 8, 2026" parses as
+    // local midnight and toISOString shifts it a day in UTC+ zones; same bug class
+    // today() already fixed (2026-07-10 review F6)
+    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
   }
   return "";
 }

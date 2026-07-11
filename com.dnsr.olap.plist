@@ -5,8 +5,10 @@
   <key>Label</key>
   <string>com.dnsr.olap</string>
 
-  <!-- Always-on static server for the Portfolio OLAP dashboard. Serves only the
-       static files (holdings live in the browser's localStorage, never on disk here).
+  <!-- Always-on static server for the Portfolio OLAP dashboard. Serves the app's
+       static files AND the working data (consolidated_holdings.csv — the full book —
+       plus rules/snapshots) since the Load Full Book feature; treat the served
+       directory as sensitive within the documented LAN trust boundary (USER_MANUAL).
        LaunchDaemon (system domain) so it runs headless without a GUI login, matching
        com.dnsr.agent. Bound to 0.0.0.0 so the Windows PC + the Forge link can reach it
        on the LAN at http://192.168.1.70:8787/. -->
