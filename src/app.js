@@ -1394,7 +1394,8 @@ function combineOverlayViews(views, names) {
 // H1 (IMPL_HARDENING, 2026-07-07): the ratio published as "Sortino" is CAGR ÷ (σ of
 // NEGATIVE months ×√12) — Sortino-STYLE, not textbook Sortino (downside deviation vs a
 // MAR). UI now captions it CAGR/Down-Vol; snapshots carry the honest `cagr_downvol`
-// key (legacy `sortino` read as fallback for one release).
+// key (legacy `sortino` fallback RETAINED deliberately for pre-2026-07-12 archived
+// snapshots in history/; the live export contract is cagr_downvol-only as of H1-tail).
 const CDV_TIP = "CAGR divided by downside volatility (std dev of NEGATIVE months, annualized). "
   + "A Sortino-style ratio - higher is better - but not textbook Sortino, which uses downside "
   + "deviation of ALL months versus a minimum acceptable return.";
