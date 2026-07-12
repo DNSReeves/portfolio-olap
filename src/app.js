@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.6.4";
+const APP_VERSION = "v2.7";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -198,6 +198,21 @@ async function loadRiskSnapshot() {
 // { TICKER: { "US": pct, "Foreign Developed": pct, "Emerging Markets": pct, "Other": pct } }.
 // Joined by ticker for the Pivot panel's weighted Region dimension.
 let REGION_EXPOSURE = {};
+
+// REPRICE LEG (v2.7, 2026-07-12): sidecar written by portfolio_analysis.py's reprice
+// pass — positions stay broker-as-of; Price/Market Value in the served CSV are marked
+// to the freshest store price (live intraday -> EOD warehouse). null = no reprice ran
+// (export-valued book, pre-2.7 behavior).
+let REPRICE_META = null;
+
+async function loadRepriceMeta() {
+  try {
+    const res = await fetch("./reprice_meta.json", { cache: "no-store" });
+    REPRICE_META = res.ok ? await res.json() : null;
+  } catch (error) {
+    REPRICE_META = null;
+  }
+}
 
 async function loadRegionExposure() {
   try {
@@ -649,6 +664,7 @@ async function initApp() {
   await loadOverlaySnapshot();     // read-only precomputed overlay backtest
   await loadDialSnapshot();        // precomputed two-bucket dial grid
   await loadRegionExposure();      // per-ETF look-through region exposure (Pivot Region dim)
+  await loadRepriceMeta();         // reprice sidecar (v2.7) — 'positions as of X · marked Y' badge
   await loadRiskSnapshot();        // precomputed capital-vs-risk decomposition (Risk panel)
 
   try {
@@ -780,9 +796,14 @@ function renderAsOfBadge() {
   const info = bookAsOf(visibleHoldings());
   if (!info) { el.asOfBadge.textContent = ""; el.asOfBadge.classList.remove("stale"); return; }
   const age = asOfAgeDays(info.date);
-  let txt = `Current as of: ${formatMDY(info.date)}`;
+  let txt = `Positions as of: ${formatMDY(info.date)}`;
   if (info.mixed) txt += ` (oldest lot ${formatMDY(info.minDate)})`;
-  if (age > 14) txt += ` · ⚠ ${age} days old — re-export from the brokers`;
+  // REPRICE LEG (v2.7): values may be marked fresher than the positions as-of.
+  const rm = REPRICE_META;
+  if (rm && rm.marked_asof && rm.repriced_n > 0) {
+    txt += ` · marked ${formatMDY(rm.marked_asof)} (${rm.repriced_n} repriced, ${rm.frozen_n} at export values)`;
+  }
+  if (age > 14) txt += ` · ⚠ positions ${age} days old — re-export from the brokers`;
   else if (age > 0) txt += ` (${age} day${age === 1 ? "" : "s"} old)`;
   el.asOfBadge.textContent = txt;
   el.asOfBadge.classList.toggle("stale", age > 14);

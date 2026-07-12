@@ -16,6 +16,20 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.7 — what's new
+
+**Mark-to-market between imports (the reprice leg).** Holding prices and market values in
+the served `consolidated_holdings.csv` are now re-marked to the freshest available price —
+the agent's live intraday store first, the EOD warehouse (within 10 days) second — while
+positions, quantities, and cost basis stay exactly as the broker exports state them.
+Value-only holdings (TIAA Traditional, the AQR SMA net) and anything without a fresh mark
+stay at export values. The as-of badge discloses both clocks: **"Positions as of X ·
+marked Y (N repriced, M at export values)"** (sidecar `reprice_meta.json`; absent = an
+export-valued book, pre-2.7 behavior). Two refresh paths: every broker-export ingest, plus
+a weekday 18:45 agent cron (`olap_reprice`) that re-marks the same book daily. The
+`history/` archive is written BEFORE the reprice pass, so the one-book-per-as-of time
+series stays broker-valued and immutable.
+
 ### Version 2.6.4 — what's new
 
 An external code review (2026-07-10 overnight sweep) drove a report-honesty release:
