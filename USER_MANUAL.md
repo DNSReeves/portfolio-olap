@@ -16,6 +16,35 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.8 — what's new
+
+**Snapshots can finally be deleted.** Every *Load Full Book* and CSV import auto-saves a
+snapshot per valuation date, so the store only ever grew — and there was no control to
+prune it. The Snapshots dialog now carries a **🗑** per row (confirm-gated; deleting the
+*active* snapshot falls the view back to the live book). This removes saved history only —
+your holdings data is untouched.
+
+**Manual drift, corrected (see below).** Three things the app has been able to do for a
+while and this manual never said:
+
+- The **Pivot panel has a chart-type toggle** — *◔ Donut ⇄ ▭ Bars* — and a **⛶ Full screen**
+  button (Esc exits). Both live in the Pivot panel header.
+- The **Planning panel's five assumptions are editable fields**, not fixed constants:
+  *Annual expenses, Reserve target, LT tax %, 90-day T-bill %, Inflation %*. The manual
+  documented the metrics they produce (reserve coverage, embedded tax, deploy gap) while
+  never saying you can change the inputs behind them — which is the more useful fact.
+- The **Convexity panel's "Target trend %"** is likewise an editable input.
+
+**Embedded tax says LT because it means LT.** The *Embedded LT tax if liquidated* figure
+assumes **every** gain is long-term. It has to: the book carries no holding-period or
+acquisition date, so there is no way to know which gains are short-term. Anything held
+under a year would be taxed higher than that number shows. (A `taxST` short-term rate had
+been sitting in the config for months with nothing reading it — a promise the data cannot
+keep. It has been removed rather than left to imply a calculation that does not happen.)
+
+*(These came out of a 2026-07-13 audit that asked one question of every surface: is each
+built capability actually reachable by a control? Several here were not.)*
+
 ### Version 2.7 — what's new
 
 **Mark-to-market between imports (the reprice leg).** Holding prices and market values in

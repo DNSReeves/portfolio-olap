@@ -699,12 +699,32 @@ th {
   padding: 10px 12px;
 }
 
+/* the 🗑 delete cell (2026-07-13 audit — snapshots were un-prunable) adds a 4th track */
+.snapshotItem {
+  grid-template-columns: 140px minmax(0, 1fr) 130px 40px;
+}
+
 .snapshotItem button {
   border: 0;
   background: transparent;
   color: #287f8f;
   font-weight: 750;
   text-align: left;
+}
+
+.snapshotItem .snapshotDelete {
+  text-align: center;
+  color: #9aa7ad;
+  font-weight: 500;
+  min-height: 34px;
+  min-width: 34px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.snapshotItem .snapshotDelete:hover {
+  color: #c0392b;
+  background: #fdecea;
 }
 
 .snapshotItem small,

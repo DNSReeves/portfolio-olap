@@ -325,7 +325,13 @@ const state = {
   db: null,
   dbError: "",
   splitPercent: loadJson(SPLIT_STORAGE_KEY, 45),
-  planning: loadJson("planning", { expenses: 360000, reserveTarget: 1500000, taxLT: 0.238, taxST: 0.408 }),
+  // `taxST` (0.408) lived here for months and NOTHING ever read it — no input, no render,
+  // no calc (2026-07-13 unreachable-features audit). It could not be wired even in
+  // principle: the book carries no holding-period / acquisition date, so there is no way
+  // to know WHICH gains are short-term. Removed rather than left as a promise the data
+  // cannot keep. The embedded-tax metric says "LT" on its face, which is the honest label —
+  // a position held <1yr would be taxed higher than that figure shows.
+  planning: loadJson("planning", { expenses: 360000, reserveTarget: 1500000, taxLT: 0.238 }),
   hiddenAccounts: new Set(loadJson("hiddenAccounts", [])),   // account-source toggles (persisted; empty = all on)
   acctMenuOpen: false,                                        // transient: the Accounts dropdown panel (v2.5)
   holdingsSort: { key: "value", dir: -1 },                    // drill-down table sort; value-desc = the legacy order (v2.5)
@@ -1282,7 +1288,7 @@ function renderPlanning(cube) {
     `<div class="metric ${years >= 4 ? "good" : "warn"}"><span>Reserve coverage</span><strong>${Number.isFinite(years) ? years.toFixed(1) + " yrs" : "∞ self-funding"}</strong></div>`,
     `<div class="metric ${idle >= 0 ? "good" : "warn"}"><span>${idle >= 0 ? "Idle / deployable" : "Reserve shortfall"}</span><strong>${money(Math.abs(idle))}</strong></div>`,
     `<div class="metric"><span>Unrealized gain</span><strong>${hasCostBasis ? money(cube.unrealizedGain) : "—"}</strong></div>`,
-    `<div class="metric warn"><span>Embedded LT tax if liquidated</span><strong>${hasCostBasis ? money(embeddedTax) : "—"}</strong></div>`,
+    `<div class="metric warn" title="Assumes EVERY gain is long-term (the book carries no holding-period data). Anything held under a year would be taxed higher than this."><span>Embedded LT tax if liquidated</span><strong>${hasCostBasis ? money(embeddedTax) : "—"}</strong></div>`,
   ].join("");
 
   const taxRows = hasCostBasis && taxableSleeves.length
@@ -1832,12 +1838,31 @@ function renderSnapshots() {
       const item = document.createElement("div");
       item.className = "snapshotItem";
       const active = snapshot.id === state.activeSnapshotId ? "Active" : "Load";
+      // SNAPSHOT-DELETE (2026-07-13 unreachable-features audit): `deleteFromStore` was a
+      // complete, correct IndexedDB helper whose ONLY reference in this file was its own
+      // definition. Every Load Full Book / CSV import auto-saves a snapshot per valuation
+      // date, so the store only ever GREW and the operator had no in-app way to prune it.
       item.innerHTML = `
-        <button type="button">${escapeHtml(active)} ${escapeHtml(snapshot.valuationDate)}</button>
+        <button type="button" data-act="load">${escapeHtml(active)} ${escapeHtml(snapshot.valuationDate)}</button>
         <small>${escapeHtml(snapshot.sourceName || "Imported snapshot")} | ${snapshot.rowCount} holdings</small>
-        <strong>${escapeHtml(new Date(snapshot.importedAt).toLocaleDateString())}</strong>`;
-      item.querySelector("button").addEventListener("click", async () => {
+        <strong>${escapeHtml(new Date(snapshot.importedAt).toLocaleDateString())}</strong>
+        <button type="button" class="snapshotDelete" data-act="delete"
+                title="delete this snapshot (does not touch the live book)">🗑</button>`;
+      item.querySelector('[data-act="load"]').addEventListener("click", async () => {
         await loadSnapshot(snapshot.id);
+      });
+      item.querySelector('[data-act="delete"]').addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const isActive = snapshot.id === state.activeSnapshotId;
+        if (!window.confirm(
+          `Delete the ${snapshot.valuationDate} snapshot (${snapshot.rowCount} holdings)?`
+          + (isActive ? "\n\nThis snapshot is currently ACTIVE — the view will fall back to the live book."
+                      : "")
+          + "\n\nThis removes the saved history only; your holdings data is untouched.")) return;
+        await deleteFromStore("portfolio_snapshots", snapshot.id);
+        if (isActive) state.activeSnapshotId = null;
+        await refreshSnapshots();
+        renderSnapshots();
       });
       return item;
     }),
