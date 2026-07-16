@@ -489,10 +489,14 @@ el.load3fButton = document.querySelector("#load3fButton");
 el.load3fDialog = document.querySelector("#load3fDialog");
 el.load3fButton?.addEventListener("click", () => {
   const st = document.querySelector("#load3fStatus"); if (st) st.textContent = "";
+  const submit = document.querySelector("#load3fSubmit");        // reset from any prior "✓ Loaded"
+  if (submit) { submit.disabled = false; submit.dataset.busy = "0"; submit.classList.remove("is-done"); submit.textContent = "Consolidate & Load"; }
   el.load3fDialog?.showModal();
 });
 document.querySelector("#load3fCancel")?.addEventListener("click", () => el.load3fDialog?.close());
 document.querySelector("#load3fSubmit")?.addEventListener("click", async () => {
+  const submit = document.querySelector("#load3fSubmit");
+  if (submit.dataset.busy === "1") return;                       // GUARD: no concurrent runs (the double-click fix)
   const status = document.querySelector("#load3fStatus");
   const schwab = document.querySelector("#load3fSchwab").files[0];
   const fidelity = document.querySelector("#load3fFidelity").files[0];
@@ -502,8 +506,8 @@ document.querySelector("#load3fSubmit")?.addEventListener("click", async () => {
   fd.append("fidelity_csv", fidelity, fidelity.name);
   fd.append("tiaa_traditional", document.querySelector("#load3fTiaaTrad").value.trim());
   fd.append("tiaa_cref", document.querySelector("#load3fTiaaCref").value.trim());
-  const submit = document.querySelector("#load3fSubmit");
-  submit.disabled = true; submit.textContent = "Consolidating…";
+  submit.dataset.busy = "1"; submit.disabled = true;
+  submit.classList.remove("is-done"); submit.textContent = "Consolidating…";
   status.textContent = "Running the consolidation server-side (~30–60s)…";
   try {
     const res = await fetch("/api/load3f", { method: "POST", body: fd });
@@ -511,18 +515,23 @@ document.querySelector("#load3fSubmit")?.addEventListener("click", async () => {
     if (!data.ok) {
       status.innerHTML = `❌ ${_esc3f(data.error || "consolidation failed")}` +
         (data.tail ? `<pre class="load3fTail">${_esc3f(data.tail)}</pre>` : "");
+      submit.disabled = false; submit.textContent = "Consolidate & Load";   // let them retry
       return;
     }
     const recon = data.reconcile_ok ? "✓ reconciles" : "⚠ reconciliation warning — check the detail";
     const warns = (data.warnings || []).length
       ? `<ul class="load3fWarns">${data.warnings.map((w) => `<li>${_esc3f(w)}</li>`).join("")}</ul>` : "";
-    status.innerHTML = `✅ Book <b>$${_esc3f(data.total || "?")}</b> · as-of ${_esc3f(data.as_of || "?")} · ${recon}${warns}<br>Loading into the dashboard…`;
+    status.innerHTML = `✅ Book <b>$${_esc3f(data.total || "?")}</b> · as-of ${_esc3f(data.as_of || "?")} · ${recon}${warns}`;
     await loadConsolidatedBook();
-    status.innerHTML += " <b>done</b> — you can close this.";
+    // PERSISTENT green success — the button becomes '✓ Loaded' and STAYS (no silent re-enable that
+    // invites a re-click). It resets to 'Consolidate & Load' only when the dialog is reopened.
+    submit.classList.add("is-done"); submit.textContent = "✓ Loaded";
+    status.innerHTML += " &mdash; <b>loaded into the dashboard.</b> Close when ready.";
   } catch (e) {
     status.textContent = `❌ ${e.message}`;
-  } finally {
     submit.disabled = false; submit.textContent = "Consolidate & Load";
+  } finally {
+    submit.dataset.busy = "0";
   }
 });
 
