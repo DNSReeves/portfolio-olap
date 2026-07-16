@@ -611,6 +611,77 @@ document.querySelector(".sectionNav")?.addEventListener("click", (ev) => {
   }
 }
 
+// ── Context-sensitive panel help ────────────────────────────────────────────
+// An ⓘ in each panel header opens an anchored popover explaining THAT panel (what it shows + how to
+// read it). One delegated listener survives panel re-renders; helpIcon() is emitted inside the
+// JS-built headers, and the static grid/holdings headers carry the same button in index.html.
+const PANEL_HELP = {
+  allocation: { title: "Allocation by Sleeve",
+    body: `<p>How your money splits across sleeves — the OLAP cube's top level. Bar length = share of the <em>currently selected</em> book.</p><p>Click a bar to drill into that sleeve; the account toggles up top rescope everything here.</p>` },
+  topHoldings: { title: "Top Holdings",
+    body: `<p>Your largest positions by market value in the current selection — a fast read on single-name concentration.</p><p>Reflects account filters and any active drill-down.</p>` },
+  drillPath: { title: "Progressive Drill Path",
+    body: `<p>Breadcrumb of your current drill: Portfolio → sleeve → sub-group → account. Click any level to jump back up.</p><p>It's what keeps the whole dashboard scoped together.</p>` },
+  holdings: { title: "All Holdings",
+    body: `<p>Every position in the current selection, lot by lot — sortable columns, searchable by ticker or name.</p><p>This is the raw book behind all the rollups above; missing cost basis is shown blank, never assumed.</p>` },
+  planning: { title: "Reserve, Tax & Liquidity",
+    body: `<p>Cash reserve vs target, the long-term tax that <em>would</em> be due if sold (by sleeve), and how liquid the book is.</p><p>Holdings with unknown cost basis are flagged and excluded from the tax estimate — never counted as $0 gain.</p>` },
+  convexity: { title: "Crash-Shape & Convexity",
+    body: `<p>Your <em>held</em> crash-shape: composition by convex role (growth / income / duration / convexity / …) and how each role behaved in past crises (precomputed attribution).</p><p>The gap row shows idle cash that could fund more convexity ~tax-free.</p>` },
+  dial: { title: "Preservation ↔ Growth Dial",
+    body: `<p>The two-bucket dial — set the preservation/growth split and see the implied allocation.</p><p>A planning tool, not a live trade.</p>` },
+  overlay: { title: "Sortino Overlay Backtest",
+    body: `<p>Backtest of the volatility-managed (Sortino / down-vol) convexity overlay vs the base book — CAGR and drawdown on a down-vol basis.</p><p>Research / backtest, not a live position.</p>` },
+  risk: { title: "Risk Contribution",
+    body: `<p>Where the risk actually sits: capital % vs <strong>risk %</strong> (vol / beta / tail) per asset class, decomposed standalone per slice.</p><p>Non-marked holdings (CDs / annuities / privates) are honestly excluded; the beta metric toggles measured sub-book vs estimated whole-book (proxy).</p>` },
+  pivot: { title: "Pivot / Matrix",
+    body: `<p>A cross-tab of the book — pick a row and column dimension (account, sleeve, asset class, convex role) to see market value by cell.</p><p>Click a cell to scope the rest of the dashboard to it.</p>` },
+};
+
+function helpIcon(key) {
+  return `<button class="helpBtn" type="button" data-help="${key}" aria-label="About this panel" title="What is this panel?">i</button>`;
+}
+
+let _helpPop = null;
+function closeHelp() {
+  if (_helpPop) { _helpPop.remove(); _helpPop = null; }
+  document.removeEventListener("keydown", _helpKey, true);
+  window.removeEventListener("resize", closeHelp);
+}
+function _helpKey(e) { if (e.key === "Escape") closeHelp(); }
+function openHelp(btn) {
+  const h = PANEL_HELP[btn.getAttribute("data-help")];
+  if (!h) return;
+  closeHelp();
+  const pop = document.createElement("div");
+  pop.className = "helpPop";
+  pop.setAttribute("role", "dialog");
+  pop.innerHTML = `<div class="helpPopHead"><strong>${escapeHtml(h.title)}</strong>`
+    + `<button class="helpPopX" type="button" aria-label="Close">×</button></div>`
+    + `<div class="helpPopBody">${h.body}<p class="helpPopMore"><button type="button" class="helpPopGuide">Full guide ↗</button></p></div>`;
+  document.body.appendChild(pop);
+  // Anchor under the ⓘ, kept inside the viewport (position:absolute, page coords).
+  const r = btn.getBoundingClientRect();
+  pop.style.top = `${window.scrollY + r.bottom + 6}px`;
+  pop.style.left = `${window.scrollX + r.left}px`;
+  const pr = pop.getBoundingClientRect();
+  if (pr.right > window.innerWidth - 8) {
+    pop.style.left = `${Math.max(8, window.scrollX + window.innerWidth - pr.width - 8)}px`;
+  }
+  _helpPop = pop;
+  pop.querySelector(".helpPopX").addEventListener("click", closeHelp);
+  pop.querySelector(".helpPopGuide").addEventListener("click", () => { closeHelp(); openManual(); });
+  document.addEventListener("keydown", _helpKey, true);
+  window.addEventListener("resize", closeHelp);
+}
+// One listener for all panels (delegated → survives re-render). Clicking the ⓘ must not bubble into
+// the header's own click handlers (sort, select-scope); clicking anywhere else dismisses.
+document.addEventListener("click", (ev) => {
+  const btn = ev.target.closest?.(".helpBtn");
+  if (btn) { ev.preventDefault(); ev.stopPropagation(); openHelp(btn); return; }
+  if (_helpPop && !ev.target.closest(".helpPop")) closeHelp();
+});
+
 initApp();
 
 // ── assumed cost basis (v2.4.4, operator ask) ────────────────────────────────
@@ -1365,7 +1436,7 @@ function renderPlanning(cube) {
     <div class="panelHeader">
       <div>
         <p class="eyebrow">Planning &amp; Risk</p>
-        <h2>Reserve, Tax &amp; Liquidity</h2>
+        <h2>Reserve, Tax &amp; Liquidity ${helpIcon("planning")}</h2>
       </div>
       <div class="planConfig">
         ${cfgField("expenses", "Annual expenses", cfg.expenses, { money: true })}
@@ -1522,7 +1593,7 @@ function renderOverlay() {
     <div class="panelHeader">
       <div>
         <p class="eyebrow">Structural convexity &middot; volatility-managed construction</p>
-        <h2>Sortino Overlay Backtest <em class="cxSub" title="${escapeAttr(CDV_TIP)}">CAGR/Down-Vol basis</em></h2>
+        <h2>Sortino Overlay Backtest <em class="cxSub" title="${escapeAttr(CDV_TIP)}">CAGR/Down-Vol basis</em> ${helpIcon("overlay")}</h2>
       </div>
       <span class="pill ovPill" title="${escapeAttr(S.note)}">as-of ${escapeHtml(S.data_as_of || "?")} &middot; ${escapeHtml(win)} monthly</span>
     </div>
@@ -1577,7 +1648,7 @@ function renderRisk() {
   const wbtns = ["3Y", "1Y"].filter((k) => sliceWindows[k]).map((k) =>
     `<button class="rkWin ${k === winKey ? "active" : ""}" data-win="${k}">${k}</button>`).join("");
   const controls = `<div class="rkControls"><label class="rkSliceWrap">View <select class="rkSlice">${scopeOpts}</select></label>${withinSel}<span class="rkWindows">Lookback ${wbtns}</span></div>`;
-  const header = acctCaveatBadge() + `<div class="panelHeader"><div><p class="eyebrow">Where the risk actually is — capital vs risk, by asset class · <strong>standalone per slice</strong></p><h2>Risk Contribution</h2></div><span class="pill" title="${escapeAttr(S.method || "")}">${escapeHtml(sliceLabel)}</span></div>`;
+  const header = acctCaveatBadge() + `<div class="panelHeader"><div><p class="eyebrow">Where the risk actually is — capital vs risk, by asset class · <strong>standalone per slice</strong></p><h2>Risk Contribution ${helpIcon("risk")}</h2></div><span class="pill" title="${escapeAttr(S.method || "")}">${escapeHtml(sliceLabel)}</span></div>`;
   const wire = () => {
     const sel = el.risk.querySelector(".rkSlice");
     if (sel) sel.addEventListener("change", () => { state.riskSlice = sel.value; state.riskWithin = null; renderRisk(); });
@@ -1705,7 +1776,7 @@ function renderConvexity(cube) {
 
   el.convexity.innerHTML = `
     <div class="panelHeader">
-      <div><p class="eyebrow">Tactical convexity &middot; held instruments</p><h2>Crash-Shape &amp; Convexity</h2></div>
+      <div><p class="eyebrow">Tactical convexity &middot; held instruments</p><h2>Crash-Shape &amp; Convexity ${helpIcon("convexity")}</h2></div>
       <span class="pill ovPill">Convexity = trend / managed-futures / long-short</span>
     </div>
     <div class="planNote"><strong>Convexity has two sources.</strong> This panel is <em>tactical</em> convexity — the crash-hedge instruments you hold. <em>Structural</em> convexity comes from how the book is sized &amp; rebalanced (volatility targeting) — see the <strong>Sortino Overlay</strong> panel below. A holdings view sees only the tactical half; a vol-managed book can be far more convex than its instruments suggest.</div>
@@ -1752,7 +1823,7 @@ function renderDial(cube) {
   const hedgePill = `hedge fixed: ${Math.round((S.hedge.TREND || 0) * 100)}% trend · ${Math.round((S.hedge.TR || 0) * 100)}% Treas · ${Math.round((S.hedge.GLD || 0) * 100)}% gold`;
   el.dial.innerHTML = acctCaveatBadge() + `
     <div class="panelHeader">
-      <div><p class="eyebrow">Two-bucket dial · set it together</p><h2>Preservation ↔ Growth Dial</h2></div>
+      <div><p class="eyebrow">Two-bucket dial · set it together</p><h2>Preservation ↔ Growth Dial ${helpIcon("dial")}</h2></div>
       <span class="pill ovPill">${hedgePill}</span>
     </div>
     <div class="dialSlider">
@@ -2104,7 +2175,7 @@ function renderPivot() {
     (withNone ? `<option value="none"${sel === "none" ? " selected" : ""}>— None (1-D) —</option>` : "") +
     PIVOT_DIMS.map((d) => `<option value="${d.key}"${sel === d.key ? " selected" : ""}>${e(d.label)}</option>`).join("");
 
-  let html = `<header class="pivotHead"><h2>Pivot / Matrix</h2>
+  let html = `<header class="pivotHead"><h2>Pivot / Matrix ${helpIcon("pivot")}</h2>
     <div class="pivotCtl">
       <label>Rows <select id="pivotRowSel">${dimOptions(state.pivotRow, false)}</select></label>
       <label>Columns <select id="pivotColSel">${dimOptions(state.pivotCol, true)}</select></label>

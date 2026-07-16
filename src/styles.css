@@ -1313,6 +1313,32 @@ body.pivotFullOpen { overflow: hidden; }
 .rkEstTag { font-style: normal; font-size: 10.5px; font-weight: 600; color: #b8860b; border: 1px solid #e0a31f; border-radius: 6px; padding: 0 5px; margin-left: 6px; vertical-align: middle; }
 .rkEstNote { margin-top: -4px; }
 
+/* ── Context-sensitive panel help (ⓘ per header → anchored popover) ──────── */
+.helpBtn {
+  font: 600 11px/1 ui-sans-serif, system-ui, sans-serif; font-style: italic;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; margin-left: 8px; padding: 0; vertical-align: middle;
+  border: 1px solid #cfd9dd; border-radius: 50%; background: #ffffff; color: #287f8f; cursor: pointer;
+}
+.helpBtn:hover { background: #287f8f; color: #ffffff; border-color: #287f8f; }
+.helpBtn:focus-visible { outline: 2px solid #287f8f; outline-offset: 2px; }
+.helpPop {
+  position: absolute; z-index: 1200; width: max-content; max-width: min(340px, 92vw);
+  background: #ffffff; border: 1px solid #cfd9dd; border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(20, 40, 50, .20); font-size: 13px; color: #2c3a41; line-height: 1.5;
+}
+.helpPopHead { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 9px 12px; border-bottom: 1px solid #eef2f4; }
+.helpPopHead strong { font-size: 13.5px; color: #1c2a31; }
+.helpPopX { border: 0; background: none; font-size: 19px; line-height: 1; color: #5b6b72; cursor: pointer; padding: 0 2px; }
+.helpPopX:hover { color: #1c2a31; }
+.helpPopBody { padding: 10px 12px; }
+.helpPopBody p { margin: 0 0 7px; }
+.helpPopBody strong { color: #1c2a31; }
+.helpPopMore { margin: 9px 0 0 !important; padding-top: 8px; border-top: 1px solid #eef2f4; }
+.helpPopGuide { border: 0; background: none; color: #287f8f; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 0; }
+.helpPopGuide:hover { text-decoration: underline; }
+
 /* ── Find-in-guide (manual search) ──────────────────────────────────────── */
 .manualSearch { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; }
 .manualSearch input[type="search"] { flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 7px 11px; border: 1px solid #cfd9dd; border-radius: 8px; background: #ffffff; color: #1c2a31; }
