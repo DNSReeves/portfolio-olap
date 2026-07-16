@@ -1687,18 +1687,23 @@ function renderRisk() {
   const betaVal = betaMode === "estimated" ? W.beta_est_wholebook : pf.beta;
   const betaLegend = (W.non_marked_by_bucket || [])
     .map((r) => `${r.key}: β${r.proxy_beta} — ${r.source} ($${Math.round(r.mv).toLocaleString()})`).join("\n");
+  // Coverage note lives in ONE place — under the metrics, swapping by beta mode (operator, 2026-07-16).
+  // Measured: the sub-book / non-marked-excluded caveat. Estimated: the proxy explanation PLUS the
+  // honesty clarifier that the vol/beta/tail TABLE is still sub-book (only the beta went whole-book).
+  const coverageNote = betaMode === "estimated"
+    ? `<div class="planNote rkEstNote">Beta here is an <strong>estimated whole-book</strong> figure — proxy betas on the non-marked ${(W.non_marked_weight * 100).toFixed(0)}%: ${(W.non_marked_by_bucket || []).map((r) => `${escapeHtml(r.key)} β${r.proxy_beta} ($${Math.round(r.mv).toLocaleString()})`).join(" · ")}. Proxy, <strong>not measured</strong> (Damodaran industry betas; de-smoothing — Getmansky-Lo-Makarov 2004, Geltner 1991/93; tune in <code>proxy_betas.json</code>). The vol / beta / tail <strong>%s in the table below still cover the measured sub-book only</strong>.</div>`
+    : `<div class="rkCaveat">⚠️ The vol / beta / tail %s and the beta below cover the <strong>measurable sub-book</strong>${markedMv != null ? ` — <strong>$${markedMv.toLocaleString()}</strong> (<strong>${markedPct.toFixed(0)}%</strong> of ${escapeHtml(sliceLabel)})` : ""}, and sum to 100%. The other <strong>${(W.non_marked_weight * 100).toFixed(0)}%</strong> ($${Math.round(W.non_marked_mv).toLocaleString()}) is <strong>non-marked</strong> (CDs / annuities / private / illiquid — no honest market series) and <strong>excluded</strong>.${betaEstAvail ? ` Switch beta to <em>estimated · whole-book</em> for a proxy that includes it.` : ""}</div>`;
   el.risk.innerHTML = header + controls + `
-    <div class="rkCaveat">⚠️ The risk %s below cover the <strong>measurable sub-book</strong>${markedMv != null ? ` — <strong>$${markedMv.toLocaleString()}</strong> (<strong>${markedPct.toFixed(0)}%</strong> of ${escapeHtml(sliceLabel)})` : ""} and sum to 100%. The other <strong>${(W.non_marked_weight * 100).toFixed(0)}%</strong> ($${Math.round(W.non_marked_mv).toLocaleString()}) is <strong>non-marked</strong> (CDs / annuities / private / illiquid — no honest market series) and <strong>excluded</strong>.</div>
     <div class="planMetrics metrics">
       <div class="metric"><span>Volatility (annualized)</span><strong>${(pf.vol_annual * 100).toFixed(1)}%</strong></div>
       <div class="metric"><span>Portfolio beta (vs SPY)
-        <select class="rkBetaMode" title="Measured = the marked sub-book only (matches the risk %s below). Estimated = the WHOLE book, assigning a proxy beta to the non-marked buckets (proxy, not measured — sources below).">
+        <select class="rkBetaMode" title="Measured = the marked sub-book only (matches the risk %s below). Estimated = the WHOLE book, assigning a proxy beta to the non-marked buckets (proxy, not measured — note below).">
           <option value="measured" ${betaMode === "measured" ? "selected" : ""}>measured · sub-book</option>
           <option value="estimated" ${betaMode === "estimated" ? "selected" : ""} ${betaEstAvail ? "" : "disabled"}>estimated · whole-book${betaEstAvail ? "" : " (reload book)"}</option>
         </select></span><strong>${betaVal.toFixed(2)}${betaMode === "estimated" ? ` <em class="rkEstTag" title="${escapeAttr(betaLegend)}">proxy</em>` : ""}</strong></div>
       <div class="metric"><span>Expected shortfall (worst ${(pf.es_alpha * 100).toFixed(0)}% days)</span><strong>${(pf.es_daily * 100).toFixed(2)}%/day</strong></div>
     </div>
-    ${betaMode === "estimated" ? `<div class="planNote rkEstNote">Estimated whole-book β applies <strong>proxy</strong> betas to the non-marked ${(W.non_marked_weight * 100).toFixed(0)}%: ${(W.non_marked_by_bucket || []).map((r) => `${escapeHtml(r.key)} β${r.proxy_beta} ($${Math.round(r.mv).toLocaleString()})`).join(" · ")}. Proxy, <strong>not measured</strong> — anchors: Damodaran industry betas; de-smoothing (Getmansky-Lo-Makarov 2004, Geltner 1991/93). Tune in <code>proxy_betas.json</code>.</div>` : ""}
+    ${coverageNote}
     <table class="rkTable">
       <thead><tr>
         <th>Asset class</th>
