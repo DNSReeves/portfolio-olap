@@ -1584,6 +1584,8 @@ function renderRisk() {
     const wsel = el.risk.querySelector(".rkWithin");
     if (wsel) wsel.addEventListener("change", () => { state.riskWithin = wsel.value || null; renderRisk(); });
     el.risk.querySelectorAll(".rkWin").forEach((b) => b.addEventListener("click", () => { state.riskWindow = b.getAttribute("data-win"); renderRisk(); }));
+    const bsel = el.risk.querySelector(".rkBetaMode");
+    if (bsel) bsel.addEventListener("change", () => { state.betaMode = bsel.value; renderRisk(); });
   };
   if (!W || W.error) {
     el.risk.innerHTML = header + controls +
@@ -1606,13 +1608,26 @@ function renderRisk() {
   const markedMv = (W.marked_mv != null) ? W.marked_mv
     : (_nmw > 0 && _nmw < 1 ? Math.round(W.non_marked_mv * (1 - _nmw) / _nmw) : null);
   const markedPct = (W.marked_weight != null ? W.marked_weight : (1 - _nmw)) * 100;
+  // Measured vs estimated beta popup (default measured — the current method). The estimated
+  // whole-book figure needs the snapshot's proxy fields; if this snapshot predates them the option
+  // is disabled until the operator reloads the book (Load 3F / Load Full Book reruns the generator).
+  const betaEstAvail = W.beta_est_wholebook != null;
+  const betaMode = (state.betaMode === "estimated" && betaEstAvail) ? "estimated" : "measured";
+  const betaVal = betaMode === "estimated" ? W.beta_est_wholebook : pf.beta;
+  const betaLegend = (W.non_marked_by_bucket || [])
+    .map((r) => `${r.key}: β${r.proxy_beta} — ${r.source} ($${Math.round(r.mv).toLocaleString()})`).join("\n");
   el.risk.innerHTML = header + controls + `
     <div class="rkCaveat">⚠️ The risk %s below cover the <strong>measurable sub-book</strong>${markedMv != null ? ` — <strong>$${markedMv.toLocaleString()}</strong> (<strong>${markedPct.toFixed(0)}%</strong> of ${escapeHtml(sliceLabel)})` : ""} and sum to 100%. The other <strong>${(W.non_marked_weight * 100).toFixed(0)}%</strong> ($${Math.round(W.non_marked_mv).toLocaleString()}) is <strong>non-marked</strong> (CDs / annuities / private / illiquid — no honest market series) and <strong>excluded</strong>.</div>
     <div class="planMetrics metrics">
       <div class="metric"><span>Volatility (annualized)</span><strong>${(pf.vol_annual * 100).toFixed(1)}%</strong></div>
-      <div class="metric"><span>Portfolio beta (vs SPY)</span><strong>${pf.beta.toFixed(2)}</strong></div>
+      <div class="metric"><span>Portfolio beta (vs SPY)
+        <select class="rkBetaMode" title="Measured = the marked sub-book only (matches the risk %s below). Estimated = the WHOLE book, assigning a proxy beta to the non-marked buckets (proxy, not measured — sources below).">
+          <option value="measured" ${betaMode === "measured" ? "selected" : ""}>measured · sub-book</option>
+          <option value="estimated" ${betaMode === "estimated" ? "selected" : ""} ${betaEstAvail ? "" : "disabled"}>estimated · whole-book${betaEstAvail ? "" : " (reload book)"}</option>
+        </select></span><strong>${betaVal.toFixed(2)}${betaMode === "estimated" ? ` <em class="rkEstTag" title="${escapeAttr(betaLegend)}">proxy</em>` : ""}</strong></div>
       <div class="metric"><span>Expected shortfall (worst ${(pf.es_alpha * 100).toFixed(0)}% days)</span><strong>${(pf.es_daily * 100).toFixed(2)}%/day</strong></div>
     </div>
+    ${betaMode === "estimated" ? `<div class="planNote rkEstNote">Estimated whole-book β applies <strong>proxy</strong> betas to the non-marked ${(W.non_marked_weight * 100).toFixed(0)}%: ${(W.non_marked_by_bucket || []).map((r) => `${escapeHtml(r.key)} β${r.proxy_beta} ($${Math.round(r.mv).toLocaleString()})`).join(" · ")}. Proxy, <strong>not measured</strong> — anchors: Damodaran industry betas; de-smoothing (Getmansky-Lo-Makarov 2004, Geltner 1991/93). Tune in <code>proxy_betas.json</code>.</div>` : ""}
     <table class="rkTable">
       <thead><tr>
         <th>Asset class</th>
