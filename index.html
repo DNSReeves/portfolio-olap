@@ -44,6 +44,7 @@
               <input id="csvFile" type="file" accept=".csv,text/csv" />
             </label>
             <button id="loadBookButton" title="Load the full consolidated book (all accounts) exported by portfolio_analysis.py">📥 Load Full Book</button>
+            <button id="load3fButton" title="Load the 3 native institutional exports directly — comprehensive Schwab CSV + comprehensive Fidelity CSV + your two TIAA balances. Consolidated server-side (portfolio_analysis.py), then loaded like Load Full Book. Drop the files exactly as downloaded — no renaming.">🏦 Load 3F</button>
             <button id="importPanelButton">Import Mapping</button>
             <button id="snapshotsButton">Snapshots</button>
             <button id="reportButton" title="Full-book PDF report — every account, sleeve rollups, and per-lot holdings detail; opens print-ready, use Save as PDF">📄 Report</button>
@@ -56,6 +57,28 @@
           <button id="bookReload" class="bookBannerBtn">Reload</button>
           <button id="bookDismiss" class="bookBannerGhost">Dismiss</button>
         </div>
+
+        <dialog id="load3fDialog" class="load3fDialog">
+          <form method="dialog">
+            <h3>🏦 Load 3-File Set</h3>
+            <p class="load3fHint">Drop the exports exactly as downloaded — no renaming. The TIAA statement is a vector PDF (not machine-readable), so type its two balances from the Daily Summary.</p>
+            <label>Schwab — comprehensive <em>All-Accounts</em> CSV
+              <input id="load3fSchwab" type="file" accept=".csv,text/csv" required />
+            </label>
+            <label>Fidelity — comprehensive <em>Portfolio_Positions</em> CSV
+              <input id="load3fFidelity" type="file" accept=".csv,text/csv" required />
+            </label>
+            <div class="load3fTiaa">
+              <label>TIAA Traditional $ <input id="load3fTiaaTrad" type="text" inputmode="decimal" placeholder="227768.78" /></label>
+              <label>CREF Growth $ <input id="load3fTiaaCref" type="text" inputmode="decimal" placeholder="240190.99" /></label>
+            </div>
+            <div id="load3fStatus" class="load3fStatus" aria-live="polite"></div>
+            <menu class="load3fButtons">
+              <button id="load3fCancel" type="button" class="bookBannerGhost">Cancel</button>
+              <button id="load3fSubmit" type="button">Consolidate &amp; Load</button>
+            </menu>
+          </form>
+        </dialog>
 
         <div id="rulesBanner" class="bookBanner" hidden style="background:#7f1d1d;border-color:#b91c1c">
           <span class="bookBannerMsg">⚠ Classifier rules failed to load (classification_rules.json) — sleeve, asset-class and convex-role views are DEGRADED. Fix the file/server and reload.</span>

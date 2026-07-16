@@ -480,6 +480,52 @@ el.bookDismiss?.addEventListener("click", () => {
   hideBookBanner();
 });
 
+// ── Load 3F (2026-07-16) — upload the 3 native institutional exports; consolidate server-side ──
+// The mature Python consolidation is REUSED via POST /api/load3f (no JS re-implementation → no
+// Python/JS divergence). On success we reload the freshly-written book through the SAME
+// loadConsolidatedBook() path as Load Full Book, which stays untouched.
+const _esc3f = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+el.load3fButton = document.querySelector("#load3fButton");
+el.load3fDialog = document.querySelector("#load3fDialog");
+el.load3fButton?.addEventListener("click", () => {
+  const st = document.querySelector("#load3fStatus"); if (st) st.textContent = "";
+  el.load3fDialog?.showModal();
+});
+document.querySelector("#load3fCancel")?.addEventListener("click", () => el.load3fDialog?.close());
+document.querySelector("#load3fSubmit")?.addEventListener("click", async () => {
+  const status = document.querySelector("#load3fStatus");
+  const schwab = document.querySelector("#load3fSchwab").files[0];
+  const fidelity = document.querySelector("#load3fFidelity").files[0];
+  if (!schwab || !fidelity) { status.textContent = "⚠ Pick both the Schwab and the Fidelity CSV."; return; }
+  const fd = new FormData();
+  fd.append("schwab_csv", schwab, schwab.name);
+  fd.append("fidelity_csv", fidelity, fidelity.name);
+  fd.append("tiaa_traditional", document.querySelector("#load3fTiaaTrad").value.trim());
+  fd.append("tiaa_cref", document.querySelector("#load3fTiaaCref").value.trim());
+  const submit = document.querySelector("#load3fSubmit");
+  submit.disabled = true; submit.textContent = "Consolidating…";
+  status.textContent = "Running the consolidation server-side (~30–60s)…";
+  try {
+    const res = await fetch("/api/load3f", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!data.ok) {
+      status.innerHTML = `❌ ${_esc3f(data.error || "consolidation failed")}` +
+        (data.tail ? `<pre class="load3fTail">${_esc3f(data.tail)}</pre>` : "");
+      return;
+    }
+    const recon = data.reconcile_ok ? "✓ reconciles" : "⚠ reconciliation warning — check the detail";
+    const warns = (data.warnings || []).length
+      ? `<ul class="load3fWarns">${data.warnings.map((w) => `<li>${_esc3f(w)}</li>`).join("")}</ul>` : "";
+    status.innerHTML = `✅ Book <b>$${_esc3f(data.total || "?")}</b> · as-of ${_esc3f(data.as_of || "?")} · ${recon}${warns}<br>Loading into the dashboard…`;
+    await loadConsolidatedBook();
+    status.innerHTML += " <b>done</b> — you can close this.";
+  } catch (e) {
+    status.textContent = `❌ ${e.message}`;
+  } finally {
+    submit.disabled = false; submit.textContent = "Consolidate & Load";
+  }
+});
+
 // The rules banner is a hard error (classifier degraded) — the only action is a full reload
 // to re-attempt the fetch; it is NOT dismissable (unlike the book banner) by design.
 el.rulesReload?.addEventListener("click", () => location.reload());
