@@ -1599,8 +1599,15 @@ function renderRisk() {
     const barW = Math.max(0, Math.min(100, r.vol_pct));
     return `<tr class="${cls}"><td class="rkName">${escapeHtml(r.key)}</td><td class="rkNum">${r.capital_pct_marked.toFixed(1)}</td><td class="rkBarCell"><div class="rkBar"><span style="width:${barW}%"></span></div><em>${r.vol_pct.toFixed(1)}</em></td><td class="rkNum">${r.beta_pct.toFixed(1)}</td><td class="rkNum ${hedge ? "rkNeg" : ""}">${r.es_pct.toFixed(1)}</td></tr>`;
   }).join("");
+  // Measurable ("marked") sub-book $ that the risk %s actually cover. New snapshots carry marked_mv
+  // directly; for a snapshot generated before that field existed, derive it from the non-marked
+  // weight (nmw = non_marked_mv / slice_total ⇒ marked = non_marked_mv·(1−nmw)/nmw).
+  const _nmw = W.non_marked_weight || 0;
+  const markedMv = (W.marked_mv != null) ? W.marked_mv
+    : (_nmw > 0 && _nmw < 1 ? Math.round(W.non_marked_mv * (1 - _nmw) / _nmw) : null);
+  const markedPct = (W.marked_weight != null ? W.marked_weight : (1 - _nmw)) * 100;
   el.risk.innerHTML = header + controls + `
-    <div class="rkCaveat">⚠️ <strong>${(W.non_marked_weight * 100).toFixed(0)}%</strong> of <strong>${escapeHtml(sliceLabel)}</strong> ($${Math.round(W.non_marked_mv).toLocaleString()}) is <strong>non-marked</strong> (CDs / annuities / private / illiquid — no honest market series) and <strong>excluded</strong>. The risk %s below are of the measurable sub-book and sum to 100%.</div>
+    <div class="rkCaveat">⚠️ The risk %s below cover the <strong>measurable sub-book</strong>${markedMv != null ? ` — <strong>$${markedMv.toLocaleString()}</strong> (<strong>${markedPct.toFixed(0)}%</strong> of ${escapeHtml(sliceLabel)})` : ""} and sum to 100%. The other <strong>${(W.non_marked_weight * 100).toFixed(0)}%</strong> ($${Math.round(W.non_marked_mv).toLocaleString()}) is <strong>non-marked</strong> (CDs / annuities / private / illiquid — no honest market series) and <strong>excluded</strong>.</div>
     <div class="planMetrics metrics">
       <div class="metric"><span>Volatility (annualized)</span><strong>${(pf.vol_annual * 100).toFixed(1)}%</strong></div>
       <div class="metric"><span>Portfolio beta (vs SPY)</span><strong>${pf.beta.toFixed(2)}</strong></div>
