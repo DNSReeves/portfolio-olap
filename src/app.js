@@ -793,6 +793,7 @@ async function initApp() {
   state.valuationDate = today();
   el.valuationDateInput.value = state.valuationDate;
   await loadClassificationRules(); // shared sleeve rules before any classification runs
+  await loadAccountManagers();     // account→manager SSOT (self/advisor) before the account filter renders
   await loadOverlaySnapshot();     // read-only precomputed overlay backtest
   await loadDialSnapshot();        // precomputed two-bucket dial grid
   await loadRegionExposure();      // per-ETF look-through region exposure (Pivot Region dim)
@@ -982,19 +983,20 @@ function renderAccountFilter() {
   const on = names.filter((n) => !state.hiddenAccounts.has(n));
   const onMv = accounts.filter(([k]) => !state.hiddenAccounts.has(k)).reduce((t, [, mv]) => t + mv, 0);
   const filtered = on.length < names.length;
+  const advLbl = advisorLabel();                 // "CAM" when there's a single advisor, else "Advisor"
   const summary = isAll ? `All accounts (${names.length})`
     : isSelf ? `Self-managed (${on.length})`
-    : isAdv ? `Advisor (${on.length})`
+    : isAdv ? `${advLbl} (${on.length})`
     : `${on.length} of ${names.length} accounts`;
   const presets = [
-    ["all", "All", isAll], ["self", "Self-managed", isSelf], ["advisor", "Advisor", isAdv],
+    ["all", "All", isAll], ["self", "Self-managed", isSelf], ["advisor", advLbl, isAdv],
   ].map(([key, lbl, sel]) =>
-    `<button type="button" class="acctPreset ${sel ? "on" : ""}" data-preset="${key}">${lbl}</button>`).join("");
+    `<button type="button" class="acctPreset ${sel ? "on" : ""}" data-preset="${key}">${escapeHtml(lbl)}</button>`).join("");
   const boxes = accounts.map(([name, mv]) => {
     const checked = !state.hiddenAccounts.has(name);
     const adv = ADVISOR_ACCOUNTS.has(name);
     return `<label class="acctRow"><input type="checkbox" data-acct="${escapeAttr(name)}"${checked ? " checked" : ""}/>` +
-      `<span class="acctName">${escapeHtml(name)}${adv ? `<small class="acctTag">advisor</small>` : ""}</span>` +
+      `<span class="acctName">${escapeHtml(name)}${adv ? `<small class="acctTag">${escapeHtml(managerLabelOf(name))}</small>` : ""}</span>` +
       `<em>$${(mv / 1e6).toFixed(2)}M</em></label>`;
   }).join("");
   el.acctFilter.innerHTML =
@@ -1125,9 +1127,42 @@ function inSelection(holding) {
 // filter is surfaced in the title, the pill row, and the badges, never silent.
 // Pure core (also the test seam — `function` declarations are reachable from the vm test
 // harness; top-level consts are not): the stateful wrappers below close over `state`.
+// Account → manager (self / advisor) is now driven by account_managers.json — the SSOT emitted from
+// config/account_managers.yaml on the agent side and shared with book_query + the VMC report (was a
+// hardcoded set here AND in vmc_overlay.py, which could drift; unified 2026-07-17). Fetched at boot;
+// the literal below is the degrade-safe fallback if the file is missing.
+let ACCOUNT_MANAGERS = null;
+async function loadAccountManagers() {
+  try {
+    const res = await fetch("./account_managers.json", { cache: "no-store" });
+    ACCOUNT_MANAGERS = res.ok ? await res.json() : null;
+  } catch { ACCOUNT_MANAGERS = null; }
+  if (ACCOUNT_MANAGERS && !(ACCOUNT_MANAGERS.managers && ACCOUNT_MANAGERS.accounts)) ACCOUNT_MANAGERS = null;
+  ADVISOR_ACCOUNTS = advisorAccounts();          // refresh the derived set once the config lands
+}
 function advisorAccounts() {
+  const cfg = ACCOUNT_MANAGERS;
+  if (cfg) {
+    const advKeys = new Set(Object.entries(cfg.managers)
+      .filter(([, v]) => v && v.kind === "advisor").map(([k]) => k));
+    return new Set(Object.entries(cfg.accounts).filter(([, m]) => advKeys.has(m)).map(([a]) => a));
+  }
   return new Set(["Living Trust", "Partnership", "Fidelity_AQR_FLEX45_Portfolio",
                   "Limit Liability Company"]);
+}
+function managerLabelOf(account) {               // the specific manager (e.g. "CAM"), for row/report tags
+  const cfg = ACCOUNT_MANAGERS;
+  const m = cfg && cfg.accounts[account] && cfg.managers[cfg.accounts[account]];
+  if (m && m.label) return m.label;
+  return ADVISOR_ACCOUNTS.has(account) ? "advisor" : "self";
+}
+function advisorLabel() {                         // preset/summary label: the sole advisor's name, else generic
+  const cfg = ACCOUNT_MANAGERS;
+  if (cfg) {
+    const advs = Object.entries(cfg.managers).filter(([, v]) => v && v.kind === "advisor");
+    if (advs.length === 1) return advs[0][1].label || "Advisor";
+  }
+  return "Advisor";
 }
 function accountKey(holding) { return holding.brokerageAccount || "(No account)"; }
 function filterByAccounts(holdings, hidden) {
@@ -1147,7 +1182,7 @@ function accountFilterActiveFor(holdings, hidden) {
   if (!hidden || !hidden.size) return false;
   return holdings.some((h) => hidden.has(accountKey(h)));
 }
-const ADVISOR_ACCOUNTS = advisorAccounts();
+let ADVISOR_ACCOUNTS = advisorAccounts();   // reassigned by loadAccountManagers() once the config JSON loads
 function visibleHoldings() { return filterByAccounts(state.holdings, state.hiddenAccounts); }
 function distinctAccounts() { return distinctAccountsOf(state.holdings); }
 function accountFilterActive() { return accountFilterActiveFor(state.holdings, state.hiddenAccounts); }
@@ -2465,7 +2500,7 @@ function buildReportHtml(holdings, opts = {}) {
   }
   const accounts = [...acctMap.entries()].sort((a, b) => b[1].value - a[1].value);
   const acctRows = accounts.map(([name, g]) =>
-    `<tr><td>${reportEsc(name)}${ADVISOR_ACCOUNTS.has(name) ? ` <em class="tag">advisor</em>` : ""}</td>` +
+    `<tr><td>${reportEsc(name)}${ADVISOR_ACCOUNTS.has(name) ? ` <em class="tag">${reportEsc(managerLabelOf(name))}</em>` : ""}</td>` +
     `<td class="num">${money(g.value)}</td><td class="num">${pctBook(g.value)}</td>` +
     // assumed-inclusive account cost gets the same * as per-lot rows — summing this
     // column otherwise exceeds the headline "Cost basis (known)" unexplained (review F4)
@@ -2525,7 +2560,7 @@ function buildReportHtml(holdings, opts = {}) {
         `<td class="num">${cost}</td><td class="num">${money(h.marketValue)}</td>` +
         gl(gainOf(h), hasKnownBasis(h) ? h.costBasis : 0) + `</tr>`;
     }).join("");
-    detail += `<h3>${reportEsc(name)}${ADVISOR_ACCOUNTS.has(name) ? ` <em class="tag">advisor</em>` : ""}` +
+    detail += `<h3>${reportEsc(name)}${ADVISOR_ACCOUNTS.has(name) ? ` <em class="tag">${reportEsc(managerLabelOf(name))}</em>` : ""}` +
       ` <span class="muted">· ${g.rows.length} position${g.rows.length === 1 ? "" : "s"} · ${money(g.value)} (${pctBook(g.value)})</span></h3>` +
       `<table><thead><tr><th>Ticker</th><th>Asset</th><th>Sleeve</th>` +
       (anyShares ? `<th class="num">Shares</th>` : "") +

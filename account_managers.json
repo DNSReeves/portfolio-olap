@@ -1,0 +1,23 @@
+{
+  "managers": {
+    "self": {
+      "label": "Self-managed",
+      "kind": "self"
+    },
+    "cam": {
+      "label": "CAM",
+      "kind": "advisor"
+    }
+  },
+  "accounts": {
+    "Partnership": "cam",
+    "Living Trust": "cam",
+    "Limit Liability Company": "cam",
+    "Fidelity_AQR_FLEX45_Portfolio": "cam",
+    "Fidelity_Portfolio": "self",
+    "Bond Account": "self",
+    "TIAA-CREF": "self",
+    "DNSR-IRA": "self",
+    "RMD Receiver": "self"
+  }
+}
