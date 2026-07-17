@@ -1657,6 +1657,8 @@ function renderRisk() {
     el.risk.querySelectorAll(".rkWin").forEach((b) => b.addEventListener("click", () => { state.riskWindow = b.getAttribute("data-win"); renderRisk(); }));
     const bsel = el.risk.querySelector(".rkBetaMode");
     if (bsel) bsel.addEventListener("change", () => { state.betaMode = bsel.value; renderRisk(); });
+    el.risk.querySelectorAll(".rkName[data-sleeve]").forEach((td) =>
+      td.addEventListener("click", () => selectScope({ sleeve: td.getAttribute("data-sleeve") })));
   };
   if (!W || W.error) {
     el.risk.innerHTML = header + controls +
@@ -1665,12 +1667,22 @@ function renderRisk() {
     return;
   }
   const pf = W.portfolio;
+  // The risk table's asset-class labels ARE cube sleeve names, so a row → scope the dashboard to that
+  // sleeve (operator, 2026-07-16 — consistent with every other panel). Only wire rows whose sleeve is
+  // actually present in the current book, so a click never scopes to an empty view.
+  const bookSleeves = new Set(visibleHoldings().map((h) => h.sleeve));
+  let anyScopeable = false;
   const rows = W.by_asset_class.map((r) => {
     const hedge = r.es_pct < 0;
     const conc = r.vol_pct - r.capital_pct_marked;        // risk-vs-capital gap
     const cls = hedge ? "rkHedge" : (conc > 8 ? "rkConc" : "");
     const barW = Math.max(0, Math.min(100, r.vol_pct));
-    return `<tr class="${cls}"><td class="rkName">${escapeHtml(r.key)}</td><td class="rkNum">${r.capital_pct_marked.toFixed(1)}</td><td class="rkBarCell"><div class="rkBar"><span style="width:${barW}%"></span></div><em>${r.vol_pct.toFixed(1)}</em></td><td class="rkNum">${r.beta_pct.toFixed(1)}</td><td class="rkNum ${hedge ? "rkNeg" : ""}">${r.es_pct.toFixed(1)}</td></tr>`;
+    const scopeable = bookSleeves.has(r.key);
+    if (scopeable) anyScopeable = true;
+    const nameCell = scopeable
+      ? `<td class="rkName scopeLabel" data-sleeve="${escapeAttr(r.key)}" title="Scope the dashboard to ${escapeAttr(r.key)}">${escapeHtml(r.key)}</td>`
+      : `<td class="rkName">${escapeHtml(r.key)}</td>`;
+    return `<tr class="${cls}">${nameCell}<td class="rkNum">${r.capital_pct_marked.toFixed(1)}</td><td class="rkBarCell"><div class="rkBar"><span style="width:${barW}%"></span></div><em>${r.vol_pct.toFixed(1)}</em></td><td class="rkNum">${r.beta_pct.toFixed(1)}</td><td class="rkNum ${hedge ? "rkNeg" : ""}">${r.es_pct.toFixed(1)}</td></tr>`;
   }).join("");
   // Measurable ("marked") sub-book $ that the risk %s actually cover. New snapshots carry marked_mv
   // directly; for a snapshot generated before that field existed, derive it from the non-marked
@@ -1714,7 +1726,7 @@ function renderRisk() {
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="planNote">Each slice is decomposed <strong>standalone</strong> — its own &sigma;/&beta;/ES, weights renormalized inside the slice. Columns are exact <strong>Euler decompositions</strong>. <strong>Vol&nbsp;% &gt; Capital&nbsp;%</strong> = carries more risk than money (shaded amber); <strong class="good">negative Tail&nbsp;%</strong> = a crash hedge that <em>reduces</em> drawdown (shaded green). ${winKey} daily · ${W.obs}d (${escapeHtml(W.start)}&rarr;${escapeHtml(W.end)}) · snapshot ${escapeHtml((S.generated || "").slice(0, 10))}.</div>`;
+    <div class="planNote">Each slice is decomposed <strong>standalone</strong> — its own &sigma;/&beta;/ES, weights renormalized inside the slice. Columns are exact <strong>Euler decompositions</strong>. <strong>Vol&nbsp;% &gt; Capital&nbsp;%</strong> = carries more risk than money (shaded amber); <strong class="good">negative Tail&nbsp;%</strong> = a crash hedge that <em>reduces</em> drawdown (shaded green). ${winKey} daily · ${W.obs}d (${escapeHtml(W.start)}&rarr;${escapeHtml(W.end)}) · snapshot ${escapeHtml((S.generated || "").slice(0, 10))}.${anyScopeable ? " Click an asset class to scope the book to it." : ""}</div>`;
   wire();
 }
 
@@ -1876,13 +1888,21 @@ function renderAllocation(cube) {
 }
 
 function renderTopHoldings(cube) {
+  // Two affordances per row (operator, 2026-07-16): the ticker → its chart (MarketForge), the sleeve
+  // chip → scope the dashboard. A non-chartable name (private fund / option) falls back to sleeve-scope.
   el.topHoldings.replaceChildren(
-    ...cube.topHoldings.map((holding) => {
-      const button = document.createElement("button");
-      button.className = "miniItem";
-      button.innerHTML = `<span><strong>${escapeHtml(holding.ticker || holding.assetName)}</strong><small>${escapeHtml(holding.sleeve)}</small></span><span>${money(holding.marketValue)}</span>`;
-      button.addEventListener("click", () => selectScope({ sleeve: holding.sleeve }));
-      return button;
+    ...cube.topHoldings.map((h) => {
+      const row = document.createElement("div");
+      row.className = "miniItem";
+      const tkr = h.ticker || "";
+      const chartable = isChartableTicker(tkr);
+      const name = chartable
+        ? tickerChartLink(tkr, tkr, ` · ${h.assetName || ""}`)
+        : `<strong class="scopeLabel" title="Scope the dashboard to the ${escapeAttr(h.sleeve)} sleeve">${escapeHtml(tkr || h.assetName)}</strong>`;
+      row.innerHTML = `<span>${name}<button type="button" class="miniSleeve" title="Scope the dashboard to the ${escapeAttr(h.sleeve)} sleeve">${escapeHtml(h.sleeve)}</button></span><span>${money(h.marketValue)}</span>`;
+      row.querySelector(".miniSleeve")?.addEventListener("click", () => selectScope({ sleeve: h.sleeve }));
+      if (!chartable) row.querySelector(".scopeLabel")?.addEventListener("click", () => selectScope({ sleeve: h.sleeve }));
+      return row;
     }),
   );
 }
@@ -2710,10 +2730,23 @@ function forgeTickerUrl(kind, ticker, loc) {
   return `${base}#${kind}=${encodeURIComponent(ticker)}`;
 }
 
-// Plausible exchange symbol → worth a Forge link. 1-5 letters covers ETFs/stocks/funds; bond
-// CUSIPs (9 alnum), option symbols and "-" placeholders fall out naturally.
+// Plausible EXCHANGE symbol → worth a Forge chart link. 1-5 uppercase letters covers ETFs/stocks;
+// bond CUSIPs (9 alnum), option symbols and "-" placeholders fall out naturally. We also exclude
+// 5-letter open-end MUTUAL-FUND symbols (…X, the Nasdaq convention: CCLFX / SHRMX / LENDX) — Forge's
+// ETF tab has no series for them, so a link would open an empty tab (operator, 2026-07-16).
 function isChartableTicker(ticker) {
-  return /^[A-Z]{1,5}$/.test(ticker || "");
+  const t = ticker || "";
+  return /^[A-Z]{1,5}$/.test(t) && !/^[A-Z]{4}X$/.test(t);
+}
+
+// ONE ticker→chart affordance for every panel: a chartable ticker renders as a link to its
+// MarketForge ETF tab (price chart + deep dive); anything else stays plain text. Keeps the whole
+// dashboard's "click a ticker → see its chart" behavior consistent.
+function tickerChartLink(ticker, label, titleExtra = "") {
+  const lbl = label != null ? label : (ticker || "");
+  if (!isChartableTicker(ticker)) return `<strong>${escapeHtml(lbl)}</strong>`;
+  const tip = `Open the MarketForge ETF tab for ${ticker} — price chart, identity, costs, composition, factor regression, flows, news (new tab)${titleExtra}`;
+  return `<a class="tickerLink" href="${forgeTickerUrl("etf", ticker, location)}" target="_blank" rel="noopener" title="${escapeAttr(tip)}">${escapeHtml(lbl)}</a>`;
 }
 
 function renderHoldings() {

@@ -1398,6 +1398,14 @@ th.sortable:hover { color: #0f766e; }
 .drillDonut svg .drillSlice[data-real]:hover { opacity: 0.8; }
 .tickerLink { color: inherit; text-decoration: none; border-bottom: 1px dotted #9fb3ba; }
 .tickerLink:hover { color: #0f766e; border-bottom: 1px solid #0f766e; }
+/* Consistent scope affordance (click a category → scope the dashboard). */
+.scopeLabel { cursor: pointer; border-radius: 4px; }
+.scopeLabel:hover { color: #0f766e; text-decoration: underline; text-underline-offset: 2px; }
+td.rkName.scopeLabel:hover { background: #eef7f6; }
+/* Top-Holdings sleeve chip → scope. */
+.miniSleeve { display: inline-block; margin-top: 2px; padding: 1px 8px; font: inherit; font-size: 11px;
+  color: #5b6b72; background: #eef2f4; border: 1px solid #e0e7ea; border-radius: 999px; cursor: pointer; text-align: left; }
+.miniSleeve:hover { color: #0f766e; background: #e2efee; border-color: #b9d8d4; }
 
 /* v2.4.4: assumed-basis footnotes */
 .basisNote { color: #b7791f; font-weight: 700; cursor: help; margin-left: 2px; }
