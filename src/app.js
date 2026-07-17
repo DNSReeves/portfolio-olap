@@ -1419,7 +1419,7 @@ function renderPlanning(cube) {
 
   const taxRows = hasCostBasis && taxableSleeves.length
     ? taxableSleeves.slice(0, 6).map((s) =>
-        `<div class="planTaxRow"><span>${escapeHtml(s.name)}</span><em>${money(s.gain)} gain</em><strong>${money(s.tax)}</strong></div>`).join("")
+        `<div class="planTaxRow"><span class="scopeLabel" data-sleeve="${escapeAttr(s.name)}" title="Scope the dashboard to ${escapeAttr(s.name)}">${escapeHtml(s.name)}</span><em>${money(s.gain)} gain</em><strong>${money(s.tax)}</strong></div>`).join("")
     : `<div class="planNote">${hasCostBasis ? "No embedded gains." : "Import cost basis to compute embedded tax."}</div>`;
 
   // P3-34 caveat: holdings whose basis is unknown in the source export (missing OR operator-assumed
@@ -1454,6 +1454,8 @@ function renderPlanning(cube) {
       ${noBasisNote}
     </div>`;
 
+  el.planning.querySelectorAll(".planTaxRow [data-sleeve]").forEach((sp) =>
+    sp.addEventListener("click", () => selectScope({ sleeve: sp.getAttribute("data-sleeve") })));
   el.planning.querySelectorAll("input[data-plan]").forEach((input) => {
     input.addEventListener("change", () => {
       const key = input.dataset.plan;
