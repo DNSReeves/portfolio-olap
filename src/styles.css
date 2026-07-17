@@ -182,7 +182,7 @@ button {
 .subSleeves { margin-left: 14px; padding-left: 6px; border-left: 1px solid #2a3a44; }
 .subSleeves .sleeve { font-size: 12px; padding: 5px 8px; }
 
-/* "View by: Asset Class | Convex Role" sidebar switch */
+/* "View by: Asset Class | Role" sidebar switch (Role = convex role) */
 .viewToggle { margin-bottom: 12px; }
 .viewToggleLabel {
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;

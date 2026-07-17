@@ -1160,7 +1160,7 @@ function selectScope({ sleeve = "All", bucket = null, subGroup = null }) {
   else window.scrollTo({ top: 0, behavior: "smooth" });   // "All Portfolio" → back to the top
 }
 
-// The "View by: Asset Class | Convex Role" switch atop the sidebar nav.
+// The "View by: Asset Class | Role" switch atop the sidebar nav (Role = convex role).
 function viewToggle() {
   const wrap = document.createElement("div");
   wrap.className = "viewToggle";
@@ -2131,7 +2131,7 @@ const PIVOT_DIMS = [
   // Look-through (weighted): composite/alt funds are split into Equity/Bond/Cash/Alternatives.
   { key: "asset_lt", label: "Asset Class (look-through)", order: () => ["Equity", "Bond", "Cash", "Alternatives"],
     dist: (h) => assetClassLookThrough(h) },
-  { key: "convex_role", label: "Convex Role", of: (h) => convexRoleForSleeve(h.sleeve) || "Other", order: () => _CONVEX_ROLE_ORDER },
+  { key: "convex_role", label: "Role", of: (h) => convexRoleForSleeve(h.sleeve) || "Other", order: () => _CONVEX_ROLE_ORDER },
   { key: "style_size", label: "Style × Size", of: (h) => styleSizeOfSleeve(h.sleeve) },
   { key: "account", label: "Account", of: (h) => h.brokerageAccount || "—" },
   { key: "liquidity", label: "Liquidity", of: (h) => liquidityOfSleeve(h.sleeve) },
@@ -2593,7 +2593,7 @@ ${noBasisValue ? `<div class="muted">Basis unknown on ${money(noBasisValue)} of 
 <table><thead><tr><th>Bucket / Sleeve</th><th class="num">Value</th><th class="num">% of book</th><th class="num">Gain / Loss</th></tr></thead>
 <tbody>${classRows}</tbody></table>
 
-<h2>Convex-Role View</h2>
+<h2>Role View</h2>
 <table><thead><tr><th>Role</th><th class="num">Value</th><th class="num">% of book</th></tr></thead>
 <tbody>${roleRows}</tbody></table>
 
