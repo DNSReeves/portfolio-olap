@@ -1160,6 +1160,13 @@ function selectScope({ sleeve = "All", bucket = null, subGroup = null }) {
   else window.scrollTo({ top: 0, behavior: "smooth" });   // "All Portfolio" → back to the top
 }
 
+// Scope to a convex ROLE (Growth / Income / Duration / …). Roles are the grouping ONLY in role view,
+// so flip the sidebar to role view if needed, then scope the dashboard to that role bucket.
+function scopeToRole(role) {
+  if (state.sidebarView !== "role") { state.sidebarView = "role"; saveJson("sidebarView", "role"); }
+  selectScope({ bucket: role });
+}
+
 // The "View by: Asset Class | Role" switch atop the sidebar nav (Role = convex role).
 function viewToggle() {
   const wrap = document.createElement("div");
@@ -1765,7 +1772,7 @@ function renderConvexity(cube) {
   const compRows = _CONVEX_ROLE_ORDER.filter((r) => (roleTot[r] || 0) > 0).map((r) => {
     const v = roleTot[r] || 0;
     const hot = r === "Convexity";
-    return `<div class="cxRow ${hot ? "cxHot" : ""}"><span class="cxLabel">${r}${hot ? " ◆" : ""}</span>` +
+    return `<div class="cxRow ${hot ? "cxHot" : ""}"><span class="cxLabel scopeLabel" data-role="${escapeAttr(r)}" title="Scope the dashboard to the ${escapeAttr(r)} role">${r}${hot ? " ◆" : ""}</span>` +
            `<span class="cxBar"><i style="width:${(100 * v / maxRole).toFixed(1)}%"></i></span>` +
            `<strong>${money(v)}</strong><em>${percent(total ? v / total : 0)}</em></div>`;
   }).join("");
@@ -1806,7 +1813,7 @@ function renderConvexity(cube) {
       <div class="metric ${gapPct <= 0 ? "good" : "warn"}"><span>${gapPct > 0 ? "Gap → deploy to trend" : "At/above target"}</span><strong>${gapPct > 0 ? money(gapUsd) : "✓"}</strong></div>
     </div>
     <div class="planNote">The Convexity role's ${money(convexVal)} is mostly <strong>long-short equity</strong> (${money(lsVal)}, AQR Flex / Delphi) — only ${money(trendVal)} is genuine <strong>trend / managed-futures</strong>, the actual crash hedge. The gap + deploy target that.</div>
-    <div class="cxBlock"><p class="eyebrow">Composition by convex role</p>${compRows}</div>
+    <div class="cxBlock"><p class="eyebrow">Composition by Role</p>${compRows}</div>
     ${deployRows ? `<div class="cxBlock"><p class="eyebrow">Close the gap — idle cash → standalone trend (~$0 tax)</p>${deployRows}</div>` : ""}
     ${crisisBlock}`;
 
@@ -1819,6 +1826,8 @@ function renderConvexity(cube) {
       render();
     });
   });
+  el.convexity.querySelectorAll(".cxLabel[data-role]").forEach((sp) =>
+    sp.addEventListener("click", () => scopeToRole(sp.getAttribute("data-role"))));
 }
 
 // Two-bucket dial: a live equity slider over the precomputed dial grid. Risk metrics come
