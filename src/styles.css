@@ -208,9 +208,9 @@ main {
 }
 
 .workspaceSplit {
-  --top-pane: 45%;
+  --top-pane: 340px;   /* px (definite) so the splitter drag resolves; JS clamps it to [180, ~¾vh] */
   display: grid;
-  grid-template-rows: minmax(180px, var(--top-pane)) 10px minmax(220px, 1fr);
+  grid-template-rows: var(--top-pane) 10px minmax(220px, 1fr);
   min-height: 620px;            /* concrete height so the drill-down split resolves now that
                                     main scrolls instead of handing it the leftover viewport */
   overflow: hidden;

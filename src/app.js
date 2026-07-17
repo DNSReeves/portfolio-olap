@@ -302,7 +302,7 @@ const STORAGE_PREFIX = "portfolio-olap:";
 const DB_NAME = "portfolio-olap-v2";
 const DB_VERSION = 1;
 const DEFAULT_PORTFOLIO_ID = "default";
-const SPLIT_STORAGE_KEY = "workspaceSplitPercent";
+const SPLIT_STORAGE_KEY = "workspaceSplitTopPx";   // was a %; % grid rows don't resolve in an indefinite-height container
 const state = {
   holdings: applyAssumedBasis(loadJson("holdings", SAMPLE_HOLDINGS)),
   assignments: loadJson("assignments", {}),
@@ -324,7 +324,7 @@ const state = {
   activeSnapshotId: "",
   db: null,
   dbError: "",
-  splitPercent: loadJson(SPLIT_STORAGE_KEY, 45),
+  splitTopPx: loadJson(SPLIT_STORAGE_KEY, 340),   // top-pane height in px (definite → the drag resolves)
   // `taxST` (0.408) lived here for months and NOTHING ever read it — no input, no render,
   // no calc (2026-07-13 unreachable-features audit). It could not be wired even in
   // principle: the book carries no holding-period / acquisition date, so there is no way
@@ -870,9 +870,12 @@ function render() {
   renderHoldings();
 }
 
+// Top pane sized in PX (definite) — a % max never resolved because .workspaceSplit has no definite
+// height (main scrolls; only min-height), so dragging silently did nothing. Clamp to [180, ~¾ vh].
+const SPLIT_MIN_PX = 180;
+function splitMaxPx() { return Math.max(SPLIT_MIN_PX + 140, Math.round(window.innerHeight * 0.75)); }
 function applyWorkspaceSplit() {
-  const top = clamp(state.splitPercent, 25, 70);
-  el.workspaceSplit.style.setProperty("--top-pane", `${top}%`);
+  el.workspaceSplit.style.setProperty("--top-pane", `${clamp(state.splitTopPx, SPLIT_MIN_PX, splitMaxPx())}px`);
 }
 
 function startSplitDrag(event) {
@@ -880,9 +883,8 @@ function startSplitDrag(event) {
   el.splitter.setPointerCapture(event.pointerId);
   const onMove = (moveEvent) => {
     const rect = el.workspaceSplit.getBoundingClientRect();
-    const offset = moveEvent.clientY - rect.top;
-    state.splitPercent = clamp((offset / rect.height) * 100, 25, 70);
-    saveJson(SPLIT_STORAGE_KEY, state.splitPercent);
+    state.splitTopPx = clamp(moveEvent.clientY - rect.top, SPLIT_MIN_PX, splitMaxPx());
+    saveJson(SPLIT_STORAGE_KEY, state.splitTopPx);
     applyWorkspaceSplit();
   };
   const onUp = () => {
@@ -896,8 +898,8 @@ function startSplitDrag(event) {
 function handleSplitterKey(event) {
   if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
   event.preventDefault();
-  state.splitPercent = clamp(state.splitPercent + (event.key === "ArrowUp" ? -5 : 5), 25, 70);
-  saveJson(SPLIT_STORAGE_KEY, state.splitPercent);
+  state.splitTopPx = clamp(state.splitTopPx + (event.key === "ArrowUp" ? -24 : 24), SPLIT_MIN_PX, splitMaxPx());
+  saveJson(SPLIT_STORAGE_KEY, state.splitTopPx);
   applyWorkspaceSplit();
 }
 
