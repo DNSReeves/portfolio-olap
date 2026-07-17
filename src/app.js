@@ -1661,13 +1661,36 @@ function renderOverlay() {
 // The headline is the GAP — a class small in capital but large in risk (concentration), or a
 // negative Tail% (a crash hedge that REDUCES drawdown). Non-marked holdings (privates/CDs/annuities)
 // are excluded + surfaced as a coverage caveat. 3Y default with a 1Y toggle.
+// When the Accounts filter's visible set matches a precomputed Risk slice — a manager group (CAM /
+// Self-managed) or a single account — return that slice key so the snapshot panel FOLLOWS the filter.
+function riskSliceForAccountFilter() {
+  const S = RISK_SNAPSHOT;
+  if (!S || !S.data) return null;
+  const visible = new Set(distinctAccounts().filter(([n]) => !state.hiddenAccounts.has(n)).map(([n]) => n));
+  if (!visible.size) return null;
+  if (visible.size === 1) { const only = [...visible][0]; if (S.data[only]) return only; }
+  const cfg = ACCOUNT_MANAGERS;
+  if (cfg && cfg.managers) {
+    for (const key of Object.keys(cfg.managers)) {
+      const accts = Object.entries(cfg.accounts).filter(([, m]) => m === key).map(([a]) => a);
+      if (accts.length === visible.size && accts.every((a) => visible.has(a)) && S.data[`mgr:${key}`]) return `mgr:${key}`;
+    }
+  }
+  return null;                                     // arbitrary selection — no matching precomputed slice
+}
+
 function renderRisk() {
   if (!el.risk) return;
   const S = RISK_SNAPSHOT;
   if (!S || !S.data || !S.slices) { el.risk.innerHTML = ""; el.risk.style.display = "none"; return; }
   el.risk.style.display = "";
   const slices = S.slices;
-  const sliceKey = (state.riskSlice && S.data[state.riskSlice]) ? state.riskSlice : "Total";
+  // Follow the global Accounts filter: when the visible accounts match a snapshot slice (a manager
+  // group like CAM, or a single account), scope Risk to THAT slice. The panel can't recompute an
+  // arbitrary selection in-browser, but it can show the matching precomputed slice (2026-07-17).
+  const filterSlice = accountFilterActive() ? riskSliceForAccountFilter() : null;
+  const sliceKey = (filterSlice && S.data[filterSlice]) ? filterSlice
+    : (state.riskSlice && S.data[state.riskSlice]) ? state.riskSlice : "Total";
   const sliceMeta = slices.find((s) => s.key === sliceKey) || {};
   const scope = S.data[sliceKey] || S.data["Total"] || {};
   // Scope × Within: an optional within-asset-class breakdown of the chosen scope (e.g. the
@@ -1681,8 +1704,8 @@ function renderRisk() {
   const winKey = (state.riskWindow && sliceWindows[state.riskWindow]) ? state.riskWindow : "3Y";
   const W = sliceWindows[winKey] || sliceWindows["3Y"] || Object.values(sliceWindows)[0];
   // scope <select> (Total → tax tracks → accounts) + within <select> + window toggle
-  const groupLabel = { tax: "Tax track", account: "Account" };
-  const scopeOpts = ["all", "tax", "account"].map((g) => {
+  const groupLabel = { manager: "Manager", tax: "Tax track", account: "Account" };
+  const scopeOpts = ["all", "manager", "tax", "account"].map((g) => {
     const items = slices.filter((s) => s.group === g);
     if (!items.length) return "";
     const opts = items.map((s) =>
@@ -1695,8 +1718,13 @@ function renderRisk() {
     ? `<label class="rkSliceWrap">Within <select class="rkWithin">${withinOpts}</select></label>` : "";
   const wbtns = ["3Y", "1Y"].filter((k) => sliceWindows[k]).map((k) =>
     `<button class="rkWin ${k === winKey ? "active" : ""}" data-win="${k}">${k}</button>`).join("");
-  const controls = `<div class="rkControls"><label class="rkSliceWrap">View <select class="rkSlice">${scopeOpts}</select></label>${withinSel}<span class="rkWindows">Lookback ${wbtns}</span></div>`;
-  const header = acctCaveatBadge() + `<div class="panelHeader"><div><p class="eyebrow">Where the risk actually is — capital vs risk, by asset class · <strong>standalone per slice</strong></p><h2>Risk Contribution ${helpIcon("risk")}</h2></div><span class="pill" title="${escapeAttr(S.method || "")}">${escapeHtml(sliceLabel)}</span></div>`;
+  // When the Accounts filter drives the slice, reflect it and disable the manual picker (clear the
+  // filter to choose a slice by hand) — otherwise a manual pick would just snap back on re-render.
+  const scopeWrap = filterSlice
+    ? `<label class="rkSliceWrap" title="Scoped to the Accounts filter above — clear it to pick a slice manually">View <select class="rkSlice" disabled>${scopeOpts}</select></label>`
+    : `<label class="rkSliceWrap">View <select class="rkSlice">${scopeOpts}</select></label>`;
+  const controls = `<div class="rkControls">${scopeWrap}${withinSel}<span class="rkWindows">Lookback ${wbtns}</span></div>`;
+  const header = (accountFilterActive() && !filterSlice ? acctCaveatBadge() : "") + `<div class="panelHeader"><div><p class="eyebrow">Where the risk actually is — capital vs risk, by asset class · <strong>standalone per slice</strong></p><h2>Risk Contribution ${helpIcon("risk")}</h2></div><span class="pill" title="${escapeAttr(S.method || "")}">${escapeHtml(sliceLabel)}</span></div>`;
   const wire = () => {
     const sel = el.risk.querySelector(".rkSlice");
     if (sel) sel.addEventListener("change", () => { state.riskSlice = sel.value; state.riskWithin = null; renderRisk(); });
