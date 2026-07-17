@@ -1170,7 +1170,7 @@ function viewToggle() {
   wrap.appendChild(lbl);
   const row = document.createElement("div");
   row.className = "viewToggleBtns";
-  for (const [v, text] of [["class", "Asset Class"], ["role", "Convex Role"]]) {
+  for (const [v, text] of [["class", "Asset Class"], ["role", "Role"]]) {
     const btn = document.createElement("button");
     btn.className = `viewToggleBtn ${state.sidebarView === v ? "active" : ""}`;
     btn.textContent = text;
