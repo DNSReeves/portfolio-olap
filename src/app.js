@@ -873,7 +873,9 @@ function render() {
 // Top pane sized in PX (definite) — a % max never resolved because .workspaceSplit has no definite
 // height (main scrolls; only min-height), so dragging silently did nothing. Clamp to [180, ~¾ vh].
 const SPLIT_MIN_PX = 180;
-function splitMaxPx() { return Math.max(SPLIT_MIN_PX + 140, Math.round(window.innerHeight * 0.75)); }
+// Generous ceiling — nearly the full viewport (was ¾, which couldn't enlarge the top pane enough to
+// show a long sleeve list). Anything still taller stays reachable via the pane's internal scroll.
+function splitMaxPx() { return Math.max(SPLIT_MIN_PX + 140, window.innerHeight - 120); }
 function applyWorkspaceSplit() {
   el.workspaceSplit.style.setProperty("--top-pane", `${clamp(state.splitTopPx, SPLIT_MIN_PX, splitMaxPx())}px`);
 }

@@ -397,6 +397,14 @@ h2 {
   overflow: hidden;
 }
 
+/* Grid panels are flex columns so each scroll body fills EXACTLY the space under its header and its
+   last row stays reachable. .bars/.miniList used max-height:100% (ignoring the header height), so
+   their scroll viewport overran the panel's overflow:hidden and clipped the final row. */
+.grid .panel { display: flex; flex-direction: column; }
+.grid .panel .bars,
+.grid .panel .miniList,
+.grid .panel .drillPath { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; }
+
 .panelHeader {
   justify-content: space-between;
   gap: 14px;
