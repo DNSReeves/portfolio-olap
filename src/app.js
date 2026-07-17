@@ -2401,6 +2401,13 @@ function reportEsc(v) {
 function buildReportHtml(holdings, opts = {}) {
   const asOf = opts.valuationDate || "";
   const version = opts.appVersion || "";
+  // Account scope (2026-07-16): the report follows the on-screen account selection. No filter → the
+  // full book (the default); a filter → only the selected accounts, named in the header.
+  const scope = opts.accountScope || { filterActive: false, accounts: [] };
+  const scopeTitle = scope.filterActive ? "Selected Accounts" : "Full Book";
+  const scopeNote = scope.filterActive
+    ? `${scope.accounts.length} selected account${scope.accounts.length === 1 ? "" : "s"}: ${reportEsc(scope.accounts.join(", "))}`
+    : "full book, all accounts";
   const now = opts.generatedAt || new Date();
   const hasBasis = (h) => h.costBasis !== undefined && h.costBasis !== null;
   // "known" = present in the source export; an assumed basis (v2.4.4, = MV) is display-only and
@@ -2538,8 +2545,8 @@ function buildReportHtml(holdings, opts = {}) {
   .pagebreak { page-break-before: always; }
   @media print { body { margin: 0; } .noprint { display: none; } }
 </style></head><body>
-<h1>Investment Portfolio — Full Book Report</h1>
-<div class="muted">Book as-of <b>${reportEsc(asOf || "unknown")}</b> ${staleNote} · generated ${reportEsc(generated)} · Portfolio OLAP ${reportEsc(version)} · full book, all accounts (any on-screen account filter is ignored)</div>
+<h1>Investment Portfolio — ${scopeTitle} Report</h1>
+<div class="muted">Book as-of <b>${reportEsc(asOf || "unknown")}</b> ${staleNote} · generated ${reportEsc(generated)} · Portfolio OLAP ${reportEsc(version)} · ${scopeNote}</div>
 <div class="noprint" style="margin:10px 0;">
 <button onclick="window.print()" style="padding:6px 14px;">🖨 Print / Save as PDF</button>
 <button id="emailBtn" onclick="emailReport(this)" style="padding:6px 14px;margin-left:8px;">✉️ Email me this report</button>
@@ -2606,12 +2613,14 @@ function openPdfReport() {
   const agentBase = location.hostname.endsWith(".ts.net")
     ? `https://${location.hostname}:8443`
     : `${location.protocol}//${location.hostname}:8765`;
-  const html = buildReportHtml(state.holdings, {
+  const scoped = visibleHoldings();                  // 2026-07-16: report follows the account selection
+  const html = buildReportHtml(scoped, {
     // the BOOK's own as-of date, same source as the v2.6.3 header badge — never
     // state.valuationDate alone (initApp resets that to today on every load, which
     // made the report + email claim an old book was current; 2026-07-10 review F1)
-    valuationDate: bookAsOf(state.holdings)?.date || state.valuationDate,
+    valuationDate: bookAsOf(scoped)?.date || state.valuationDate,
     appVersion: APP_VERSION, agentBase,
+    accountScope: { filterActive: accountFilterActive(), accounts: distinctAccountsOf(scoped) },
   });
   const w = window.open("", "_blank");
   if (!w) { window.alert("Pop-up blocked — allow pop-ups for this site to generate the report."); return; }
