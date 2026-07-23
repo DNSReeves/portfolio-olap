@@ -1445,3 +1445,35 @@ td.rkName.scopeLabel:hover { background: #eef7f6; }
   opacity: 1; cursor: default; font-weight: 600;
 }
 #load3fSubmit.is-done::before { content: ""; }
+
+
+/* ── Book Over Time (2026-07-23) ─────────────────────────────────────────── */
+.botPanel { position: relative; }
+.botControls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.botControls select { padding: 3px 6px; border: 1px solid #dfe6e9; border-radius: 6px; background: #fff; }
+.botChip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+  padding: 3px 9px; border: 1px solid #dfe6e9; border-radius: 12px; background: #fff;
+  color: #5a6b73; }
+.botChip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; opacity: .35; }
+.botChip.on { color: #172026; border-color: #b9c6cc; }
+.botChip.on i { opacity: 1; }
+.botChip.fixed { cursor: default; }
+.botTableBtn { margin-left: auto; }
+.botChart { position: relative; }
+.botSvg { width: 100%; height: auto; display: block; }
+.botGrid { stroke: #eef2f4; stroke-width: 1; }
+.botAxis { font-size: 10px; fill: #7a8a92; font-family: inherit; }
+.botLine { fill: none; stroke-width: 2; }
+.botDot { stroke: #ffffff; stroke-width: 2; }
+.botDirect { font-size: 11px; fill: #172026; font-family: inherit; }
+.botCross { stroke: #b9c6cc; stroke-width: 1; stroke-dasharray: 3 3; }
+.botTip { position: absolute; background: #fff; border: 1px solid #dfe6e9; border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(23,32,38,.08);
+  pointer-events: none; min-width: 170px; }
+.botTip .botTipDate { font-weight: 600; margin-bottom: 4px; }
+.botTip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.botTip .up { color: #008300; }
+.botTip .dn { color: #e34948; }
+.botTable table { border-collapse: collapse; font-size: 12px; width: 100%; }
+.botTable th, .botTable td { padding: 4px 8px; border-bottom: 1px solid #eef2f4; text-align: right; }
+.botTable th:first-child, .botTable td:first-child { text-align: left; }

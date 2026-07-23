@@ -356,6 +356,9 @@ const el = {
   allocationBars: document.querySelector("#allocationBars"),
   topHoldings: document.querySelector("#topHoldings"),
   drillPath: document.querySelector("#drillPath"),
+  botControls: document.querySelector("#botControls"),
+  botChart: document.querySelector("#botChart"),
+  botTable: document.querySelector("#botTable"),
   holdings: document.querySelector("#holdings"),
   holdingsHead: document.querySelector("#holdingsHead"),
   holdingsFoot: document.querySelector("#holdingsFoot"),
@@ -620,6 +623,8 @@ const PANEL_HELP = {
     body: `<p>How your money splits across sleeves — the OLAP cube's top level. Bar length = share of the <em>currently selected</em> book.</p><p>Click a bar to drill into that sleeve; the account toggles up top rescope everything here.</p>` },
   topHoldings: { title: "Top Holdings",
     body: `<p>Your largest positions by market value in the current selection — a fast read on single-name concentration.</p><p>Reflects account filters and any active drill-down.</p>` },
+  bookOverTime: { title: "Book Over Time",
+    body: `<p>Total market value across every saved snapshot — one point per valuation date (each Load Full Book / CSV import auto-saves one). Toggle account or sleeve overlays; hover any date for values and deltas; the table button shows the same numbers as text.</p><p>Reads the snapshot store only — nothing here re-prices or recomputes the live book. MV only in v1: gain lines would need the basisAssumed split.</p>` },
   drillPath: { title: "Progressive Drill Path",
     body: `<p>Breadcrumb of your current drill: Portfolio → sleeve → sub-group → account. Click any level to jump back up.</p><p>It's what keeps the whole dashboard scoped together.</p>` },
   holdings: { title: "All Holdings",
@@ -867,6 +872,7 @@ function render() {
   renderDrillPath();
   renderMapper();
   renderSnapshots();
+  renderBookOverTime();
   renderPerformanceSeries();
   renderHoldings();
 }
@@ -3141,6 +3147,226 @@ function toPositionValuation(holding, snapshot, rowIndex) {
   };
 }
 
+
+// ── Book Over Time (iss_457d57a7, 2026-07-23) ───────────────────────────────
+// Line chart over the saved snapshots. Dataviz method: categorical hues in
+// FIXED entity order (slot 1 = Total, always on; overlays take slots 2-8 by
+// latest-MV order and NEVER re-color when toggled — color follows the entity);
+// 2px lines, 4.5px markers with a 2px surface ring; one axis; hover crosshair
+// + tooltip; a table view covers the below-3:1-contrast hues (relief rule).
+const BOT_HUES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4",
+                  "#008300", "#4a3aa7", "#e34948"]; // validated vs #fff, adjacent pairs
+const botState = { dim: "accounts", visible: new Set(), table: false };
+
+// PURE seams (vm-harness-testable — tests/book_over_time.test.js). The fixed
+// roster ORDER is the color-follows-entity mechanism: hues assign by roster
+// index and must never depend on which chips are toggled.
+function botRoster(dimMap) {
+  // FIXED order: MV desc from the latest snapshot's bucket; >7 folds the tail
+  // into "Other" (a slot of its own, never a generated hue)
+  const sorted = [...dimMap.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  if (sorted.length <= 7) return sorted;
+  return [...sorted.slice(0, 7), "Other"];
+}
+
+function botSliceValue(dimMap, entity, roster) {
+  if (entity !== "Other") return dimMap.get(entity) || 0;
+  const named = new Set(roster.filter((e) => e !== "Other"));
+  let sum = 0;
+  for (const [k, v] of dimMap) if (!named.has(k)) sum += v;
+  return sum;
+}
+
+function botEntities() {
+  const snaps = state.snapshots;
+  if (!snaps.length) return [];
+  const latest = state.snapshotSeries?.get(snaps[snaps.length - 1].id);
+  if (!latest) return [];
+  return botRoster(botState.dim === "accounts" ? latest.accounts : latest.sleeves);
+}
+
+function botValue(snapId, entity) {
+  const bucket = state.snapshotSeries?.get(snapId);
+  if (!bucket) return 0;
+  const dimMap = botState.dim === "accounts" ? bucket.accounts : bucket.sleeves;
+  return botSliceValue(dimMap, entity, botEntities());
+}
+
+function botFmt(v) {
+  return "$" + (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(2) + "M"
+    : Math.round(v / 1000).toLocaleString() + "k");
+}
+function botDate(d) {
+  return new Date(d + "T12:00:00").toLocaleDateString("en-US",
+    { month: "short", day: "numeric" });
+}
+
+function renderBookOverTime() {
+  if (!el.botChart) return;
+  const snaps = state.snapshots;
+  el.botControls.replaceChildren();
+  el.botChart.replaceChildren();
+  if (snaps.length < 2) {
+    el.botChart.append(span(snaps.length === 1
+      ? "One snapshot saved — the line appears with the second (load next week's set)."
+      : "No saved snapshots yet — every Load Full Book auto-saves one per valuation date."));
+    el.botTable.hidden = true;
+    return;
+  }
+
+  // controls: dimension select + entity chips (the chips ARE the legend) + table toggle
+  const dimSel = document.createElement("select");
+  for (const [v, label] of [["accounts", "Accounts"], ["sleeves", "Sleeves"]]) {
+    const o = document.createElement("option");
+    o.value = v; o.textContent = label; if (botState.dim === v) o.selected = true;
+    dimSel.append(o);
+  }
+  dimSel.addEventListener("change", () => {
+    botState.dim = dimSel.value; botState.visible.clear(); renderBookOverTime();
+  });
+  el.botControls.append(dimSel);
+
+  const entities = botEntities();
+  const hueOf = (ent) => ent === "__total" ? BOT_HUES[0]
+    : BOT_HUES[(entities.indexOf(ent) % 7) + 1];
+  const chip = (label, hue, on, fixed, onToggle) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "botChip" + (on ? " on" : "") + (fixed ? " fixed" : "");
+    b.innerHTML = `<i style="background:${hue}"></i>${label}`;
+    if (!fixed) b.addEventListener("click", onToggle);
+    return b;
+  };
+  el.botControls.append(chip("Total book", BOT_HUES[0], true, true));
+  for (const ent of entities) {
+    el.botControls.append(chip(ent, hueOf(ent), botState.visible.has(ent), false, () => {
+      botState.visible.has(ent) ? botState.visible.delete(ent) : botState.visible.add(ent);
+      renderBookOverTime();
+    }));
+  }
+  const tbtn = document.createElement("button");
+  tbtn.type = "button";
+  tbtn.className = "botChip botTableBtn" + (botState.table ? " on" : "");
+  tbtn.textContent = botState.table ? "chart" : "table";
+  tbtn.addEventListener("click", () => { botState.table = !botState.table; renderBookOverTime(); });
+  el.botControls.append(tbtn);
+
+  const seriesList = [{ key: "__total", label: "Total book",
+                        vals: snaps.map((s2) => s2.totalValue) }];
+  for (const ent of entities) if (botState.visible.has(ent)) {
+    seriesList.push({ key: ent, label: ent, vals: snaps.map((s2) => botValue(s2.id, ent)) });
+  }
+
+  if (botState.table) {
+    el.botChart.replaceChildren();
+    const t = document.createElement("table");
+    const head = "<tr><th>as of</th>" + seriesList.map((sr) =>
+      `<th>${sr.label}</th>`).join("") + "</tr>";
+    const rows = snaps.map((s2, i) => "<tr><td>" + s2.valuationDate + "</td>" +
+      seriesList.map((sr) => `<td>${botFmt(sr.vals[i])}</td>`).join("") + "</tr>").join("");
+    t.innerHTML = head + rows;
+    el.botTable.replaceChildren(t);
+    el.botTable.hidden = false;
+    return;
+  }
+  el.botTable.hidden = true;
+
+  // geometry
+  const W = 720, H = 240, M = { t: 14, r: 118, b: 26, l: 56 };
+  const all = seriesList.flatMap((sr) => sr.vals);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const pad = Math.max((hi - lo) * 0.08, hi * 0.002);
+  lo -= pad; hi += pad;
+  const X = (i) => M.l + (i / (snaps.length - 1)) * (W - M.l - M.r);
+  const Y = (v) => M.t + (1 - (v - lo) / (hi - lo)) * (H - M.t - M.b);
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("class", "botSvg");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Book market value over saved snapshots");
+
+  // recessive grid: 3 y-lines + labels (honest non-zero baseline: real $ ticks)
+  for (let g = 0; g <= 2; g++) {
+    const v = lo + ((hi - lo) * g) / 2;
+    const line = document.createElementNS(svgNS, "line");
+    line.setAttribute("x1", M.l); line.setAttribute("x2", W - M.r);
+    line.setAttribute("y1", Y(v)); line.setAttribute("y2", Y(v));
+    line.setAttribute("class", "botGrid");
+    svg.append(line);
+    const lbl = document.createElementNS(svgNS, "text");
+    lbl.setAttribute("x", M.l - 6); lbl.setAttribute("y", Y(v) + 4);
+    lbl.setAttribute("class", "botAxis"); lbl.setAttribute("text-anchor", "end");
+    lbl.textContent = botFmt(v);
+    svg.append(lbl);
+  }
+  snaps.forEach((s2, i) => {
+    const lbl = document.createElementNS(svgNS, "text");
+    lbl.setAttribute("x", X(i)); lbl.setAttribute("y", H - 8);
+    lbl.setAttribute("class", "botAxis"); lbl.setAttribute("text-anchor", "middle");
+    lbl.textContent = botDate(s2.valuationDate);
+    svg.append(lbl);
+  });
+
+  // series: 2px line + 4.5px markers with a 2px surface ring; direct labels ≤4
+  const directLabel = seriesList.length <= 4;
+  for (const sr of seriesList) {
+    const hue = hueOf(sr.key);
+    const d = sr.vals.map((v, i) => `${i ? "L" : "M"}${X(i)},${Y(v)}`).join("");
+    const path = document.createElementNS(svgNS, "path");
+    path.setAttribute("d", d); path.setAttribute("class", "botLine");
+    path.setAttribute("stroke", hue);
+    svg.append(path);
+    sr.vals.forEach((v, i) => {
+      const dot = document.createElementNS(svgNS, "circle");
+      dot.setAttribute("cx", X(i)); dot.setAttribute("cy", Y(v));
+      dot.setAttribute("r", 4.5); dot.setAttribute("fill", hue);
+      dot.setAttribute("class", "botDot");
+      svg.append(dot);
+    });
+    if (directLabel) {
+      const last = sr.vals.length - 1;
+      const lbl = document.createElementNS(svgNS, "text");
+      lbl.setAttribute("x", X(last) + 10); lbl.setAttribute("y", Y(sr.vals[last]) + 4);
+      lbl.setAttribute("class", "botDirect");
+      lbl.textContent = sr.label.length > 15 ? sr.label.slice(0, 14) + "…" : sr.label;
+      svg.append(lbl);
+    }
+  }
+
+  // hover: nearest-snapshot crosshair + tooltip
+  const cross = document.createElementNS(svgNS, "line");
+  cross.setAttribute("y1", M.t); cross.setAttribute("y2", H - M.b);
+  cross.setAttribute("class", "botCross"); cross.setAttribute("visibility", "hidden");
+  svg.append(cross);
+  const tip = document.createElement("div");
+  tip.className = "botTip"; tip.hidden = true;
+  svg.addEventListener("pointermove", (ev) => {
+    const rect = svg.getBoundingClientRect();
+    const fx = ((ev.clientX - rect.left) / rect.width) * W;
+    let i = Math.round(((fx - M.l) / (W - M.l - M.r)) * (snaps.length - 1));
+    i = Math.max(0, Math.min(snaps.length - 1, i));
+    cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i));
+    cross.setAttribute("visibility", "visible");
+    const lines = seriesList.map((sr) => {
+      const v = sr.vals[i], prev = i > 0 ? sr.vals[i - 1] : null;
+      const dlt = prev != null && prev !== 0
+        ? ` <span class="${v - prev >= 0 ? "up" : "dn"}">${v - prev >= 0 ? "+" : ""}${botFmt(v - prev).replace("$", "$")}</span>` : "";
+      return `<div><i style="background:${hueOf(sr.key)}"></i>${sr.label}: <b>${botFmt(v)}</b>${dlt}</div>`;
+    }).join("");
+    tip.innerHTML = `<div class="botTipDate">${snaps[i].valuationDate}</div>${lines}`;
+    tip.hidden = false;
+    const px = (X(i) / W) * rect.width;
+    tip.style.left = Math.min(px + 12, rect.width - 190) + "px";
+    tip.style.top = "8px";
+  });
+  svg.addEventListener("pointerleave", () => {
+    cross.setAttribute("visibility", "hidden"); tip.hidden = true;
+  });
+
+  el.botChart.append(svg, tip);
+}
+
 async function refreshSnapshots() {
   if (!state.db) return;
   const snapshots = await getAllFromStore("portfolio_snapshots");
@@ -3154,6 +3380,21 @@ async function refreshSnapshots() {
         .reduce((sum, valuation) => sum + valuation.marketValue, 0),
     }))
     .sort((a, b) => a.valuationDate.localeCompare(b.valuationDate));
+
+  // Book Over Time (2026-07-23): per-snapshot account + sleeve sums in one pass.
+  // Reads the same valuations already in hand — no extra store round-trip.
+  const byId = new Map(state.snapshots.map((snap) => [snap.id, snap]));
+  const series = new Map(); // snapshotId → {accounts: Map, sleeves: Map}
+  for (const v of valuations) {
+    if (!byId.has(v.snapshotId)) continue;
+    let bucket = series.get(v.snapshotId);
+    if (!bucket) { bucket = { accounts: new Map(), sleeves: new Map() }; series.set(v.snapshotId, bucket); }
+    const acct = v.brokerageAccount || "Unassigned";
+    const slv = v.sleeveName || "Unassigned";
+    bucket.accounts.set(acct, (bucket.accounts.get(acct) || 0) + v.marketValue);
+    bucket.sleeves.set(slv, (bucket.sleeves.get(slv) || 0) + v.marketValue);
+  }
+  state.snapshotSeries = series;
 }
 
 async function loadSnapshot(snapshotId) {

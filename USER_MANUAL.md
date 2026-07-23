@@ -16,6 +16,17 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.7 — Book Over Time
+
+- **New panel: Book Over Time** — the portfolio's market value as a line across every
+  saved snapshot (one point per valuation date; the store already auto-saves on each
+  Load Full Book / CSV import). Toggle **account** or **sleeve** overlays via the chip
+  row (chips double as the legend; colors are fixed per entity and never repaint when
+  you toggle others; more than 7 entities fold into "Other"). Hover any date for a
+  crosshair with per-series values and deltas vs the prior snapshot; the **table**
+  button shows the same numbers as text. Reads the snapshot store only — nothing here
+  re-prices the live book. MV only in v1 (gain lines would need the basisAssumed split).
+
 ### Version 2.8 — what's new
 
 **Snapshots can finally be deleted.** Every *Load Full Book* and CSV import auto-saves a
