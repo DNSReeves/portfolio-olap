@@ -79,4 +79,12 @@ check("priority members never fold", !priRoster.includes("Other") || (priRoster.
 check("non-priority tail folds instead", priRoster[7] === "Other" && !priRoster.includes("A7"));
 check("no priority set → pure MV order", app.botRoster(accounts9)[0] === "A1");
 
+
+// ── splitter fit-to-content seams (2026-07-23 operator ask) ─────────────────
+// fitSplitToContent is DOM-bound, but its clamp inputs are pure: verify the
+// constants + clamp behavior the fit relies on.
+check("split min respected by clamp", app.clamp(50, 180, 800) === 180);
+check("split content fits when under max", app.clamp(430, 180, 800) === 430);
+check("split caps at max (internal scroll takes over)", app.clamp(2400, 180, 800) === 800);
+
 process.exit(failures ? 1 : 0);

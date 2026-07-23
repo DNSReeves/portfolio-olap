@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.9";
+const APP_VERSION = "v2.9.1";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -391,6 +391,7 @@ const el = {
   exportHistoryButton: document.querySelector("#exportHistoryButton"),
   workspaceSplit: document.querySelector("#workspaceSplit"),
   splitter: document.querySelector("#splitter"),
+  topWorkspace: document.querySelector("#topWorkspace"),
   valuationDateInput: document.querySelector("#valuationDateInput"),
   snapshotStatus: document.querySelector("#snapshotStatus"),
   snapshotTimeline: document.querySelector("#snapshotTimeline"),
@@ -575,6 +576,15 @@ el.snapshotsCloseButton.addEventListener("click", () => el.snapshotsDialog.close
 el.exportHistoryButton?.addEventListener("click", exportSnapshotHistory);
 el.splitter.addEventListener("pointerdown", startSplitDrag);
 el.splitter.addEventListener("keydown", handleSplitterKey);
+el.splitter.addEventListener("dblclick", () => fitSplitToContent());
+// double-TAP for touch (dblclick is unreliable on iOS): two pointerups < 350ms apart
+let _lastSplitTap = 0;
+el.splitter.addEventListener("pointerup", (ev) => {
+  if (ev.pointerType !== "touch") return;
+  const now = Date.now();
+  if (now - _lastSplitTap < 350) fitSplitToContent();
+  _lastSplitTap = now;
+});
 
 el.manualButton.addEventListener("click", openManual);
 el.reportButton.addEventListener("click", openPdfReport);
@@ -832,6 +842,7 @@ async function applyImport(sourceName = "CSV import") {
   state.selectedSleeve = "All";
   state.selectedBucket = null; state.selectedSubGroup = null;
   state.pendingCollapseAll = true;   // fresh book → start from the compact bucket overview (v2.5)
+  state.pendingFitSplit = true;      // fresh book → top pane fits its content (2026-07-23)
   saveJson("holdings", state.holdings);
   if (normalized.holdings.length && state.db) {
     const snapshot = {
@@ -856,6 +867,10 @@ function render() {
   const cube = buildPortfolioCube(visibleHoldings());        // account toggles apply upstream of everything
   state._cube = cube;   // stashed so the dial slider can re-render without a full rebuild
   applyWorkspaceSplit();
+  if (state.pendingFitSplit) {
+    state.pendingFitSplit = false;
+    requestAnimationFrame(() => requestAnimationFrame(fitSplitToContent));  // after layout settles
+  }
   renderTitle();
   renderAccountFilter();
   renderMarketRef();
@@ -885,6 +900,19 @@ const SPLIT_MIN_PX = 180;
 function splitMaxPx() { return Math.max(SPLIT_MIN_PX + 140, window.innerHeight - 120); }
 function applyWorkspaceSplit() {
   el.workspaceSplit.style.setProperty("--top-pane", `${clamp(state.splitTopPx, SPLIT_MIN_PX, splitMaxPx())}px`);
+}
+
+function fitSplitToContent() {
+  // 2026-07-23 operator ask: on a book load, the top pane sizes to its CONTENT
+  // (everything visible, no dead white space) capped at the viewport ceiling —
+  // taller content keeps internal scroll. Also reachable any time by
+  // double-tap/double-click on the grip.
+  const inner = el.topWorkspace;
+  if (!inner) return;
+  const content = inner.scrollHeight + 6;          // +border/breathing pixel fudge
+  state.splitTopPx = clamp(content, SPLIT_MIN_PX, splitMaxPx());
+  saveJson(SPLIT_STORAGE_KEY, state.splitTopPx);
+  applyWorkspaceSplit();
 }
 
 function startSplitDrag(event) {
@@ -3441,6 +3469,7 @@ async function refreshSnapshots() {
 }
 
 async function loadSnapshot(snapshotId) {
+  state.pendingFitSplit = true;   // snapshot switch = a portfolio reload (2026-07-23)
   const valuations = (await getAllFromStore("position_valuations")).filter((valuation) => valuation.snapshotId === snapshotId);
   state.holdings = valuations.map((valuation, index) => ({
     id: `${valuation.assetKey}-${index}`,

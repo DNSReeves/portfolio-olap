@@ -16,6 +16,16 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.9.1 — touch-friendly splitter + fit-on-load
+
+- **A real resizer grip**: the pane splitter is now a visible pill with dots (72px on
+  desktop, 110px and a taller row on iPhone/iPad), with an invisible extended touch
+  target and `touch-action` set so iOS drags the pane instead of scrolling the page.
+- **Fit on load**: every portfolio load (3-file set, CSV import, snapshot switch) sizes
+  the top pane to its content — everything visible, no dead white space — capped at the
+  viewport ceiling (taller content keeps internal scroll). **Double-tap (or double-click)
+  the grip** any time to re-fit.
+
 ### Version 2.9 — Book Over Time
 
 - **New panel: Book Over Time** — the portfolio's market value as a line across every
