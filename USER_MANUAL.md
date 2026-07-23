@@ -16,7 +16,7 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
-### Version 2.7 — Book Over Time
+### Version 2.9 — Book Over Time
 
 - **New panel: Book Over Time** — the portfolio's market value as a line across every
   saved snapshot (one point per valuation date; the store already auto-saves on each
