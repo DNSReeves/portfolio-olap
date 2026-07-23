@@ -150,9 +150,13 @@ const G = (ticker, marketValue, costBasis, extra = {}) => ({
     app.forgeTickerUrl("charts", "SPY", ts) === "https://davids-mac-mini.tail5074b4.ts.net:8443/forge#charts=SPY");
   check("LAN origin → plain :8765",
     app.forgeTickerUrl("etf", "AGG", lan) === "http://192.168.1.70:8765/forge#etf=AGG");
-  check("chartable: plain symbols yes", ["SPY", "A", "IBIT", "SWVXX"].every(app.isChartableTicker));
-  check("chartable: CUSIPs/placeholders/blank no",
-    ["91282CJZ5", "-", "", "SPY 250117C00600000", "BRK.B", null].every((t) => !app.isChartableTicker(t)));
+  check("chartable: plain symbols yes", ["SPY", "A", "IBIT", "QQQ"].every(app.isChartableTicker));
+  // SWVXX moved to the NO list 2026-07-16 (ef7bae3, the consistent click rule):
+  // 5-letter X-suffix = mutual-fund pattern — no MarketForge ETF chart exists,
+  // so the click falls back to sleeve-scope by design. The test lagged the code
+  // for a week (iss_f84c10e4).
+  check("chartable: CUSIPs/placeholders/mutual-funds/blank no",
+    ["91282CJZ5", "-", "", "SPY 250117C00600000", "BRK.B", "SWVXX", null].every((t) => !app.isChartableTicker(t)));
 }
 
 process.exit(failures ? 1 : 0);

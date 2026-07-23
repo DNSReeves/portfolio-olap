@@ -56,14 +56,17 @@ const html = app.buildReportHtml(BOOK, {
 
 check("is a complete document", html.startsWith("<!DOCTYPE html>") && html.includes("</html>"));
 check("header carries as-of + version + full-book note",
-  html.includes("2026-06-18") && html.includes("vTEST") && html.includes("account filter is ignored"));
+  // wording drift (iss_f84c10e4): "account filter is ignored" became
+  // "full book, all accounts" in the de-branding pass; same meaning
+  html.includes("2026-06-18") && html.includes("vTEST") && html.includes("full book, all accounts"));
 check("staleness warning fires at 20 days", html.includes("20 days old"));
 check("total value present", html.includes("$876,000"));
 check("accounts grouped, largest first",
   html.indexOf("Living Trust") < html.indexOf("DNSR-IRA") && html.includes("TIAA-CREF"));
 check("asset-class rollup has buckets + sleeves",
   html.includes("Asset-Class Rollup") && html.includes("Crypto") && html.includes("Core Bond"));
-check("convex-role section present", html.includes("Convex-Role View"));
+// "Convex-Role View" was de-branded to "Role View" (iss_f84c10e4)
+check("role section present", html.includes("Role View"));
 check("per-lot detail present with tickers", html.includes("IBIT") && html.includes("Holdings Detail"));
 check("assumed-basis footnote wired",
   html.includes("<sup>*</sup>") && html.includes("assumed basis"));
