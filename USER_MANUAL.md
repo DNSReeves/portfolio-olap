@@ -16,6 +16,14 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Versions 2.9.4–2.9.6 — Book Over Time table: the layout convergence
+
+- Headers wrap (long account names no longer dictate column width); the **real**
+  gap culprit found and fixed — the app-wide `table { min-width: 600px }` holdings
+  rule was stretching the compact table and distributing the slack as a date→value
+  gulf (`min-width: 0` on the panel's table is load-bearing); final pass added 22px
+  inter-column breathing room. Converged live with the operator on the iPad.
+
 ### Version 2.9.3 — Book Over Time: compact table layout
 
 - Table columns are now content-sized and left-packed (they previously stretched
