@@ -1518,7 +1518,7 @@ td.rkName.scopeLabel:hover { background: #eef7f6; }
 .botTip .up { color: #008300; }
 .botTip .dn { color: #e34948; }
 .botTable { overflow-x: auto; -webkit-overflow-scrolling: touch; }  /* h-scroll when columns exceed the panel (2026-07-23) */
-.botTable table { border-collapse: collapse; font-size: 12px; width: auto; }  /* content-sized, left-packed — was 100%: few columns spread across the panel leaving a gulf after the date */
+.botTable table { border-collapse: collapse; font-size: 12px; width: auto; min-width: 0; }  /* content-sized, left-packed. min-width:0 is LOAD-BEARING — the global `table { min-width: 600px }` (holdings-table rule) was stretching a 3-column table to 600px and distributing the slack as the date→value gulf; width:auto alone never overrode the floor */
 .botTable th, .botTable td { padding: 4px 10px 4px 6px; border-bottom: 1px solid #eef2f4; text-align: right; }
 .botTable td { white-space: nowrap; }
 /* headers WRAP instead of dictating column width — long account names were
