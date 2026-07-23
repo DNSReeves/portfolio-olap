@@ -872,7 +872,7 @@ function render() {
   renderDrillPath();
   renderMapper();
   renderSnapshots();
-  renderBookOverTime();
+  fetchBookHistory().then(renderBookOverTime);
   renderPerformanceSeries();
   renderHoldings();
 }
@@ -3177,19 +3177,15 @@ function botSliceValue(dimMap, entity, roster) {
   return sum;
 }
 
-function botEntities() {
-  const snaps = state.snapshots;
-  if (!snaps.length) return [];
-  const latest = state.snapshotSeries?.get(snaps[snaps.length - 1].id);
-  if (!latest) return [];
+function botEntitiesFor(rows) {
+  if (!rows.length) return [];
+  const latest = rows[rows.length - 1];
   return botRoster(botState.dim === "accounts" ? latest.accounts : latest.sleeves);
 }
 
-function botValue(snapId, entity) {
-  const bucket = state.snapshotSeries?.get(snapId);
-  if (!bucket) return 0;
-  const dimMap = botState.dim === "accounts" ? bucket.accounts : bucket.sleeves;
-  return botSliceValue(dimMap, entity, botEntities());
+function botRowValue(row, entity, roster) {
+  const dimMap = botState.dim === "accounts" ? row.accounts : row.sleeves;
+  return botSliceValue(dimMap, entity, roster);
 }
 
 function botFmt(v) {
@@ -3201,15 +3197,43 @@ function botDate(d) {
     { month: "short", day: "numeric" });
 }
 
+function botMergeTimeline(snapRows, histRows) {
+  // Merge the per-browser IndexedDB snapshots with the SERVER's history/
+  // archives (the durable record) — dedupe by date, local snapshot wins (it
+  // carries the freshest client-side detail; totals agree either way).
+  // Pure + vm-testable. Rows: {date, total, accounts:Map, sleeves:Map}.
+  const byDate = new Map();
+  for (const h of histRows || []) {
+    byDate.set(h.date, { date: h.date, total: h.total,
+      accounts: new Map(Object.entries(h.accounts || {})),
+      sleeves: new Map(Object.entries(h.sleeves || {})) });
+  }
+  for (const r of snapRows || []) byDate.set(r.date, r);
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function fetchBookHistory() {
+  if (state.botHistory !== undefined && state.botHistory !== null) return;
+  try {
+    const res = await fetch("./api/book_history", { cache: "no-store" });
+    state.botHistory = res.ok ? (await res.json()).history || [] : [];
+  } catch { state.botHistory = []; }   // offline/older server → IndexedDB-only
+}
+
 function renderBookOverTime() {
   if (!el.botChart) return;
-  const snaps = state.snapshots;
+  const snapRows = (state.snapshots || []).map((s2) => {
+    const bucket = state.snapshotSeries?.get(s2.id) || { accounts: new Map(), sleeves: new Map() };
+    return { date: s2.valuationDate, total: s2.totalValue,
+             accounts: bucket.accounts, sleeves: bucket.sleeves };
+  });
+  const rows = botMergeTimeline(snapRows, state.botHistory || []);
   el.botControls.replaceChildren();
   el.botChart.replaceChildren();
-  if (snaps.length < 2) {
-    el.botChart.append(span(snaps.length === 1
-      ? "One snapshot saved — the line appears with the second (load next week's set)."
-      : "No saved snapshots yet — every Load Full Book auto-saves one per valuation date."));
+  if (rows.length < 2) {
+    el.botChart.append(span(rows.length === 1
+      ? "One valuation date on record — the line appears with the second (load next week's set)."
+      : "No book history yet — every Load Full Book adds a dated point."));
     el.botTable.hidden = true;
     return;
   }
@@ -3226,7 +3250,7 @@ function renderBookOverTime() {
   });
   el.botControls.append(dimSel);
 
-  const entities = botEntities();
+  const entities = botEntitiesFor(rows);
   const hueOf = (ent) => ent === "__total" ? BOT_HUES[0]
     : BOT_HUES[(entities.indexOf(ent) % 7) + 1];
   const chip = (label, hue, on, fixed, onToggle) => {
@@ -3252,9 +3276,10 @@ function renderBookOverTime() {
   el.botControls.append(tbtn);
 
   const seriesList = [{ key: "__total", label: "Total book",
-                        vals: snaps.map((s2) => s2.totalValue) }];
+                        vals: rows.map((r) => r.total) }];
   for (const ent of entities) if (botState.visible.has(ent)) {
-    seriesList.push({ key: ent, label: ent, vals: snaps.map((s2) => botValue(s2.id, ent)) });
+    seriesList.push({ key: ent, label: ent,
+                      vals: rows.map((r) => botRowValue(r, ent, entities)) });
   }
 
   if (botState.table) {
@@ -3262,9 +3287,9 @@ function renderBookOverTime() {
     const t = document.createElement("table");
     const head = "<tr><th>as of</th>" + seriesList.map((sr) =>
       `<th>${sr.label}</th>`).join("") + "</tr>";
-    const rows = snaps.map((s2, i) => "<tr><td>" + s2.valuationDate + "</td>" +
+    const trows = rows.map((r, i) => "<tr><td>" + r.date + "</td>" +
       seriesList.map((sr) => `<td>${botFmt(sr.vals[i])}</td>`).join("") + "</tr>").join("");
-    t.innerHTML = head + rows;
+    t.innerHTML = head + trows;
     el.botTable.replaceChildren(t);
     el.botTable.hidden = false;
     return;
@@ -3277,7 +3302,7 @@ function renderBookOverTime() {
   let lo = Math.min(...all), hi = Math.max(...all);
   const pad = Math.max((hi - lo) * 0.08, hi * 0.002);
   lo -= pad; hi += pad;
-  const X = (i) => M.l + (i / (snaps.length - 1)) * (W - M.l - M.r);
+  const X = (i) => M.l + (i / (rows.length - 1)) * (W - M.l - M.r);
   const Y = (v) => M.t + (1 - (v - lo) / (hi - lo)) * (H - M.t - M.b);
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNS, "svg");
@@ -3300,11 +3325,11 @@ function renderBookOverTime() {
     lbl.textContent = botFmt(v);
     svg.append(lbl);
   }
-  snaps.forEach((s2, i) => {
+  rows.forEach((r, i) => {
     const lbl = document.createElementNS(svgNS, "text");
     lbl.setAttribute("x", X(i)); lbl.setAttribute("y", H - 8);
     lbl.setAttribute("class", "botAxis"); lbl.setAttribute("text-anchor", "middle");
-    lbl.textContent = botDate(s2.valuationDate);
+    lbl.textContent = botDate(r.date);
     svg.append(lbl);
   });
 
@@ -3344,8 +3369,8 @@ function renderBookOverTime() {
   svg.addEventListener("pointermove", (ev) => {
     const rect = svg.getBoundingClientRect();
     const fx = ((ev.clientX - rect.left) / rect.width) * W;
-    let i = Math.round(((fx - M.l) / (W - M.l - M.r)) * (snaps.length - 1));
-    i = Math.max(0, Math.min(snaps.length - 1, i));
+    let i = Math.round(((fx - M.l) / (W - M.l - M.r)) * (rows.length - 1));
+    i = Math.max(0, Math.min(rows.length - 1, i));
     cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i));
     cross.setAttribute("visibility", "visible");
     const lines = seriesList.map((sr) => {
@@ -3354,7 +3379,7 @@ function renderBookOverTime() {
         ? ` <span class="${v - prev >= 0 ? "up" : "dn"}">${v - prev >= 0 ? "+" : ""}${botFmt(v - prev).replace("$", "$")}</span>` : "";
       return `<div><i style="background:${hueOf(sr.key)}"></i>${sr.label}: <b>${botFmt(v)}</b>${dlt}</div>`;
     }).join("");
-    tip.innerHTML = `<div class="botTipDate">${snaps[i].valuationDate}</div>${lines}`;
+    tip.innerHTML = `<div class="botTipDate">${rows[i].date}</div>${lines}`;
     tip.hidden = false;
     const px = (X(i) / W) * rect.width;
     tip.style.left = Math.min(px + 12, rect.width - 190) + "px";

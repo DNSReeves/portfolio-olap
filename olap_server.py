@@ -81,6 +81,41 @@ class NoCacheHandler(SimpleHTTPRequestHandler):
                 fields[name] = payload.decode("utf-8", "replace").strip()
         return fields, files
 
+    def _book_history(self):
+        """GET /api/book_history (2026-07-23, Book Over Time): per-date totals +
+        account/sleeve sums from the server-side history/ archives — the DURABLE
+        record (one consolidated CSV per load). The client's IndexedDB snapshots
+        are per-browser; this endpoint makes the temporal panel machine-independent."""
+        import csv as _csv
+        import glob as _glob
+        out = []
+        for f in sorted(_glob.glob(os.path.join(DIRECTORY, "history", "consolidated_*.csv"))):
+            date = os.path.basename(f)[len("consolidated_"):-len(".csv")]
+            total = 0.0
+            accounts, sleeves = {}, {}
+            try:
+                with open(f, newline="", encoding="utf-8-sig") as fh:
+                    for row in _csv.DictReader(fh):
+                        mv = _to_num(row.get("Market Value"))
+                        if mv is None:
+                            continue
+                        total += mv
+                        acct = (row.get("Account") or "Unassigned").strip() or "Unassigned"
+                        slv = (row.get("Sleeve") or "Unassigned").strip() or "Unassigned"
+                        accounts[acct] = accounts.get(acct, 0.0) + mv
+                        sleeves[slv] = sleeves.get(slv, 0.0) + mv
+            except OSError:
+                continue
+            out.append({"date": date, "total": round(total, 2),
+                        "accounts": {k: round(v, 2) for k, v in accounts.items()},
+                        "sleeves": {k: round(v, 2) for k, v in sleeves.items()}})
+        self._json(200, {"history": out})
+
+    def do_GET(self):
+        if self.path.rstrip("/") == "/api/book_history":
+            return self._book_history()
+        return super().do_GET()
+
     def do_POST(self):
         if self.path.rstrip("/") != "/api/load3f":
             return self._json(404, {"ok": False, "error": "unknown endpoint"})

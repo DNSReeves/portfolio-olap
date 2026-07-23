@@ -54,4 +54,21 @@ check("fmt millions", app.botFmt(16811609) === "$16.81M");
 check("fmt thousands", app.botFmt(4500) === "$5k");
 check("fmt negative", app.botFmt(-146000) === "$-146k");
 
+// ── server-history merge (2026-07-23 follow-up: IndexedDB is per-browser; the
+// history/ archives are the durable record — merged, local wins on date) ─────
+const hist = [
+  { date: "2026-06-18", total: 100, accounts: { X: 60, Y: 40 }, sleeves: { S: 100 } },
+  { date: "2026-07-23", total: 130, accounts: { X: 70, Y: 60 }, sleeves: { S: 130 } },
+];
+const local = [
+  { date: "2026-07-23", total: 131, accounts: new Map([["X", 71], ["Y", 60]]), sleeves: new Map([["S", 131]]) },
+];
+const merged = app.botMergeTimeline(local, hist);
+check("merge: union of dates, sorted", merged.length === 2 && merged[0].date === "2026-06-18");
+check("merge: local wins on same date", merged[1].total === 131 && merged[1].accounts.get("X") === 71);
+check("merge: server rows become Map-shaped buckets",  // instanceof fails cross-realm (vm)
+  typeof merged[0].accounts.get === "function" && merged[0].accounts.get("X") === 60);
+check("merge: empty local → pure server", app.botMergeTimeline([], hist).length === 2);
+check("merge: empty server → pure local", app.botMergeTimeline(local, []).length === 1);
+
 process.exit(failures ? 1 : 0);
