@@ -71,4 +71,12 @@ check("merge: server rows become Map-shaped buckets",  // instanceof fails cross
 check("merge: empty local → pure server", app.botMergeTimeline([], hist).length === 2);
 check("merge: empty server → pure local", app.botMergeTimeline(local, []).length === 1);
 
+// ── priority roster (2026-07-23 live report: self-managed must not fold) ────
+const pri = new Set(["A8", "A9"]);            // the two smallest are self-managed
+const priRoster = app.botRoster(accounts9, pri);
+check("priority members lead the roster", priRoster[0] === "A8" && priRoster[1] === "A9");
+check("priority members never fold", !priRoster.includes("Other") || (priRoster.includes("A8") && priRoster.includes("A9")));
+check("non-priority tail folds instead", priRoster[7] === "Other" && !priRoster.includes("A7"));
+check("no priority set → pure MV order", app.botRoster(accounts9)[0] === "A1");
+
 process.exit(failures ? 1 : 0);

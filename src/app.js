@@ -3161,10 +3161,16 @@ const botState = { dim: "accounts", visible: new Set(), table: false };
 // PURE seams (vm-harness-testable — tests/book_over_time.test.js). The fixed
 // roster ORDER is the color-follows-entity mechanism: hues assign by roster
 // index and must never depend on which chips are toggled.
-function botRoster(dimMap) {
-  // FIXED order: MV desc from the latest snapshot's bucket; >7 folds the tail
-  // into "Other" (a slot of its own, never a generated hue)
-  const sorted = [...dimMap.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+function botRoster(dimMap, prioritySet) {
+  // FIXED order: priority members first (the operator's self-managed accounts —
+  // the 2026-07-23 live report: MV-only ordering folded DNSR-IRA and RMD
+  // Receiver into "Other" while keeping the $13M advisor accounts he watches
+  // elsewhere), each tier MV desc; >7 folds the TAIL into "Other" (a slot of
+  // its own, never a generated hue).
+  const pri = prioritySet || new Set();
+  const sorted = [...dimMap.entries()]
+    .sort((a, b) => (pri.has(b[0]) - pri.has(a[0])) || (b[1] - a[1]))
+    .map(([k]) => k);
   if (sorted.length <= 7) return sorted;
   return [...sorted.slice(0, 7), "Other"];
 }
@@ -3177,10 +3183,20 @@ function botSliceValue(dimMap, entity, roster) {
   return sum;
 }
 
+function botSelfManagedSet() {
+  const cfg = ACCOUNT_MANAGERS;
+  if (!cfg) return new Set();
+  const selfKeys = new Set(Object.entries(cfg.managers)
+    .filter(([, m]) => m.kind === "self").map(([k]) => k));
+  return new Set(Object.entries(cfg.accounts)
+    .filter(([, mgr]) => selfKeys.has(mgr)).map(([a]) => a));
+}
+
 function botEntitiesFor(rows) {
   if (!rows.length) return [];
   const latest = rows[rows.length - 1];
-  return botRoster(botState.dim === "accounts" ? latest.accounts : latest.sleeves);
+  if (botState.dim === "accounts") return botRoster(latest.accounts, botSelfManagedSet());
+  return botRoster(latest.sleeves);
 }
 
 function botRowValue(row, entity, roster) {
@@ -3301,7 +3317,9 @@ function renderBookOverTime() {
   const all = seriesList.flatMap((sr) => sr.vals);
   let lo = Math.min(...all), hi = Math.max(...all);
   const pad = Math.max((hi - lo) * 0.08, hi * 0.002);
+  const dataFloor = Math.min(...all);
   lo -= pad; hi += pad;
+  if (dataFloor >= 0 && lo < 0) lo = 0;   // 2026-07-23 live report: axis showed $-857k on an all-positive book
   const X = (i) => M.l + (i / (rows.length - 1)) * (W - M.l - M.r);
   const Y = (v) => M.t + (1 - (v - lo) / (hi - lo)) * (H - M.t - M.b);
   const svgNS = "http://www.w3.org/2000/svg";
