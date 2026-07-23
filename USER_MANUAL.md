@@ -16,6 +16,15 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.9.2 — Book Over Time: Safari table fix + Δ%
+
+- **Table view fixed on Safari/iPad**: the table markup is now built complete
+  (thead/tbody) — WebKit silently dropped the bare row strings the first version
+  used, which showed dates with no values.
+- **Δ% everywhere**: the table gains a rightmost **Δ total** column (each date's
+  change vs the prior snapshot, green/red), and the plot's right-edge labels now
+  carry each visible series' **full-span % change** (e.g. "Total book −0.86%").
+
 ### Version 2.9.1 — touch-friendly splitter + fit-on-load
 
 - **A real resizer grip**: the pane splitter is now a visible pill with dots (72px on

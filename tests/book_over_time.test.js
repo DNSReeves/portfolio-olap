@@ -87,4 +87,21 @@ check("split min respected by clamp", app.clamp(50, 180, 800) === 180);
 check("split content fits when under max", app.clamp(430, 180, 800) === 430);
 check("split caps at max (internal scroll takes over)", app.clamp(2400, 180, 800) === 800);
 
+
+// ── table HTML seam + Δ% (2026-07-23: Safari dropped bare <tr> in
+// table.innerHTML — the "dates only" report; now full markup on the wrapper) ─
+check("pct change formats signed", app.botPctChange(100, 103) === "+3.00%");
+check("pct change negative", app.botPctChange(16957282, 16811609) === "-0.86%");
+check("pct change null-safe", app.botPctChange(0, 5) === "—" && app.botPctChange(null, 5) === "—");
+const tRows = [
+  { date: "2026-06-18", total: 16957282 }, { date: "2026-07-23", total: 16811609 },
+];
+const tSeries = [{ key: "__total", label: "Total book", vals: [16957282, 16811609] }];
+const html = app.botTableHtml(tRows, tSeries);
+check("table html is a COMPLETE table (Safari fix)", html.startsWith("<table><thead>") && html.includes("<tbody>"));
+check("table values present", html.includes("<td>$16.96M</td>") && html.includes("<td>$16.81M</td>"));
+check("delta column present with sign+class", html.includes('Δ total') && html.includes('class="dn">-0.86%'));
+check("first row delta is em-dash", html.includes(">—</td>"));
+check("labels escaped", app.botTableHtml(tRows, [{ key: "x", label: "<img>", vals: [1, 2] }]).includes("&lt;img&gt;"));
+
 process.exit(failures ? 1 : 0);

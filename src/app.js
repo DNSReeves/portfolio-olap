@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.9.1";
+const APP_VERSION = "v2.9.2";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
@@ -3264,6 +3264,32 @@ async function fetchBookHistory() {
   } catch { state.botHistory = []; }   // offline/older server → IndexedDB-only
 }
 
+function botPctChange(a, b) {
+  // % change b vs a, formatted with sign; null-safe ("—" when uncomputable)
+  if (a == null || b == null || a === 0) return "\u2014";
+  const pct = ((b - a) / Math.abs(a)) * 100;
+  const s2 = pct >= 0 ? "+" : "";
+  return s2 + pct.toFixed(2) + "%";
+}
+
+function botTableHtml(rows, seriesList) {
+  // COMPLETE <table> markup (thead/tbody) — assigned to the wrapper DIV, never
+  // to table.innerHTML: Safari/WebKit drops bare <tr> strings there (the
+  // 2026-07-23 "table shows only dates" report from the iPad). Rightmost
+  // column: Δ% of the Total book vs the prior date (operator ask).
+  const head = "<thead><tr><th>as of</th>" +
+    seriesList.map((sr) => `<th>${escapeHtml(sr.label)}</th>`).join("") +
+    "<th>\u0394 total</th></tr></thead>";
+  const total = seriesList[0];
+  const body = "<tbody>" + rows.map((r, i) => {
+    const cells = seriesList.map((sr) => `<td>${botFmt(sr.vals[i])}</td>`).join("");
+    const dlt = i === 0 ? "\u2014" : botPctChange(total.vals[i - 1], total.vals[i]);
+    const cls = dlt.startsWith("+") ? "up" : (dlt.startsWith("-") ? "dn" : "");
+    return `<tr><td>${escapeHtml(r.date)}</td>${cells}<td class="${cls}">${dlt}</td></tr>`;
+  }).join("") + "</tbody>";
+  return `<table>${head}${body}</table>`;
+}
+
 function renderBookOverTime() {
   if (!el.botChart) return;
   const snapRows = (state.snapshots || []).map((s2) => {
@@ -3328,20 +3354,14 @@ function renderBookOverTime() {
 
   if (botState.table) {
     el.botChart.replaceChildren();
-    const t = document.createElement("table");
-    const head = "<tr><th>as of</th>" + seriesList.map((sr) =>
-      `<th>${sr.label}</th>`).join("") + "</tr>";
-    const trows = rows.map((r, i) => "<tr><td>" + r.date + "</td>" +
-      seriesList.map((sr) => `<td>${botFmt(sr.vals[i])}</td>`).join("") + "</tr>").join("");
-    t.innerHTML = head + trows;
-    el.botTable.replaceChildren(t);
+    el.botTable.innerHTML = botTableHtml(rows, seriesList);   // full <table> — see botTableHtml
     el.botTable.hidden = false;
     return;
   }
   el.botTable.hidden = true;
 
   // geometry
-  const W = 720, H = 240, M = { t: 14, r: 118, b: 26, l: 56 };
+  const W = 720, H = 240, M = { t: 14, r: 150, b: 26, l: 56 };  // r widened for "name +x.xx%" labels
   const all = seriesList.flatMap((sr) => sr.vals);
   let lo = Math.min(...all), hi = Math.max(...all);
   const pad = Math.max((hi - lo) * 0.08, hi * 0.002);
@@ -3397,10 +3417,13 @@ function renderBookOverTime() {
     });
     if (directLabel) {
       const last = sr.vals.length - 1;
+      const span = botPctChange(sr.vals[0], sr.vals[last]);   // full-span Δ% (operator ask)
       const lbl = document.createElementNS(svgNS, "text");
       lbl.setAttribute("x", X(last) + 10); lbl.setAttribute("y", Y(sr.vals[last]) + 4);
       lbl.setAttribute("class", "botDirect");
-      lbl.textContent = sr.label.length > 15 ? sr.label.slice(0, 14) + "…" : sr.label;
+      const name = sr.label.length > 12 ? sr.label.slice(0, 11) + "…" : sr.label;
+      lbl.textContent = `${name} ${span}`;
+      lbl.classList.add(span.startsWith("+") ? "up" : span.startsWith("-") ? "dn" : "flat");
       svg.append(lbl);
     }
   }

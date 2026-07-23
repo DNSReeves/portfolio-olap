@@ -1520,3 +1520,8 @@ td.rkName.scopeLabel:hover { background: #eef7f6; }
 .botTable table { border-collapse: collapse; font-size: 12px; width: 100%; }
 .botTable th, .botTable td { padding: 4px 8px; border-bottom: 1px solid #eef2f4; text-align: right; }
 .botTable th:first-child, .botTable td:first-child { text-align: left; }
+
+.botDirect.up { fill: #008300; }
+.botDirect.dn { fill: #e34948; }
+.botTable td.up { color: #008300; }
+.botTable td.dn { color: #e34948; }
