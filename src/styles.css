@@ -1519,7 +1519,12 @@ td.rkName.scopeLabel:hover { background: #eef7f6; }
 .botTip .dn { color: #e34948; }
 .botTable { overflow-x: auto; -webkit-overflow-scrolling: touch; }  /* h-scroll when columns exceed the panel (2026-07-23) */
 .botTable table { border-collapse: collapse; font-size: 12px; width: auto; }  /* content-sized, left-packed — was 100%: few columns spread across the panel leaving a gulf after the date */
-.botTable th, .botTable td { padding: 4px 14px 4px 8px; border-bottom: 1px solid #eef2f4; text-align: right; white-space: nowrap; }
+.botTable th, .botTable td { padding: 4px 10px 4px 6px; border-bottom: 1px solid #eef2f4; text-align: right; }
+.botTable td { white-space: nowrap; }
+/* headers WRAP instead of dictating column width — long account names were
+   making columns far wider than their values (the gap the operator saw) */
+.botTable th { white-space: normal; max-width: 96px; overflow-wrap: anywhere;
+  vertical-align: bottom; font-size: 11px; line-height: 1.25; }
 .botTable th:first-child, .botTable td:first-child { text-align: left; }
 
 .botDirect.up { fill: #008300; }
