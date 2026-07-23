@@ -16,6 +16,12 @@ Two terms used throughout: a **sleeve** is a granular category (see the list abo
 
 The implementation is a zero-dependency app. It runs in a browser using static HTML, CSS, and JavaScript.
 
+### Version 2.9.3 — Book Over Time: compact table layout
+
+- Table columns are now content-sized and left-packed (they previously stretched
+  across the full panel, leaving a gulf between the date and the values); the
+  panel scrolls horizontally when overlay columns exceed its width (touch-friendly).
+
 ### Version 2.9.2 — Book Over Time: Safari table fix + Δ%
 
 - **Table view fixed on Safari/iPad**: the table markup is now built complete

@@ -1517,8 +1517,9 @@ td.rkName.scopeLabel:hover { background: #eef7f6; }
 .botTip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
 .botTip .up { color: #008300; }
 .botTip .dn { color: #e34948; }
-.botTable table { border-collapse: collapse; font-size: 12px; width: 100%; }
-.botTable th, .botTable td { padding: 4px 8px; border-bottom: 1px solid #eef2f4; text-align: right; }
+.botTable { overflow-x: auto; -webkit-overflow-scrolling: touch; }  /* h-scroll when columns exceed the panel (2026-07-23) */
+.botTable table { border-collapse: collapse; font-size: 12px; width: auto; }  /* content-sized, left-packed — was 100%: few columns spread across the panel leaving a gulf after the date */
+.botTable th, .botTable td { padding: 4px 14px 4px 8px; border-bottom: 1px solid #eef2f4; text-align: right; white-space: nowrap; }
 .botTable th:first-child, .botTable td:first-child { text-align: left; }
 
 .botDirect.up { fill: #008300; }
