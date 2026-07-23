@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.9.5";
+const APP_VERSION = "v2.9.6";
 
 // DEFAULT_SLEEVES / SLEEVE_PARENTS / _AC_* below are the LITERAL FALLBACK. When
 // classification_rules.json loads, applyTaxonomyMaps() overrides them from the ONE
